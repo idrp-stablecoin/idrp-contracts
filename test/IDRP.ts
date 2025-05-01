@@ -7,7 +7,7 @@ describe("IDRP", function () {
   async function contractFixture() {
     const [defaultAdmin, user] = await hre.ethers.getSigners()
     const IDRP = await hre.ethers.getContractFactory("IDRP")
-    const contract = await hre.upgrades.deployProxy(IDRP, ["IDRP", "IDRP"])
+    const contract = await hre.upgrades.deployProxy(IDRP, [await defaultAdmin.getAddress()])
     await contract.waitForDeployment()
 
     return { contract, defaultAdmin, user }
@@ -83,7 +83,13 @@ describe("IDRP", function () {
       const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
+      // Mint tokens to user
       await contract.connect(defaultAdmin).mint(user.address, amount)
+
+      // User set allowance for defaultAdmin to be burned
+      await contract.connect(user).approve(await defaultAdmin.getAddress(), amount)
+
+      // Burn tokens from user
       await contract.connect(defaultAdmin).burn(user.address, amount)
       expect(await contract.balanceOf(user.address)).to.equal(0)
     })
@@ -101,6 +107,17 @@ describe("IDRP", function () {
 
       await contract.connect(defaultAdmin).mint(user.address, amount)
       await expect(contract.connect(user).burn(user.address, amount)).to.be.rejected
+    })
+
+    it("Should not burn tokens if minter role doesn't have allowance", async function () {
+      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const amount = parseUnits("1000000000", 6)
+
+      await contract.connect(defaultAdmin).mint(user.address, amount)
+
+      await expect(contract.connect(defaultAdmin).burn(user.address, amount)).to.be.revertedWith(
+        "Burn amount exceeds allowance"
+      )
     })
 
     it("Should not mint tokens if paused", async function () {
