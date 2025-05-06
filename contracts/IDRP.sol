@@ -81,12 +81,19 @@ contract IDRP is
     ) public onlyRole(MINTER_ROLE) whenNotPaused {
         if (frozen[from]) revert FrozenAccount();
 
-        // Ensure the MINTER_ROLE has an allowance from 'from'
-        uint256 currentAllowance = allowance(from, _msgSender());
-        require(currentAllowance >= amount, "Burn amount exceeds allowance");
-
-        // Deduct the burned amount from the allowance
-        _approve(from, _msgSender(), currentAllowance - amount);
+        // If `from` is not depositoryWallet, ensure the caller has allowance
+        // depositoryWallet is a cold wallet and can't approve
+        // the contract to burn tokens on its behalf
+        if (from != depositoryWallet) {
+            // Ensure the MINTER_ROLE has an allowance from 'from'
+            uint256 currentAllowance = allowance(from, _msgSender());
+            require(
+                currentAllowance >= amount,
+                "Burn amount exceeds allowance"
+            );
+            // Deduct the burned amount from the allowance
+            _approve(from, _msgSender(), currentAllowance - amount);
+        }
 
         _burn(from, amount);
     }
