@@ -63,7 +63,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
         { name: "to", type: "address" },
         { name: "operationType", type: "uint8" },
         { name: "amount", type: "uint256" },
-        { name: "nonce", type: "uint256" },
+        { name: "operationIdentifier", type: "string" },
         { name: "deadline", type: "uint256" },
       ],
     };
@@ -386,12 +386,13 @@ describe("IDRPController - Quorum Rule Tests", function () {
       console.log("Expected required roles: OFFICER_ROLE");
 
       const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const operationIdentifier = "tx101"; // Use operation ID
 
       const operation = {
         to: depository.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -407,6 +408,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
         operation.operationType,
         operation.to,
         operation.amount,
+        operation.operationIdentifier,
         operation.deadline,
         [officerSignature]
       );
@@ -439,12 +441,13 @@ describe("IDRPController - Quorum Rule Tests", function () {
       console.log("Expected required roles: OFFICER_ROLE, MANAGER_ROLE");
 
       const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const operationIdentifier = "tx102"; // Use operation ID
 
       const operation = {
         to: depository.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -462,6 +465,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
           operation.operationType,
           operation.to,
           operation.amount,
+          operation.operationIdentifier,
           operation.deadline,
           [officerSignature]
         );
@@ -486,6 +490,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
         operation.operationType,
         operation.to,
         operation.amount,
+        operation.operationIdentifier,
         operation.deadline,
         [officerSignature, managerSignature]
       );
@@ -522,12 +527,13 @@ describe("IDRPController - Quorum Rule Tests", function () {
       );
 
       const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const operationIdentifier = "tx103"; // Use operation ID
 
       const operation = {
         to: depository.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -550,6 +556,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
           operation.operationType,
           operation.to,
           operation.amount,
+          operation.operationIdentifier,
           operation.deadline,
           [officerSignature, managerSignature]
         );
@@ -574,6 +581,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
         operation.operationType,
         operation.to,
         operation.amount,
+        operation.operationIdentifier,
         operation.deadline,
         [officerSignature, managerSignature, directorSignature]
       );

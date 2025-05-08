@@ -69,10 +69,10 @@ contract IDRPController is
     // Domain separator for EIP-712
     bytes32 private DOMAIN_SEPARATOR;
 
-    // Typehash for operation approvals
+    // Typehash for operation approvals - updated to use operationIdentifier instead of nonce
     bytes32 private constant OPERATION_TYPEHASH =
         keccak256(
-            "Operation(address to,uint8 operationType,uint256 amount,uint256 nonce,uint256 deadline)"
+            "Operation(address to,uint8 operationType,uint256 amount,string operationIdentifier,uint256 deadline)"
         );
 
     // Events
@@ -80,7 +80,7 @@ contract IDRPController is
         OperationType indexed operationType,
         address indexed to,
         uint256 amount,
-        uint256 indexed nonce
+        string indexed operationIdentifier
     );
     event QuorumRulesUpdated(OperationType indexed operationType);
     event TokensWithdrawn(
@@ -135,11 +135,12 @@ contract IDRPController is
         emit QuorumRulesUpdated(operationType);
     }
 
-    // Main execution function
+    // Main execution function - updated to use operationIdentifier instead of nonce
     function executeOperation(
         OperationType operationType,
         address to,
         uint256 amount,
+        string calldata operationIdentifier,
         uint256 deadline,
         bytes[] calldata signatures
     ) external {
@@ -159,12 +160,12 @@ contract IDRPController is
         // Get the appropriate quorum rule for this operation and amount
         QuorumRule memory rule = getQuorumRule(operationType, amount);
 
-        // Hash the operation data
+        // Hash the operation data - using operationIdentifier instead of nonce
         bytes32 operationHash = getOperationHash(
             to,
             uint8(operationType),
             amount,
-            nonce,
+            operationIdentifier,
             deadline
         );
 
@@ -178,7 +179,7 @@ contract IDRPController is
         // Mark operation hash as used to prevent replay
         usedSignatures[operationHash] = true;
 
-        // Increment nonce to prevent replay of future transactions
+        // Increment nonce - keeping for backward compatibility
         nonce++;
 
         // Execute the operation
@@ -196,7 +197,7 @@ contract IDRPController is
             IIDRP(idrpToken).unpause();
         }
 
-        emit OperationExecuted(operationType, to, amount, nonce - 1);
+        emit OperationExecuted(operationType, to, amount, operationIdentifier);
     }
 
     // Specialized function to verify unpause signatures with OR logic
@@ -204,7 +205,7 @@ contract IDRPController is
         bytes32 operationHash,
         bytes[] calldata signatures
     ) internal view {
-        require(!usedSignatures[operationHash], "Signatures already used");
+        require(!usedSignatures[operationHash], "Operation hash already used");
         
         bool hasOfficer = false;
         bool hasManager = false;
@@ -259,12 +260,12 @@ contract IDRPController is
         revert("No matching quorum rule found");
     }
 
-    // Helper to get the EIP-712 hash for an operation
+    // Helper to get the EIP-712 hash for an operation - updated to use operationIdentifier
     function getOperationHash(
         address to,
         uint8 operationType,
         uint256 amount,
-        uint256 _nonce,
+        string calldata operationIdentifier,
         uint256 deadline
     ) public view returns (bytes32) {
         bytes32 structHash = keccak256(
@@ -273,7 +274,7 @@ contract IDRPController is
                 to,
                 operationType,
                 amount,
-                _nonce,
+                keccak256(bytes(operationIdentifier)),
                 deadline
             )
         );
@@ -290,7 +291,7 @@ contract IDRPController is
         bytes32[] memory requiredRoles,
         bytes[] calldata signatures
     ) internal view {
-        require(!usedSignatures[operationHash], "Signatures already used");
+        require(!usedSignatures[operationHash], "Operation hash already used");
 
         // For each required role, verify at least one signature from that role is present
         for (uint256 i = 0; i < requiredRoles.length; i++) {

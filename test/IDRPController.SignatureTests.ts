@@ -59,7 +59,7 @@ describe("IDRPController - Signature Tests", function () {
         { name: "to", type: "address" },
         { name: "operationType", type: "uint8" },
         { name: "amount", type: "uint256" },
-        { name: "nonce", type: "uint256" },
+        { name: "operationIdentifier", type: "string" },
         { name: "deadline", type: "uint256" },
       ],
     };
@@ -170,13 +170,14 @@ describe("IDRPController - Signature Tests", function () {
 
       const amount = hre.ethers.parseUnits("200000000", 6); // 200M tokens (requires officer + manager)
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx201"; // Use operation ID
 
       // Create operation data
       const operation = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -194,6 +195,7 @@ describe("IDRPController - Signature Tests", function () {
           operation.operationType,
           operation.to,
           operation.amount,
+          operation.operationIdentifier,
           operation.deadline,
           [officerSignature]
         );
@@ -219,6 +221,7 @@ describe("IDRPController - Signature Tests", function () {
           operation.operationType,
           operation.to,
           operation.amount,
+          operation.operationIdentifier,
           operation.deadline,
           [officerSignature, managerSignature]
         );
@@ -242,12 +245,13 @@ describe("IDRPController - Signature Tests", function () {
       // First operation with 200M (requires officer + manager)
       const amount = hre.ethers.parseUnits("200000000", 6);
       const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const operationIdentifier = "tx202"; // First operation ID
 
       const operation1 = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -270,6 +274,7 @@ describe("IDRPController - Signature Tests", function () {
           operation1.operationType,
           operation1.to,
           operation1.amount,
+          operation1.operationIdentifier,
           operation1.deadline,
           [officerSignature, managerSignature]
         );
@@ -292,6 +297,7 @@ describe("IDRPController - Signature Tests", function () {
           operation1.operationType,
           operation1.to,
           operation1.amount,
+          operation1.operationIdentifier,
           operation1.deadline,
           [officerSignature, managerSignature]
         );
@@ -303,16 +309,17 @@ describe("IDRPController - Signature Tests", function () {
       // Verify signature reuse failed
       expect(reuseSignaturesFailed).to.equal(true);
 
-      // Create a second operation with the same parameters but new nonce
+      // Create a second operation with the same parameters but new operationIdentifier
+      const operationIdentifier2 = "tx203"; // New operation ID
       const operation2 = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(), // Should be 1 now
+        operationIdentifier: operationIdentifier2,
         deadline: deadline,
       };
 
-      // Need new signatures for the new nonce
+      // Need new signatures for the new operationIdentifier
       const officerSignature2 = await officer.signTypedData(
         domain,
         types,
@@ -332,6 +339,7 @@ describe("IDRPController - Signature Tests", function () {
           operation2.operationType,
           operation2.to,
           operation2.amount,
+          operation2.operationIdentifier,
           operation2.deadline,
           [officerSignature2, managerSignature2]
         );
@@ -354,12 +362,13 @@ describe("IDRPController - Signature Tests", function () {
 
       const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens (requires only officer)
       const deadline = Math.floor(Date.now() / 1000) - 3600; // 1 hour in the past
+      const operationIdentifier = "tx204"; // Use operation ID
 
       const operation = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -376,6 +385,7 @@ describe("IDRPController - Signature Tests", function () {
           operation.operationType,
           operation.to,
           operation.amount,
+          operation.operationIdentifier,
           operation.deadline,
           [officerSignature]
         );

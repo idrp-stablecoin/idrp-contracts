@@ -57,7 +57,7 @@ describe("IDRPController - Pause and Unpause", function () {
         { name: "to", type: "address" },
         { name: "operationType", type: "uint8" },
         { name: "amount", type: "uint256" },
-        { name: "nonce", type: "uint256" },
+        { name: "operationIdentifier", type: "string" },
         { name: "deadline", type: "uint256" },
       ],
     };
@@ -120,13 +120,14 @@ describe("IDRPController - Pause and Unpause", function () {
       expect(await idrp.paused()).to.be.false;
 
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx301"; // Use operation ID
 
       // Create pause operation data
       const pauseOperation = {
         to: hre.ethers.ZeroAddress, // Address doesn't matter for pause
         operationType: OperationType.Pause,
         amount: 0, // Amount doesn't matter for pause
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -147,6 +148,7 @@ describe("IDRPController - Pause and Unpause", function () {
         pauseOperation.operationType,
         pauseOperation.to,
         pauseOperation.amount,
+        pauseOperation.operationIdentifier,
         pauseOperation.deadline,
         [managerSignature, directorSignature]
       );
@@ -164,13 +166,14 @@ describe("IDRPController - Pause and Unpause", function () {
       expect(await idrp.paused()).to.be.false;
 
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx302"; // Use operation ID
 
       // Create pause operation data
       const pauseOperation = {
         to: hre.ethers.ZeroAddress, // Address doesn't matter for pause
         operationType: OperationType.Pause,
         amount: 0, // Amount doesn't matter for pause
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -188,6 +191,7 @@ describe("IDRPController - Pause and Unpause", function () {
           pauseOperation.operationType,
           pauseOperation.to,
           pauseOperation.amount,
+          pauseOperation.operationIdentifier,
           pauseOperation.deadline,
           [managerSignature]
         );
@@ -208,11 +212,12 @@ describe("IDRPController - Pause and Unpause", function () {
 
       // First pause the token
       const pauseDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const pauseOperationIdentifier = "tx303"; // Use operation ID
       const pauseOperation = {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Pause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: pauseOperationIdentifier,
         deadline: pauseDeadline,
       };
 
@@ -231,6 +236,7 @@ describe("IDRPController - Pause and Unpause", function () {
         pauseOperation.operationType,
         pauseOperation.to,
         pauseOperation.amount,
+        pauseOperation.operationIdentifier,
         pauseOperation.deadline,
         [managerPauseSignature, directorPauseSignature]
       );
@@ -240,11 +246,12 @@ describe("IDRPController - Pause and Unpause", function () {
 
       // Now unpause with officer+manager+director
       const unpauseDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const unpauseOperationIdentifier = "tx304"; // Different operation ID
       const unpauseOperation = {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Unpause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: unpauseOperationIdentifier,
         deadline: unpauseDeadline,
       };
 
@@ -268,6 +275,7 @@ describe("IDRPController - Pause and Unpause", function () {
         unpauseOperation.operationType,
         unpauseOperation.to,
         unpauseOperation.amount,
+        unpauseOperation.operationIdentifier,
         unpauseOperation.deadline,
         [officerSignature, managerSignature, directorSignature]
       );
@@ -289,11 +297,12 @@ describe("IDRPController - Pause and Unpause", function () {
 
       // First pause the token
       const pauseDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const pauseOperationIdentifier = "tx305"; // Use operation ID
       const pauseOperation = {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Pause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: pauseOperationIdentifier,
         deadline: pauseDeadline,
       };
 
@@ -312,6 +321,7 @@ describe("IDRPController - Pause and Unpause", function () {
         pauseOperation.operationType,
         pauseOperation.to,
         pauseOperation.amount,
+        pauseOperation.operationIdentifier,
         pauseOperation.deadline,
         [managerPauseSignature, directorPauseSignature]
       );
@@ -321,11 +331,12 @@ describe("IDRPController - Pause and Unpause", function () {
 
       // Now unpause with manager+director+commissioner
       const unpauseDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const unpauseOperationIdentifier = "tx306"; // Different operation ID
       const unpauseOperation = {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Unpause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: unpauseOperationIdentifier,
         deadline: unpauseDeadline,
       };
 
@@ -349,6 +360,7 @@ describe("IDRPController - Pause and Unpause", function () {
         unpauseOperation.operationType,
         unpauseOperation.to,
         unpauseOperation.amount,
+        unpauseOperation.operationIdentifier,
         unpauseOperation.deadline,
         [managerSignature, directorSignature, commissionerSignature]
       );
@@ -371,11 +383,12 @@ describe("IDRPController - Pause and Unpause", function () {
 
       // First pause the token
       const pauseDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const pauseOperationIdentifier = "tx307"; // Use operation ID
       const pauseOperation = {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Pause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: pauseOperationIdentifier,
         deadline: pauseDeadline,
       };
 
@@ -395,6 +408,7 @@ describe("IDRPController - Pause and Unpause", function () {
         pauseOperation.operationType,
         pauseOperation.to,
         pauseOperation.amount,
+        pauseOperation.operationIdentifier,
         pauseOperation.deadline,
         [managerPauseSignature, directorPauseSignature]
       );
@@ -404,15 +418,17 @@ describe("IDRPController - Pause and Unpause", function () {
 
       // Try to unpause with invalid combination: officer+manager+commissioner (missing director)
       const unpauseDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const unpauseOperationIdentifier = "tx308"; // Different operation ID
       const unpauseOperation = {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Unpause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: unpauseOperationIdentifier,
         deadline: unpauseDeadline,
       };
 
-      // This is an invalid combination: officer+manager+commissioner (missing director)
+      // This is an invalid combination: officer+manager+commissioner
+      // Both valid combinations need director
       const officerSignature = await officer.signTypedData(
         domain,
         types,
@@ -435,6 +451,7 @@ describe("IDRPController - Pause and Unpause", function () {
           unpauseOperation.operationType,
           unpauseOperation.to,
           unpauseOperation.amount,
+          unpauseOperation.operationIdentifier,
           unpauseOperation.deadline,
           [officerSignature, managerSignature, commissionerSignature]
         )

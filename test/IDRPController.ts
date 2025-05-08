@@ -62,7 +62,7 @@ describe("IDRPController", function () {
         { name: "to", type: "address" },
         { name: "operationType", type: "uint8" },
         { name: "amount", type: "uint256" },
-        { name: "nonce", type: "uint256" },
+        { name: "operationIdentifier", type: "string" },
         { name: "deadline", type: "uint256" },
       ],
     };
@@ -281,13 +281,14 @@ describe("IDRPController", function () {
         await loadFixture(deployFixture);
       const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx1001"; // Use operation ID
 
       // Create operation data
       const operation = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -303,6 +304,7 @@ describe("IDRPController", function () {
         operation.operationType,
         operation.to,
         operation.amount,
+        operation.operationIdentifier,
         operation.deadline,
         [officerSignature]
       );
@@ -329,13 +331,14 @@ describe("IDRPController", function () {
       } = await loadFixture(deployFixture);
       const amount = hre.ethers.parseUnits("1500000000", 6); // 1.5B tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx1002"; // Use operation ID
 
       // Create operation data
       const operation = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -366,6 +369,7 @@ describe("IDRPController", function () {
         operation.operationType,
         operation.to,
         operation.amount,
+        operation.operationIdentifier,
         operation.deadline,
         [
           officerSignature,
@@ -387,13 +391,14 @@ describe("IDRPController", function () {
         await loadFixture(deployFixture);
       const amount = hre.ethers.parseUnits("1500000000", 6); // 1.5B tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx1003"; // Use operation ID
 
       // Create operation data
       const operation = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -416,6 +421,7 @@ describe("IDRPController", function () {
           operation.operationType,
           operation.to,
           operation.amount,
+          operation.operationIdentifier,
           operation.deadline,
           [officerSignature, managerSignature]
         );
@@ -435,13 +441,14 @@ describe("IDRPController", function () {
         await loadFixture(deployFixture);
       const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx1001"; // Use operation ID
 
       // Create operation data
       const operation = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -457,6 +464,7 @@ describe("IDRPController", function () {
         operation.operationType,
         operation.to,
         operation.amount,
+        operation.operationIdentifier,
         operation.deadline,
         [officerSignature]
       );
@@ -481,12 +489,13 @@ describe("IDRPController", function () {
       } = await loadFixture(deployFixture);
       const amount = hre.ethers.parseUnits("200000000", 6); // 200M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx1002"; // Use operation ID
 
       const operation = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -506,6 +515,7 @@ describe("IDRPController", function () {
         operation.operationType,
         operation.to,
         operation.amount,
+        operation.operationIdentifier,
         operation.deadline,
         [officerSignature, managerSignature]
       );
@@ -522,6 +532,7 @@ describe("IDRPController", function () {
           operation.operationType,
           operation.to,
           operation.amount,
+          operation.operationIdentifier,
           operation.deadline,
           [officerSignature]
         );
@@ -545,7 +556,7 @@ describe("IDRPController", function () {
         to: user.address,
         operationType: OperationType.Mint,
         amount: mintAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1003", // Use operation ID
         deadline: mintDeadline,
       };
 
@@ -560,6 +571,7 @@ describe("IDRPController", function () {
         mintOperation.operationType,
         mintOperation.to,
         mintOperation.amount,
+        mintOperation.operationIdentifier,
         mintOperation.deadline,
         [officerMintSignature]
       );
@@ -584,7 +596,7 @@ describe("IDRPController", function () {
         to: user.address,
         operationType: OperationType.Burn,
         amount: burnAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1004", // Use operation ID
         deadline: burnDeadline,
       };
 
@@ -599,6 +611,7 @@ describe("IDRPController", function () {
         burnOperation.operationType,
         burnOperation.to,
         burnOperation.amount,
+        burnOperation.operationIdentifier,
         burnOperation.deadline,
         [officerBurnSignature]
       );
@@ -622,7 +635,7 @@ describe("IDRPController", function () {
         to: user.address,
         operationType: OperationType.Mint,
         amount: mintAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1005", // Use operation ID
         deadline: mintDeadline,
       };
 
@@ -635,6 +648,7 @@ describe("IDRPController", function () {
         mintOperation.operationType,
         mintOperation.to,
         mintOperation.amount,
+        mintOperation.operationIdentifier,
         mintOperation.deadline,
         [officerMintSignature]
       );
@@ -645,7 +659,7 @@ describe("IDRPController", function () {
         to: user.address,
         operationType: OperationType.Freeze,
         amount: 0, // Amount doesn't matter for freeze
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1006", // Use operation ID
         deadline: freezeDeadline,
       };
 
@@ -658,6 +672,7 @@ describe("IDRPController", function () {
         freezeOperation.operationType,
         freezeOperation.to,
         freezeOperation.amount,
+        freezeOperation.operationIdentifier,
         freezeOperation.deadline,
         [officerFreezeSignature]
       );
@@ -687,12 +702,13 @@ describe("IDRPController", function () {
 
       const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx1007"; // Use operation ID
 
       const operation = {
         to: user.address,
         operationType: OperationType.Mint,
         amount: amount,
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -712,6 +728,7 @@ describe("IDRPController", function () {
         operation.operationType,
         operation.to,
         operation.amount,
+        operation.operationIdentifier,
         operation.deadline,
         [officerSignature, managerSignature]
       );
@@ -730,13 +747,14 @@ describe("IDRPController", function () {
       expect(await idrp.paused()).to.be.false;
 
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx1008"; // Use operation ID
 
       // Create pause operation data
       const pauseOperation = {
         to: hre.ethers.ZeroAddress, // Address doesn't matter for pause
         operationType: OperationType.Pause,
         amount: 0, // Amount doesn't matter for pause
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -757,6 +775,7 @@ describe("IDRPController", function () {
         pauseOperation.operationType,
         pauseOperation.to,
         pauseOperation.amount,
+        pauseOperation.operationIdentifier,
         pauseOperation.deadline,
         [managerSignature, directorSignature]
       );
@@ -774,13 +793,14 @@ describe("IDRPController", function () {
       expect(await idrp.paused()).to.be.false;
 
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const operationIdentifier = "tx1009"; // Use operation ID
 
       // Create pause operation data
       const pauseOperation = {
         to: hre.ethers.ZeroAddress, // Address doesn't matter for pause
         operationType: OperationType.Pause,
         amount: 0, // Amount doesn't matter for pause
-        nonce: await controller.nonce(),
+        operationIdentifier: operationIdentifier,
         deadline: deadline,
       };
 
@@ -798,6 +818,7 @@ describe("IDRPController", function () {
           pauseOperation.operationType,
           pauseOperation.to,
           pauseOperation.amount,
+          pauseOperation.operationIdentifier,
           pauseOperation.deadline,
           [managerSignature]
         );
@@ -820,7 +841,7 @@ describe("IDRPController", function () {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Pause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1010", // Use operation ID
         deadline: pauseDeadline,
       };
 
@@ -839,6 +860,7 @@ describe("IDRPController", function () {
         pauseOperation.operationType,
         pauseOperation.to,
         pauseOperation.amount,
+        pauseOperation.operationIdentifier,
         pauseOperation.deadline,
         [managerPauseSignature, directorPauseSignature]
       );
@@ -852,7 +874,7 @@ describe("IDRPController", function () {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Unpause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1011", // Use operation ID
         deadline: unpauseDeadline,
       };
 
@@ -876,6 +898,7 @@ describe("IDRPController", function () {
         unpauseOperation.operationType,
         unpauseOperation.to,
         unpauseOperation.amount,
+        unpauseOperation.operationIdentifier,
         unpauseOperation.deadline,
         [officerSignature, managerSignature, directorSignature]
       );
@@ -901,7 +924,7 @@ describe("IDRPController", function () {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Pause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1012", // Use operation ID
         deadline: pauseDeadline,
       };
 
@@ -920,6 +943,7 @@ describe("IDRPController", function () {
         pauseOperation.operationType,
         pauseOperation.to,
         pauseOperation.amount,
+        pauseOperation.operationIdentifier,
         pauseOperation.deadline,
         [managerPauseSignature, directorPauseSignature]
       );
@@ -933,7 +957,7 @@ describe("IDRPController", function () {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Unpause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1013", // Use operation ID
         deadline: unpauseDeadline,
       };
 
@@ -957,6 +981,7 @@ describe("IDRPController", function () {
         unpauseOperation.operationType,
         unpauseOperation.to,
         unpauseOperation.amount,
+        unpauseOperation.operationIdentifier,
         unpauseOperation.deadline,
         [managerSignature, directorSignature, commissionerSignature]
       );
@@ -983,7 +1008,7 @@ describe("IDRPController", function () {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Pause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1014", // Use operation ID
         deadline: pauseDeadline,
       };
 
@@ -1003,6 +1028,7 @@ describe("IDRPController", function () {
         pauseOperation.operationType,
         pauseOperation.to,
         pauseOperation.amount,
+        pauseOperation.operationIdentifier,
         pauseOperation.deadline,
         [managerPauseSignature, directorPauseSignature]
       );
@@ -1016,7 +1042,7 @@ describe("IDRPController", function () {
         to: hre.ethers.ZeroAddress,
         operationType: OperationType.Unpause,
         amount: 0,
-        nonce: await controller.nonce(),
+        operationIdentifier: "tx1015", // Use operation ID
         deadline: unpauseDeadline,
       };
 
@@ -1044,6 +1070,7 @@ describe("IDRPController", function () {
           unpauseOperation.operationType,
           unpauseOperation.to,
           unpauseOperation.amount,
+          unpauseOperation.operationIdentifier,
           unpauseOperation.deadline,
           [officerSignature, managerSignature, commissionerSignature]
         )

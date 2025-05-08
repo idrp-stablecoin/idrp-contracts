@@ -56,7 +56,7 @@ describe("IDRPController - Burn Tests", function () {
         { name: "to", type: "address" },
         { name: "operationType", type: "uint8" },
         { name: "amount", type: "uint256" },
-        { name: "nonce", type: "uint256" },
+        { name: "operationIdentifier", type: "string" },
         { name: "deadline", type: "uint256" },
       ],
     };
@@ -132,11 +132,12 @@ describe("IDRPController - Burn Tests", function () {
 
       // Mint operation
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const mintOperationId = "tx1"; // Use operation ID from database
       const mintOperation = {
         to: depository.address,
         operationType: OperationType.Mint,
         amount: mintAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: mintOperationId,
         deadline: mintDeadline,
       };
 
@@ -151,6 +152,7 @@ describe("IDRPController - Burn Tests", function () {
         mintOperation.operationType,
         mintOperation.to,
         mintOperation.amount,
+        mintOperation.operationIdentifier,
         mintOperation.deadline,
         [officerMintSignature]
       );
@@ -165,11 +167,12 @@ describe("IDRPController - Burn Tests", function () {
       const burnAmount = hre.ethers.parseUnits("25000000", 6); // 25M tokens
 
       const burnDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const burnOperationId = "tx2"; // Use different operation ID
       const burnOperation = {
         to: user.address,
         operationType: OperationType.Burn,
         amount: burnAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: burnOperationId,
         deadline: burnDeadline,
       };
 
@@ -185,6 +188,7 @@ describe("IDRPController - Burn Tests", function () {
           burnOperation.operationType,
           burnOperation.to,
           burnOperation.amount,
+          burnOperation.operationIdentifier,
           burnOperation.deadline,
           [officerBurnSignature]
         )
@@ -203,11 +207,12 @@ describe("IDRPController - Burn Tests", function () {
 
       // Mint operation
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const mintOperationId = "tx3"; // Use operation ID
       const mintOperation = {
         to: depository.address,
         operationType: OperationType.Mint,
         amount: mintAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: mintOperationId,
         deadline: mintDeadline,
       };
 
@@ -222,6 +227,7 @@ describe("IDRPController - Burn Tests", function () {
         mintOperation.operationType,
         mintOperation.to,
         mintOperation.amount,
+        mintOperation.operationIdentifier,
         mintOperation.deadline,
         [officerMintSignature]
       );
@@ -243,11 +249,12 @@ describe("IDRPController - Burn Tests", function () {
 
       // Now burn tokens
       const burnDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const burnOperationId = "tx4"; // Different operation ID
       const burnOperation = {
         to: user.address,
         operationType: OperationType.Burn,
         amount: burnAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: burnOperationId,
         deadline: burnDeadline,
       };
 
@@ -261,6 +268,7 @@ describe("IDRPController - Burn Tests", function () {
         burnOperation.operationType,
         burnOperation.to,
         burnOperation.amount,
+        burnOperation.operationIdentifier,
         burnOperation.deadline,
         [officerBurnSignature]
       );
@@ -285,11 +293,12 @@ describe("IDRPController - Burn Tests", function () {
 
       // Mint operation
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const mintOperationId = "tx5"; // Use operation ID
       const mintOperation = {
         to: depository.address,
         operationType: OperationType.Mint,
         amount: mintAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: mintOperationId,
         deadline: mintDeadline,
       };
 
@@ -303,6 +312,7 @@ describe("IDRPController - Burn Tests", function () {
         mintOperation.operationType,
         mintOperation.to,
         mintOperation.amount,
+        mintOperation.operationIdentifier,
         mintOperation.deadline,
         [officerMintSignature]
       );
@@ -325,11 +335,12 @@ describe("IDRPController - Burn Tests", function () {
 
       // Try to burn more than allowance
       const burnDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const burnOperationId = "tx6"; // Different operation ID
       const burnOperation = {
         to: user.address,
         operationType: OperationType.Burn,
         amount: burnAmount, // More than allowance
-        nonce: await controller.nonce(),
+        operationIdentifier: burnOperationId,
         deadline: burnDeadline,
       };
 
@@ -345,6 +356,7 @@ describe("IDRPController - Burn Tests", function () {
           burnOperation.operationType,
           burnOperation.to,
           burnOperation.amount,
+          burnOperation.operationIdentifier,
           burnOperation.deadline,
           [officerBurnSignature]
         )
@@ -366,11 +378,12 @@ describe("IDRPController - Burn Tests", function () {
 
       // Mint operation
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const mintOperationId = "tx7"; // Use operation ID
       const mintOperation = {
         to: depository.address,
         operationType: OperationType.Mint,
         amount: mintAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: mintOperationId,
         deadline: mintDeadline,
       };
 
@@ -384,6 +397,7 @@ describe("IDRPController - Burn Tests", function () {
         mintOperation.operationType,
         mintOperation.to,
         mintOperation.amount,
+        mintOperation.operationIdentifier,
         mintOperation.deadline,
         [officerMintSignature]
       );
@@ -403,11 +417,12 @@ describe("IDRPController - Burn Tests", function () {
 
       // Burn exactly the allowance amount
       const burnDeadline = Math.floor(Date.now() / 1000) + 3600;
+      const burnOperationId = "tx8"; // Different operation ID
       const burnOperation = {
         to: user.address,
         operationType: OperationType.Burn,
         amount: burnAmount,
-        nonce: await controller.nonce(),
+        operationIdentifier: burnOperationId,
         deadline: burnDeadline,
       };
 
@@ -421,6 +436,7 @@ describe("IDRPController - Burn Tests", function () {
         burnOperation.operationType,
         burnOperation.to,
         burnOperation.amount,
+        burnOperation.operationIdentifier,
         burnOperation.deadline,
         [officerBurnSignature]
       );
