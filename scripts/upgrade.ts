@@ -1,33 +1,40 @@
-import fs from "fs"
-import path from "path"
-import hre from "hardhat"
+import fs from "fs";
+import path from "path";
+import hre from "hardhat";
 
 async function main() {
-  const networkId = hre.network.config.chainId ?? 8545
-  const deploymentDir = path.join(hre.config.paths.root || process.cwd(), "./deployment")
+  const networkId = hre.network.config.chainId ?? 8545;
+  const deploymentDir = path.join(
+    hre.config.paths.root || process.cwd(),
+    "./deployment"
+  );
 
   if (!fs.existsSync(deploymentDir)) {
-    fs.mkdirSync(deploymentDir, { recursive: true })
+    fs.mkdirSync(deploymentDir, { recursive: true });
   }
 
-  const deploymentFile = path.join(deploymentDir, `chain-${networkId}.json`)
+  const deploymentFile = path.join(deploymentDir, `chain-${networkId}.json`);
 
   // Fetch existing deployments
-  let deployments: Record<string, string> = {}
+  let deployments: Record<string, string> = {};
   if (fs.existsSync(deploymentFile)) {
-    deployments = JSON.parse(fs.readFileSync(deploymentFile, "utf-8"))
+    deployments = JSON.parse(fs.readFileSync(deploymentFile, "utf-8"));
   }
 
-  const proxyAddress = deployments["IDRP"]
-  const IDRP = await hre.ethers.getContractFactory("IDRP")
-  const upgraded = await hre.upgrades.upgradeProxy(proxyAddress, IDRP)
+  const proxyAddress = deployments["IDRP"];
+  console.log("Upgrading IDRP to:", proxyAddress);
+  const IDRP = await hre.ethers.getContractFactory("IDRP");
+  // console.log("IDRP:", IDRP);
+  const upgraded = await hre.upgrades.upgradeProxy(proxyAddress, IDRP);
+  // console.log("Upgraded:", upgraded);
+  await upgraded.waitForDeployment();
 
-  console.log("Upgraded IDRP to:", await upgraded.getAddress())
+  console.log("Upgraded IDRP to:", await upgraded.getAddress());
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error)
-    process.exit(1)
-  })
+    console.error(error);
+    process.exit(1);
+  });

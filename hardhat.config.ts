@@ -20,7 +20,11 @@ const config: HardhatUserConfig = {
       chainId: 17000,
       // url: "https://ethereum-holesky-rpc.publicnode.com",
       url: `https://eth-holesky.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
+    },
+    sepolia: {
+      chainId: 11155111,
+      url: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
     },
     polygon: {
@@ -32,6 +36,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       holesky: ETHERSCAN_API_KEY,
+      sepolia: ETHERSCAN_API_KEY,
       polygon: POLYGON_API_KEY,
     },
   },

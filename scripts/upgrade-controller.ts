@@ -32,7 +32,10 @@ async function main() {
   const IDRPController = await hre.ethers.getContractFactory("IDRPController");
   const contract = await hre.upgrades.upgradeProxy(
     deployments["IDRPController"],
-    IDRPController
+    IDRPController,
+    {
+      redeployImplementation: "always",
+    }
   );
   await contract.waitForDeployment();
 
