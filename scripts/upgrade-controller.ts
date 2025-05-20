@@ -34,7 +34,7 @@ async function main() {
     deployments["IDRPController"],
     IDRPController,
     {
-      redeployImplementation: "always",
+      // redeployImplementation: "always",
     }
   );
   await contract.waitForDeployment();
