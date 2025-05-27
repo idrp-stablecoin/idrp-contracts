@@ -1156,7 +1156,7 @@
             "label": "quorumRules",
             "offset": 0,
             "slot": "2",
-            "type": "t_mapping(t_enum(OperationType)10173,t_array(t_struct(QuorumRule)10181_storage)dyn_storage)",
+            "type": "t_mapping(t_enum(OperationType)3426,t_array(t_struct(QuorumRule)3434_storage)dyn_storage)",
             "contract": "IDRPController",
             "src": "contracts/IDRPController.sol:64"
           },
@@ -1266,11 +1266,11 @@
             "label": "bytes32[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(QuorumRule)10181_storage)dyn_storage": {
+          "t_array(t_struct(QuorumRule)3434_storage)dyn_storage": {
             "label": "struct IDRPController.QuorumRule[]",
             "numberOfBytes": "32"
           },
-          "t_enum(OperationType)10173": {
+          "t_enum(OperationType)3426": {
             "label": "enum IDRPController.OperationType",
             "members": [
               "Mint",
@@ -1286,11 +1286,11 @@
             "label": "mapping(bytes32 => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_enum(OperationType)10173,t_array(t_struct(QuorumRule)10181_storage)dyn_storage)": {
+          "t_mapping(t_enum(OperationType)3426,t_array(t_struct(QuorumRule)3434_storage)dyn_storage)": {
             "label": "mapping(enum IDRPController.OperationType => struct IDRPController.QuorumRule[])",
             "numberOfBytes": "32"
           },
-          "t_struct(QuorumRule)10181_storage": {
+          "t_struct(QuorumRule)3434_storage": {
             "label": "struct IDRPController.QuorumRule",
             "members": [
               {
@@ -1669,6 +1669,237 @@
               "src": "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol:40",
               "offset": 0,
               "slot": "4"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "a64648f15ee78ac92c61275c5a523e539029e41d495f253c738a2ecbacbd4ddf": {
+      "address": "0xEC7fCa6CccA1f755Af5047449fAED9eE39C3D6b1",
+      "txHash": "0xeaa982f911b0c4613d8741a45c2163237d467aeea69b62bfc529143718efadd9",
+      "layout": {
+        "solcVersion": "0.8.28",
+        "storage": [
+          {
+            "label": "idrpToken",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address",
+            "contract": "IDRPController",
+            "src": "contracts/IDRPController.sol:43"
+          },
+          {
+            "label": "nonce",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256",
+            "contract": "IDRPController",
+            "src": "contracts/IDRPController.sol:44"
+          },
+          {
+            "label": "quorumRules",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_enum(OperationType)3426,t_array(t_struct(QuorumRule)3434_storage)dyn_storage)",
+            "contract": "IDRPController",
+            "src": "contracts/IDRPController.sol:64"
+          },
+          {
+            "label": "usedSignatures",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_mapping(t_bytes32,t_bool)",
+            "contract": "IDRPController",
+            "src": "contracts/IDRPController.sol:67"
+          },
+          {
+            "label": "DOMAIN_SEPARATOR",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_bytes32",
+            "contract": "IDRPController",
+            "src": "contracts/IDRPController.sol:70"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)24_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AccessControlStorage)34_storage": {
+            "label": "struct AccessControlUpgradeable.AccessControlStorage",
+            "members": [
+              {
+                "label": "_roles",
+                "type": "t_mapping(t_bytes32,t_struct(RoleData)24_storage)",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(InitializableStorage)211_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)151_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)24_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "hasRole",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(QuorumRule)3434_storage)dyn_storage": {
+            "label": "struct IDRPController.QuorumRule[]",
+            "numberOfBytes": "32"
+          },
+          "t_enum(OperationType)3426": {
+            "label": "enum IDRPController.OperationType",
+            "members": [
+              "Mint",
+              "Burn",
+              "Freeze",
+              "Unfreeze",
+              "Pause",
+              "Unpause"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_bytes32,t_bool)": {
+            "label": "mapping(bytes32 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_enum(OperationType)3426,t_array(t_struct(QuorumRule)3434_storage)dyn_storage)": {
+            "label": "mapping(enum IDRPController.OperationType => struct IDRPController.QuorumRule[])",
+            "numberOfBytes": "32"
+          },
+          "t_struct(QuorumRule)3434_storage": {
+            "label": "struct IDRPController.QuorumRule",
+            "members": [
+              {
+                "label": "minAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "maxAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "requiredRoles",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.AccessControl": [
+            {
+              "contract": "AccessControlUpgradeable",
+              "label": "_roles",
+              "type": "t_mapping(t_bytes32,t_struct(RoleData)24_storage)",
+              "src": "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol:61",
+              "offset": 0,
+              "slot": "0"
             }
           ],
           "erc7201:openzeppelin.storage.Initializable": [
