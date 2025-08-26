@@ -38,9 +38,24 @@ The IDRP contract is built using OpenZeppelin’s upgradeable contracts and cons
 
 Since this contract is upgradeable, it should be deployed using a proxy pattern. You can use OpenZeppelin's Upgrades Plugin to deploy and manage upgrades.
 
+### IDRP
+
 ```sh
 npx hardhat run scripts/deploy.ts --network <your-network>
 ```
+
+### IDRP Controller
+
+```sh
+npx hardhat run scripts/deploy-controller.ts --network <your-network>
+```
+
+### Initial Setup
+- run controller setup script after deploying both contracts
+    ```sh
+    npx hardhat run scripts/setup-controller.ts --network <your-network>
+    ```
+- hit `setDepository` on IDRP contract, to set depository address.
 
 ## Security Considerations
 
