@@ -8,10 +8,21 @@ import "hardhat-dependency-compiler";
 const IDRP_DEPLOYER_PRIVATE_KEY = vars.get("IDRP_DEPLOYER_PRIVATE_KEY");
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
+const INFURA_API_KEY = vars.get("INFURA_API_KEY");
 const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
+const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.28",
+  solidity: {
+    version: "0.8.28",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+      // viaIR: true,
+    }
+  },
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
@@ -32,19 +43,57 @@ const config: HardhatUserConfig = {
       url: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
     },
+    mainnet: {
+      chainId: 1,
+      // url: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+      url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
+      // 
+      // gasPrice: "auto", // Let hardhat estimate the gas price
+      // gasMultiplier: 1.5, // Add 50% buffer to estimated gas
+      // timeout: 1800000, // 30 minutes
+    },
+    kairos: {
+      chainId: 1001,
+      url: "https://rpc.ankr.com/kaia_testnet",
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
+      gasPrice: 250000000000,
+    }
   },
   etherscan: {
     apiKey: {
       holesky: ETHERSCAN_API_KEY,
       sepolia: ETHERSCAN_API_KEY,
       polygon: POLYGON_API_KEY,
+      mainnet: ETHERSCAN_API_KEY,
+      kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
     },
+    customChains: [
+      {
+        chainId: 1001,
+        network: "kairos",
+        urls: {
+          apiURL: "https://kairos-api.kaiascan.io/hardhat-verify",
+          browserURL: "https://kairos.kaiascan.io",
+        }
+      }
+    ]
   },
   dependencyCompiler: {
     paths: [
       "@safe-global/safe-contracts/contracts/proxies/SafeProxyFactory.sol",
     ],
   },
+  gasReporter: { 
+    enabled: true, 
+    currency: 'USD', 
+    // gasPrice: 5, 
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY, 
+    excludeContracts: [], 
+    src: './contracts', 
+    // etherscan: vars.get("ETHERSCAN_API_KEY")
+  },
+  
 };
 
 export default config;
