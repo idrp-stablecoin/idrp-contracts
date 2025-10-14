@@ -1,19 +1,6 @@
 # IDRP Stablecoin
 
-IDRP is a stablecoin pegged to the Indonesian Rupiah (IDR). It is an ERC-20 token with additional features such as upgradability, pausing, freezing, and minting/burning capabilities.
-
-## Features
-
-- **ERC-20 Compliant**: Fully compatible with Ethereum-based wallets and smart contracts.
-- **Upgradeable**: Uses OpenZeppelin's UUPS upgrade pattern to support future enhancements.
-- **Minting & Burning**: Only authorized accounts (`MINTER_ROLE`) can mint and burn tokens.
-- **Pausing**: Transactions can be paused by accounts with the `PAUSER_ROLE`.
-- **Freezing**: Specific accounts can be frozen to prevent transfers.
-- **Permit (EIP-2612)**: Supports gasless approvals via signatures.
-
-## Smart Contract Overview
-
-The IDRP contract is built using OpenZeppelin’s upgradeable contracts and consists of:
+IDRP is a stablecoin pegged to the Indonesian Rupiah (IDR). It is an ERC-20 token with additional features such as upgradability, pausing, freezing, and minting/burning capabilities. The IDRP contract is built using OpenZeppelin’s upgradeable contracts and consists of:
 
 ### Roles
 
@@ -33,6 +20,15 @@ The IDRP contract is built using OpenZeppelin’s upgradeable contracts and cons
 - `unfreeze(address account)`: Unfreezes a specified account.
 - `transfer(address to, uint256 amount)`: Transfers tokens with additional security checks.
 - `transferFrom(address from, address to, uint256 amount)`: Transfers tokens on behalf of another account.
+
+## Smart Contract Architecture
+
+The documentation for the smart contract architecture can be read [here](./docs/arch/3.SMART_CONTRACT_ARCH.md).
+
+## Smart Contract Bussiness Process
+
+The documentation for the smart contract bussiness process can be read [here](./docs/bussiness-proccess/SMART_CONTRACT_BUSSINESS_PROCESS.md).
+
 
 ## Deployment
 
