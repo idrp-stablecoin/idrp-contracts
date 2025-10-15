@@ -33,15 +33,17 @@ The onramp process enables users to convert fiat currency (IDR) to IDRP tokens.
 #### Detailed Minting Process:
 1. User logs into the platform and requests to mint IDRP tokens
 2. System verifies user's KYC/KYB status
-3. User initiates bank transfer to the designated IDRP account at BNI
-4. BNI API confirms the transfer receipt to the platform
-5. System performs AML check on the transaction
-6. If AML check passes:
-   - Admin approves minting request
-   - Smart contract controller calls mint function
-   - Tokens are minted to user's wallet address
-7. Transaction details are recorded in the database
-8. User receives notification of completed minting
+3. System performs AML check on the transaction
+4. If AML check passes:
+   - App creates transaction record and displays bank transfer instructions
+   - User receives email with transaction details
+   - User makes bank transfer to the designated IDRP account
+   - App notifies Admin of pending transaction
+   - Admin verifies the transfer receipt
+   - Admin calls `executeOperation` with mint type on the IDRPController
+   - IDRPController mints tokens to user's wallet address
+5. Transaction details are recorded in the database
+6. User receives notification of completed minting
 
 ### 3.2 Offramp Process (Burning)
 
@@ -52,15 +54,17 @@ The offramp process allows users to convert IDRP tokens back to fiat currency (I
 #### Detailed Burning Process:
 1. User logs into the platform and requests to burn IDRP tokens
 2. System verifies user's identity and bank account details
-3. User approves token spending by the controller contract
-4. System performs AML check on the transaction
-5. If AML check passes:
-   - Admin approves burning request
-   - Smart contract controller calls burn function
-   - Tokens are burned from user's wallet
-6. System initiates bank transfer to user's registered bank account through BNI API
-7. Transaction details are recorded in the database
-8. User receives notification of completed burning and fiat transfer
+3. System performs AML check on the transaction
+4. If AML check passes:
+   - App creates transaction record and displays transaction instructions
+   - User receives email with transaction details
+   - User approves the IDRPController contract to spend their IDRP tokens
+   - App notifies Admin of pending transaction
+   - Admin calls `executeOperation` with burn type on the IDRPController
+   - IDRPController burns tokens from the user's wallet
+   - Admin arranges bank transfer to user's registered bank account
+5. Transaction details are recorded in the database
+6. User receives notification of completed burning and fiat transfer
 
 ### 3.3 Pause/Unpause Operations
 
