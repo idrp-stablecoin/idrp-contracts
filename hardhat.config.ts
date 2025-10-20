@@ -21,7 +21,7 @@ const config: HardhatUserConfig = {
         runs: 200,
       },
       // viaIR: true,
-    }
+    },
   },
   networks: {
     hardhat: {
@@ -48,7 +48,7 @@ const config: HardhatUserConfig = {
       // url: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
-      // 
+      //
       // gasPrice: "auto", // Let hardhat estimate the gas price
       // gasMultiplier: 1.5, // Add 50% buffer to estimated gas
       // timeout: 1800000, // 30 minutes
@@ -58,7 +58,7 @@ const config: HardhatUserConfig = {
       url: "https://rpc.ankr.com/kaia_testnet",
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
       gasPrice: 250000000000,
-    }
+    },
   },
   etherscan: {
     apiKey: {
@@ -75,25 +75,25 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://kairos-api.kaiascan.io/hardhat-verify",
           browserURL: "https://kairos.kaiascan.io",
-        }
-      }
-    ]
+        },
+      },
+    ],
   },
   dependencyCompiler: {
     paths: [
       "@safe-global/safe-contracts/contracts/proxies/SafeProxyFactory.sol",
     ],
   },
-  gasReporter: { 
-    enabled: true, 
-    currency: 'USD', 
-    // gasPrice: 5, 
-    coinmarketcap: process.env.COINMARKETCAP_API_KEY, 
-    excludeContracts: [], 
-    src: './contracts', 
+  gasReporter: {
+    enabled: true,
+    currency: "USD",
+    token: "BNB",
+    gasPrice: 2, // gwei
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+    excludeContracts: [],
+    src: "./contracts",
     // etherscan: vars.get("ETHERSCAN_API_KEY")
   },
-  
 };
 
 export default config;
