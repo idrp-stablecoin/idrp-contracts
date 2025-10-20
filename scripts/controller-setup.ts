@@ -70,6 +70,9 @@ async function main() {
   await idrp
     .connect(deployer)
     .grantRole(await idrp.FREEZER_ROLE(), await controller.getAddress());
+  await idrp
+    .connect(deployer)
+    .grantRole(await idrp.PAUSER_ROLE(), await controller.getAddress());
   console.log("Controller granted roles on IDRP token");
 
   // Set quorum rules
