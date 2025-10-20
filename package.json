@@ -11,12 +11,15 @@
   "description": "",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/truffle-upgrades": "^1.21.0",
+    "bs58check": "^4.0.0",
     "hardhat": "^2.22.19"
   },
   "dependencies": {
     "@openzeppelin/contracts-upgradeable": "^5.3.0",
     "@openzeppelin/hardhat-upgrades": "^3.9.0",
     "@safe-global/safe-contracts": "^1.4.1-2",
+    "dotenv": "^17.2.3",
     "hardhat-dependency-compiler": "^1.2.1"
   },
   "overrides": {
