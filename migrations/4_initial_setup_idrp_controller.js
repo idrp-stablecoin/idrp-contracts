@@ -34,6 +34,13 @@ module.exports = async function (deployer, network, accounts) {
     const MANAGER_ROLE = await idrpController.MANAGER_ROLE();
     const DIRECTOR_ROLE = await idrpController.DIRECTOR_ROLE();
     const COMMISSIONER_ROLE = await idrpController.COMMISSIONER_ROLE();
+    console.log("[4_setup_idrp_controller] Roles:", {
+      ADMIN_ROLE,
+      OFFICER_ROLE,
+      MANAGER_ROLE,
+      DIRECTOR_ROLE,
+      COMMISSIONER_ROLE,
+    });
     await idrpController.grantRole(ADMIN_ROLE, adminAddress, {
       from: superAdmin,
     });
@@ -71,34 +78,38 @@ module.exports = async function (deployer, network, accounts) {
     );
 
     // Set quorum rules
+    // await idrpController.setQuorumRules(
+    //   OPERATION.MINT, // uint8
+    //   [[0, ONE_HUNDRED_MILLION, [OFFICER_ROLE]]], // Array params
+    //   { from: superAdmin }
+    // );
+    console.log("passed");
     await idrpController.setQuorumRules(
       OPERATION.MINT,
       [
-        {
-          minAmount: 0,
-          maxAmount: ONE_HUNDRED_MILLION,
-          requiredRoles: [OFFICER_ROLE],
-        },
-        {
-          minAmount: ONE_HUNDRED_MILLION,
-          maxAmount: FIVE_HUNDRED_MILLION,
-          requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
-        },
-        {
-          minAmount: FIVE_HUNDRED_MILLION,
-          maxAmount: ONE_BILLION,
-          requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
-        },
-        {
-          minAmount: ONE_BILLION,
-          maxAmount: MaxUint256,
-          requiredRoles: [
-            OFFICER_ROLE,
-            MANAGER_ROLE,
-            DIRECTOR_ROLE,
-            COMMISSIONER_ROLE,
-          ],
-        },
+        // 0 - 100M: Officer
+        [0, ONE_HUNDRED_MILLION, [OFFICER_ROLE]],
+
+        // 100M - 500M: Officer + Manager
+        [
+          ONE_HUNDRED_MILLION,
+          FIVE_HUNDRED_MILLION,
+          [OFFICER_ROLE, MANAGER_ROLE],
+        ],
+
+        // 500M - 1B: Officer + Manager + Director
+        [
+          FIVE_HUNDRED_MILLION,
+          ONE_BILLION,
+          [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
+        ],
+
+        // 1B - MaxUint: Officer + Manager + Director + Commissioner
+        [
+          ONE_BILLION,
+          MaxUint256,
+          [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE, COMMISSIONER_ROLE],
+        ],
       ],
       { from: superAdmin }
     );
@@ -108,31 +119,29 @@ module.exports = async function (deployer, network, accounts) {
     await idrpController.setQuorumRules(
       OPERATION.BURN,
       [
-        {
-          minAmount: 0,
-          maxAmount: ONE_HUNDRED_MILLION,
-          requiredRoles: [OFFICER_ROLE],
-        },
-        {
-          minAmount: ONE_HUNDRED_MILLION,
-          maxAmount: FIVE_HUNDRED_MILLION,
-          requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
-        },
-        {
-          minAmount: FIVE_HUNDRED_MILLION,
-          maxAmount: ONE_BILLION,
-          requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
-        },
-        {
-          minAmount: ONE_BILLION,
-          maxAmount: TEN_BILLION,
-          requiredRoles: [
-            OFFICER_ROLE,
-            MANAGER_ROLE,
-            DIRECTOR_ROLE,
-            COMMISSIONER_ROLE,
-          ],
-        },
+        // 0 - 100M: Officer
+        [0, ONE_HUNDRED_MILLION, [OFFICER_ROLE]],
+
+        // 100M - 500M: Officer + Manager
+        [
+          ONE_HUNDRED_MILLION,
+          FIVE_HUNDRED_MILLION,
+          [OFFICER_ROLE, MANAGER_ROLE],
+        ],
+
+        // 500M - 1B: Officer + Manager + Director
+        [
+          FIVE_HUNDRED_MILLION,
+          ONE_BILLION,
+          [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
+        ],
+
+        // 1B - MaxUint: Officer + Manager + Director + Commissioner
+        [
+          ONE_BILLION,
+          MaxUint256,
+          [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE, COMMISSIONER_ROLE],
+        ],
       ],
       { from: superAdmin }
     );
@@ -142,31 +151,21 @@ module.exports = async function (deployer, network, accounts) {
     await idrpController.setQuorumRules(
       OPERATION.FREEZE,
       [
-        {
-          minAmount: 0,
-          maxAmount: FIVE_HUNDRED_MILLION,
-          requiredRoles: [OFFICER_ROLE],
-        },
-        {
-          minAmount: FIVE_HUNDRED_MILLION,
-          maxAmount: ONE_BILLION,
-          requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
-        },
-        {
-          minAmount: ONE_BILLION,
-          maxAmount: TEN_BILLION,
-          requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
-        },
-        {
-          minAmount: TEN_BILLION,
-          maxAmount: MaxUint256,
-          requiredRoles: [
-            OFFICER_ROLE,
-            MANAGER_ROLE,
-            DIRECTOR_ROLE,
-            COMMISSIONER_ROLE,
-          ],
-        },
+        // 0 - 500M: Officer
+        [0, FIVE_HUNDRED_MILLION, [OFFICER_ROLE]],
+
+        // 500M - 1B: Officer + Manager
+        [FIVE_HUNDRED_MILLION, ONE_BILLION, [OFFICER_ROLE, MANAGER_ROLE]],
+
+        // 1B - 10B: Officer + Manager + Director
+        [ONE_BILLION, TEN_BILLION, [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE]],
+
+        // 10B - MaxUint: Officer + Manager + Director + Commissioner
+        [
+          TEN_BILLION,
+          MaxUint256,
+          [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE, COMMISSIONER_ROLE],
+        ],
       ],
       { from: superAdmin }
     );
@@ -176,31 +175,21 @@ module.exports = async function (deployer, network, accounts) {
     await idrpController.setQuorumRules(
       OPERATION.UNFREEZE,
       [
-        {
-          minAmount: 0,
-          maxAmount: FIVE_HUNDRED_MILLION,
-          requiredRoles: [OFFICER_ROLE],
-        },
-        {
-          minAmount: FIVE_HUNDRED_MILLION,
-          maxAmount: ONE_BILLION,
-          requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
-        },
-        {
-          minAmount: ONE_BILLION,
-          maxAmount: TEN_BILLION,
-          requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
-        },
-        {
-          minAmount: TEN_BILLION,
-          maxAmount: MaxUint256,
-          requiredRoles: [
-            OFFICER_ROLE,
-            MANAGER_ROLE,
-            DIRECTOR_ROLE,
-            COMMISSIONER_ROLE,
-          ],
-        },
+        // 0 - 500M: Officer
+        [0, FIVE_HUNDRED_MILLION, [OFFICER_ROLE]],
+
+        // 500M - 1B: Officer + Manager
+        [FIVE_HUNDRED_MILLION, ONE_BILLION, [OFFICER_ROLE, MANAGER_ROLE]],
+
+        // 1B - 10B: Officer + Manager + Director
+        [ONE_BILLION, TEN_BILLION, [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE]],
+
+        // 10B - MaxUint: Officer + Manager + Director + Commissioner
+        [
+          TEN_BILLION,
+          MaxUint256,
+          [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE, COMMISSIONER_ROLE],
+        ],
       ],
       {
         from: superAdmin,
@@ -212,11 +201,8 @@ module.exports = async function (deployer, network, accounts) {
     await idrpController.setQuorumRules(
       OPERATION.PAUSE,
       [
-        {
-          minAmount: 0,
-          maxAmount: MaxUint256,
-          requiredRoles: [DIRECTOR_ROLE, MANAGER_ROLE],
-        },
+        // Any amount: Director + Manager
+        [0, MaxUint256, [DIRECTOR_ROLE, MANAGER_ROLE]],
       ],
       {
         from: superAdmin,
@@ -228,16 +214,12 @@ module.exports = async function (deployer, network, accounts) {
     await idrpController.setQuorumRules(
       OPERATION.UNPAUSE,
       [
-        {
-          minAmount: 0,
-          maxAmount: MaxUint256,
-          requiredRoles: [
-            OFFICER_ROLE,
-            MANAGER_ROLE,
-            DIRECTOR_ROLE,
-            COMMISSIONER_ROLE,
-          ],
-        },
+        // Any amount: Officer + Manager + Director + Commissioner
+        [
+          0,
+          MaxUint256,
+          [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE, COMMISSIONER_ROLE],
+        ],
       ],
       {
         from: superAdmin,
@@ -252,5 +234,6 @@ module.exports = async function (deployer, network, accounts) {
     );
   } catch (error) {
     console.error("[4_setup_idrp_controller] setup error", error);
+    console.error(error.stack);
   }
 };

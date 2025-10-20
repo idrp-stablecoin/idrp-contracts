@@ -12108,10 +12108,10 @@
     "*": {
       "events": {},
       "links": {},
-      "address": "413110499bf6fe6378db1cdb863101c69a459777b5",
-      "transactionHash": "c41d1316f4fec9fbf0429a8c0e09d1f32f87d5f673cd89710f241e8f89a9a3ca"
+      "address": "4160a99ecf7ae5d5065e31f878324d3454a8466d88",
+      "transactionHash": "8a8dd4cf68ce371c0b3011fd42150d788a42f7eabe4f69b0707b0e20b98a6ba7"
     }
   },
   "schemaVersion": "2.0.1",
-  "updatedAt": "2025-10-20T05:34:09.957Z"
+  "updatedAt": "2025-10-20T12:14:58.347Z"
 }

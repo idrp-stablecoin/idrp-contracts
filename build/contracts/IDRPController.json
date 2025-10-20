@@ -23637,10 +23637,10 @@
     "*": {
       "events": {},
       "links": {},
-      "address": "41986cdde87775b15abad165fde97d4e7262cb2ab5",
-      "transactionHash": "6c4ea0dede5540f46904d3fb48d24633aa1a9a6b0f21d83e86240c970d942aae"
+      "address": "41b0fecb9981c8aa8fa949fefa00cf1c346553ad0a",
+      "transactionHash": "4ab97484a66e35d549e44f12cd466ccd13bce6edec6598941b3bbd03f9b97881"
     }
   },
   "schemaVersion": "2.0.1",
-  "updatedAt": "2025-10-20T05:34:09.961Z"
+  "updatedAt": "2025-10-20T12:14:59.136Z"
 }
