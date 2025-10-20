@@ -24,7 +24,10 @@ function tronAddressToEthFormatAddress(address) {
   return "0x" + base16Address.slice(2);
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 module.exports = {
   base58Tobase16,
   tronAddressToEthFormatAddress,
+  sleep,
 };

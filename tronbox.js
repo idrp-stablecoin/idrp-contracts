@@ -14,7 +14,7 @@ module.exports = {
     shasta: {
       // Obtain test coin at https://shasta.tronex.io/
       privateKey: process.env.PRIVATE_KEY_SHASTA,
-      userFeePercentage: 50,
+      // userFeePercentage: 50,
       feeLimit: 1000 * 1e6,
       fullHost: "https://api.shasta.trongrid.io",
       network_id: "2",

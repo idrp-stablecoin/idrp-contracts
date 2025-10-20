@@ -1,9 +1,16 @@
+const { sleep } = require("./utils/misc");
+
 const IDRP = artifacts.require("IDRP");
 const IDRPController = artifacts.require("IDRPController");
 
 module.exports = async function (deployer, network, accounts) {
   try {
     const superAdmin = accounts;
+
+    // Sleep
+    console.log("[3_setup_idrp] Sleeping for 1 seconds...");
+    await sleep(1000);
+    console.log("[3_setup_idrp] Awake now, proceeding...");
 
     const idrp = await IDRP.deployed();
     const idrpController = await IDRPController.deployed();
@@ -42,21 +49,21 @@ module.exports = async function (deployer, network, accounts) {
       from: superAdmin,
     });
     console.log(
-      "[5_setup_idrp_roles] Granted PAUSER_ROLE to IDRPController at",
+      "[3_setup_idrp] Granted PAUSER_ROLE to IDRPController at",
       idrpControllerAddress
     );
     await idrp.grantRole(MINTER_ROLE, idrpControllerAddress, {
       from: superAdmin,
     });
     console.log(
-      "[5_setup_idrp_roles] Granted MINTER_ROLE to IDRPController at",
+      "[3_setup_idrp] Granted MINTER_ROLE to IDRPController at",
       idrpControllerAddress
     );
     await idrp.grantRole(FREEZER_ROLE, idrpControllerAddress, {
       from: superAdmin,
     });
     console.log(
-      "[5_setup_idrp_roles] Granted FREEZER_ROLE to IDRPController at",
+      "[3_setup_idrp] Granted FREEZER_ROLE to IDRPController at",
       idrpControllerAddress
     );
 

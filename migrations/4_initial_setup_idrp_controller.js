@@ -11,6 +11,7 @@ const {
   TEN_BILLION,
   OPERATION,
 } = require("./utils/constants");
+const { sleep } = require("./utils/misc");
 const IDRPController = artifacts.require("IDRPController");
 
 module.exports = async function (deployer, network, accounts) {
@@ -25,6 +26,11 @@ module.exports = async function (deployer, network, accounts) {
       commissionerAddress,
       adminAddress,
     });
+
+    // Sleep
+    console.log("[4_setup_idrp_controller] Sleeping for 1 seconds...");
+    await sleep(1000);
+    console.log("[4_setup_idrp_controller] Awake now, proceeding...");
 
     const idrpController = await IDRPController.deployed();
 

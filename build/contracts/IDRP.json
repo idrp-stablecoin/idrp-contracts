@@ -12105,6 +12105,12 @@
     "version": "0.8.22+commit.5ed3e10f.Emscripten.clang"
   },
   "networks": {
+    "2": {
+      "events": {},
+      "links": {},
+      "address": "41fbe3e3c3094c9c367cc744463c2670e5c9585171",
+      "transactionHash": "ad631c7c40fabf1d21242dd9a54521ab4e9a3f639eac8cbe5fe582b444aef012"
+    },
     "*": {
       "events": {},
       "links": {},
@@ -12113,5 +12119,5 @@
     }
   },
   "schemaVersion": "2.0.1",
-  "updatedAt": "2025-10-20T12:14:58.347Z"
+  "updatedAt": "2025-10-20T12:38:02.623Z"
 }
