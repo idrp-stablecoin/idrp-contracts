@@ -6,6 +6,7 @@ import "hardhat-dependency-compiler";
 
 // const PRIVATE_KEY = vars.get("PRIVATE_KEY")
 const IDRP_DEPLOYER_PRIVATE_KEY = vars.get("IDRP_DEPLOYER_PRIVATE_KEY");
+const IDRP_ADMIN_PRIVATE_KEY = vars.get("IDRP_ADMIN_PRIVATE_KEY");
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
@@ -31,24 +32,23 @@ const config: HardhatUserConfig = {
       chainId: 17000,
       // url: "https://ethereum-holesky-rpc.publicnode.com",
       url: `https://eth-holesky.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-      accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
     },
     sepolia: {
       chainId: 11155111,
       url: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-      accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
     },
     polygon: {
       chainId: 137,
       url: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-      accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
     },
     mainnet: {
       chainId: 1,
       // url: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
-      accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
-      //
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       // gasPrice: "auto", // Let hardhat estimate the gas price
       // gasMultiplier: 1.5, // Add 50% buffer to estimated gas
       // timeout: 1800000, // 30 minutes
@@ -56,8 +56,15 @@ const config: HardhatUserConfig = {
     kairos: {
       chainId: 1001,
       url: "https://rpc.ankr.com/kaia_testnet",
-      accounts: [IDRP_DEPLOYER_PRIVATE_KEY],
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       gasPrice: 250000000000,
+    },
+    bsc: {
+      chainId: 56,
+      // url: `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+      url: `https://bsc-mainnet.infura.io/v3/${INFURA_API_KEY}`,
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
+      gasMultiplier: 1.1, // Add 10% buffer to estimated gas
     },
   },
   etherscan: {
@@ -67,6 +74,7 @@ const config: HardhatUserConfig = {
       polygon: POLYGON_API_KEY,
       mainnet: ETHERSCAN_API_KEY,
       kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
+      bsc: ETHERSCAN_API_KEY,
     },
     customChains: [
       {
@@ -87,8 +95,7 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: true,
     currency: "USD",
-    token: "BNB",
-    gasPrice: 2, // gwei
+    // gasPrice: 5,
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
     excludeContracts: [],
     src: "./contracts",
