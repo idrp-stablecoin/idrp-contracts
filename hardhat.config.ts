@@ -3,6 +3,7 @@ import { vars } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
+import "@nomicfoundation/hardhat-verify";
 
 // const PRIVATE_KEY = vars.get("PRIVATE_KEY")
 const IDRP_DEPLOYER_PRIVATE_KEY = vars.get("IDRP_DEPLOYER_PRIVATE_KEY");
@@ -68,14 +69,15 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: {
-      holesky: ETHERSCAN_API_KEY,
-      sepolia: ETHERSCAN_API_KEY,
-      polygon: POLYGON_API_KEY,
-      mainnet: ETHERSCAN_API_KEY,
-      kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
-      bsc: ETHERSCAN_API_KEY,
-    },
+    // apiKey: {
+    //   holesky: ETHERSCAN_API_KEY,
+    //   sepolia: ETHERSCAN_API_KEY,
+    //   polygon: ETHERSCAN_API_KEY,
+    //   mainnet: ETHERSCAN_API_KEY,
+    //   kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
+    //   bsc: ETHERSCAN_API_KEY,
+    // },
+    apiKey: ETHERSCAN_API_KEY,
     customChains: [
       {
         chainId: 1001,
@@ -83,6 +85,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://kairos-api.kaiascan.io/hardhat-verify",
           browserURL: "https://kairos.kaiascan.io",
+        },
+      },
+      {
+        chainId: 56,
+        network: "bsc",
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api",
+          browserURL: "https://bscscan.com",
         },
       },
     ],
@@ -95,7 +105,8 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: true,
     currency: "USD",
-    // gasPrice: 5,
+    token: "ETH",
+    gasPrice: 0.1,
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
     excludeContracts: [],
     src: "./contracts",
