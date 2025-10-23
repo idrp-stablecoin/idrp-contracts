@@ -3,7 +3,8 @@ import { vars } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
-import "@nomicfoundation/hardhat-verify";
+// import "@nomicfoundation/hardhat-verify";
+// import hardhatVerify from "@nomicfoundation/hardhat-verify";
 
 // const PRIVATE_KEY = vars.get("PRIVATE_KEY")
 const IDRP_DEPLOYER_PRIVATE_KEY = vars.get("IDRP_DEPLOYER_PRIVATE_KEY");
@@ -49,6 +50,7 @@ const config: HardhatUserConfig = {
       chainId: 1,
       // url: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+      // url: "https://eth.llamarpc.com",
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       // gasPrice: "auto", // Let hardhat estimate the gas price
       // gasMultiplier: 1.5, // Add 50% buffer to estimated gas
@@ -65,7 +67,7 @@ const config: HardhatUserConfig = {
       // url: `https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       url: `https://bsc-mainnet.infura.io/v3/${INFURA_API_KEY}`,
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
-      gasMultiplier: 1.1, // Add 10% buffer to estimated gas
+      // gasMultiplier: 1.1, // Add 10% buffer to estimated gas
     },
   },
   etherscan: {
@@ -91,7 +93,7 @@ const config: HardhatUserConfig = {
         chainId: 56,
         network: "bsc",
         urls: {
-          apiURL: "https://api.etherscan.io/v2/api",
+          apiURL: "https://api.etherscan.io/v2/api?chainid=56",
           browserURL: "https://bscscan.com",
         },
       },
@@ -111,6 +113,11 @@ const config: HardhatUserConfig = {
     excludeContracts: [],
     src: "./contracts",
     // etherscan: vars.get("ETHERSCAN_API_KEY")
+  },
+  sourcify: {
+    // Disabled by default
+    // Doesn't need an API key
+    enabled: true,
   },
 };
 

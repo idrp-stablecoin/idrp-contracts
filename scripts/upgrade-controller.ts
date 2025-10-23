@@ -6,9 +6,8 @@ async function main() {
   const name = "IDRPController";
   const networkId = hre.network.config.chainId ?? 8545;
   const signers = await hre.ethers.getSigners();
-  const deployer = signers[0];
-
-  console.log("deployer", deployer.address);
+  const admin = signers[1];
+  console.log("admin", admin.address);
 
   const deploymentDir = path.join(
     hre.config.paths.root || process.cwd(),
@@ -29,13 +28,16 @@ async function main() {
 
   // Upgrade IDRPController
   console.log("Upgrading IDRPController...");
-  const IDRPController = await hre.ethers.getContractFactory("IDRPController");
+  const IDRPController = await hre.ethers.getContractFactory(
+    "IDRPController",
+    admin
+  );
   const contract = await hre.upgrades.upgradeProxy(
     deployments["IDRPController"],
-    IDRPController,
-    {
-      // redeployImplementation: "always",
-    }
+    IDRPController
+    // {
+    // redeployImplementation: "always",
+    // }
   );
   await contract.waitForDeployment();
 
