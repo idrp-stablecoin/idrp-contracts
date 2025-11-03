@@ -1,14 +1,17 @@
 import fs from "fs";
 import path from "path";
 import hre from "hardhat";
+import { ADMIN_ADDRESS } from "./utils/constants";
 
 async function main() {
   const name = "IDRPController";
   const networkId = hre.network.config.chainId ?? 8545;
   const signers = await hre.ethers.getSigners();
   const deployer = signers[0];
+  const adminAddress = ADMIN_ADDRESS;
 
   console.log("deployer", deployer.address);
+  console.log("adminAddress", adminAddress);
 
   const deploymentDir = path.join(
     hre.config.paths.root || process.cwd(),
@@ -35,13 +38,13 @@ async function main() {
 
   console.log(`Deploying to network: ${networkId}`);
 
+  console.log("Existing deployments:", deployments);
+
   // Deploy contracts
   console.log("Deploying IDRPController...");
-  // const IDRPController = await hre.ethers.getContractFactory("IDRPController")
-  // const contract = await IDRPController.deploy(deployments["IDRP"], deployer.address)
   const contract = await hre.upgrades.deployProxy(
     await hre.ethers.getContractFactory("IDRPController"),
-    [deployments["IDRP"], deployer.address]
+    [deployments["IDRP"], adminAddress]
   );
   await contract.waitForDeployment();
   const contractAddress = await contract.getAddress();

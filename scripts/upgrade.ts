@@ -8,6 +8,9 @@ async function main() {
     hre.config.paths.root || process.cwd(),
     "./deployment"
   );
+  const signers = await hre.ethers.getSigners();
+  const admin = signers[1];
+  console.log("admin", admin.address);
 
   if (!fs.existsSync(deploymentDir)) {
     fs.mkdirSync(deploymentDir, { recursive: true });
@@ -23,7 +26,7 @@ async function main() {
 
   const proxyAddress = deployments["IDRP"];
   console.log("Upgrading IDRP to:", proxyAddress);
-  const IDRP = await hre.ethers.getContractFactory("IDRP");
+  const IDRP = await hre.ethers.getContractFactory("IDRP", admin);
   // console.log("IDRP:", IDRP);
   const upgraded = await hre.upgrades.upgradeProxy(proxyAddress, IDRP);
   // console.log("Upgraded:", upgraded);

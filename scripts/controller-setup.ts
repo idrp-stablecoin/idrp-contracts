@@ -2,26 +2,29 @@ import fs from "fs";
 import path from "path";
 import { ethers } from "hardhat";
 import hre from "hardhat";
+import {
+  ADMIN_ADDRESS,
+  COMMISSIONER_ADDRESS,
+  DIRECTOR_ADDRESS,
+  MANAGER_ADDRESS,
+  OFFICER_ADDRESS,
+} from "./utils/constants";
 
 async function main() {
   const networkId = hre.network.config.chainId ?? 8545;
   const signers = await ethers.getSigners();
-  const deployer = signers[0];
-  console.log("deployer", deployer.address);
+  const admin = signers[1];
 
-  const [
+  const [officerAddress, managerAddress, directorAddress, commissionerAddress] =
+    [OFFICER_ADDRESS, MANAGER_ADDRESS, DIRECTOR_ADDRESS, COMMISSIONER_ADDRESS];
+
+  console.log("admin", admin.address);
+  console.log("approver", {
     officerAddress,
     managerAddress,
     directorAddress,
     commissionerAddress,
-    adminAddress,
-  ] = [
-    "0x99A0AD5DF1651D8812B0b4Ca5102ad060C4DC2d3",
-    "0xf712A68ff897cdcdD7a0b68c1DE6886F1F8eD761",
-    "0x5B2A48685a89458ECbaB3AEC56923e128f441995",
-    "0xb9E8412a3b35A5A75b76E679d8791EF2C75984Ed",
-    "0x0FC4CBd7f60E0BE5FeaCFAB6B8818F88763f9640",
-  ];
+  });
 
   const deployments = JSON.parse(
     fs.readFileSync(
@@ -42,7 +45,7 @@ async function main() {
   console.log("IDRPController address:", await controller.getAddress());
 
   // Set up roles for IDRPController
-  const ADMIN_ROLE = ethers.keccak256(ethers.toUtf8Bytes("ADMIN_ROLE"));
+  // const ADMIN_ROLE = ethers.keccak256(ethers.toUtf8Bytes("ADMIN_ROLE"));
   const OFFICER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OFFICER_ROLE"));
   const MANAGER_ROLE = ethers.keccak256(ethers.toUtf8Bytes("MANAGER_ROLE"));
   const DIRECTOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("DIRECTOR_ROLE"));
@@ -50,28 +53,30 @@ async function main() {
     ethers.toUtf8Bytes("COMMISSIONER_ROLE")
   );
 
-  await controller.connect(deployer).grantRole(ADMIN_ROLE, adminAddress);
-  await controller.connect(deployer).grantRole(OFFICER_ROLE, officerAddress);
-  await controller.connect(deployer).grantRole(MANAGER_ROLE, managerAddress);
-  await controller.connect(deployer).grantRole(DIRECTOR_ROLE, directorAddress);
+  // Since adminAddress is already has ADMIN_ROLE (at the first of controller deployment), no need to grant it again
+  // await controller.connect(admin).grantRole(ADMIN_ROLE, adminAddress);
+  await controller.connect(admin).grantRole(OFFICER_ROLE, officerAddress);
+  await controller.connect(admin).grantRole(MANAGER_ROLE, managerAddress);
+  await controller.connect(admin).grantRole(DIRECTOR_ROLE, directorAddress);
   await controller
-    .connect(deployer)
+    .connect(admin)
     .grantRole(COMMISSIONER_ROLE, commissionerAddress);
 
   console.log("Roles assigned");
 
   // Grant controller the necessary roles on IDRP token
+  // Since adminAddress is already has DEFAULT_ADMIN_ROLE (at the first of IDRP deployment), no need to grant it again
+  // await idrp
+  //   .connect(admin)
+  //   .grantRole(await idrp.DEFAULT_ADMIN_ROLE(), adminAddress);
   await idrp
-    .connect(deployer)
-    .grantRole(await idrp.DEFAULT_ADMIN_ROLE(), adminAddress);
-  await idrp
-    .connect(deployer)
+    .connect(admin)
     .grantRole(await idrp.MINTER_ROLE(), await controller.getAddress());
   await idrp
-    .connect(deployer)
+    .connect(admin)
     .grantRole(await idrp.FREEZER_ROLE(), await controller.getAddress());
   await idrp
-    .connect(deployer)
+    .connect(admin)
     .grantRole(await idrp.PAUSER_ROLE(), await controller.getAddress());
   console.log("Controller granted roles on IDRP token");
 
@@ -82,7 +87,7 @@ async function main() {
   const TEN_BILLION = ethers.parseUnits("10000000000", 6);
 
   // Set mint/burn quorum rules
-  await controller.connect(deployer).setQuorumRules(
+  await controller.connect(admin).setQuorumRules(
     0, // OperationType.Mint
     [
       {
@@ -112,7 +117,7 @@ async function main() {
       },
     ]
   );
-  await controller.connect(deployer).setQuorumRules(
+  await controller.connect(admin).setQuorumRules(
     1, // OperationType.Burn
     [
       {
@@ -142,7 +147,7 @@ async function main() {
       },
     ]
   );
-  await controller.connect(deployer).setQuorumRules(
+  await controller.connect(admin).setQuorumRules(
     2, // OperationType.Freeze
     [
       {
@@ -173,7 +178,7 @@ async function main() {
     ]
   );
 
-  await controller.connect(deployer).setQuorumRules(
+  await controller.connect(admin).setQuorumRules(
     3, // OperationType.Unfreeze
     [
       {
@@ -204,7 +209,7 @@ async function main() {
     ]
   );
 
-  await controller.connect(deployer).setQuorumRules(
+  await controller.connect(admin).setQuorumRules(
     4, // OperationType.Pause
     [
       {
@@ -215,7 +220,7 @@ async function main() {
     ]
   );
 
-  await controller.connect(deployer).setQuorumRules(
+  await controller.connect(admin).setQuorumRules(
     5, // OperationType.Unpause
     [
       {
