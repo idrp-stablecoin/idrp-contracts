@@ -9,6 +9,7 @@ import {
   MANAGER_ADDRESS,
   OFFICER_ADDRESS,
 } from "./utils/constants";
+import { delay } from "./utils/misc";
 
 async function main() {
   const networkId = hre.network.config.chainId ?? 8545;
@@ -117,6 +118,10 @@ async function main() {
       },
     ]
   );
+
+  await delay(1200);
+  console.log("wait for 1.2 sec before do another setQuorumRules");
+
   await controller.connect(admin).setQuorumRules(
     1, // OperationType.Burn
     [
@@ -147,6 +152,10 @@ async function main() {
       },
     ]
   );
+
+  await delay(1200);
+  console.log("wait for 1.2 sec before do another setQuorumRules");
+
   await controller.connect(admin).setQuorumRules(
     2, // OperationType.Freeze
     [
@@ -177,6 +186,9 @@ async function main() {
       },
     ]
   );
+
+  await delay(1200);
+  console.log("wait for 1.2 sec before do another setQuorumRules");
 
   await controller.connect(admin).setQuorumRules(
     3, // OperationType.Unfreeze
@@ -209,6 +221,9 @@ async function main() {
     ]
   );
 
+  await delay(1200);
+  console.log("wait for 1.2 sec before do another setQuorumRules");
+
   await controller.connect(admin).setQuorumRules(
     4, // OperationType.Pause
     [
@@ -219,6 +234,9 @@ async function main() {
       },
     ]
   );
+
+  await delay(1200);
+  console.log("wait for 1.2 sec before do another setQuorumRules");
 
   await controller.connect(admin).setQuorumRules(
     5, // OperationType.Unpause

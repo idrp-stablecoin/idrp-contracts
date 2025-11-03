@@ -69,6 +69,12 @@ const config: HardhatUserConfig = {
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       // gasMultiplier: 1.1, // Add 10% buffer to estimated gas
     },
+    baseSepolia: {
+      chainId: 84532,
+      url: `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
+      gasMultiplier: 1.1, // Add 10% buffer to estimated gas
+    },
   },
   etherscan: {
     // apiKey: {
