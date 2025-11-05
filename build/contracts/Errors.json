@@ -41,23 +41,23 @@
   ],
   "bytecode": "0x60808060405234601757603a9081601d823930815050f35b600080fdfe600080fdfea26474726f6e582212203d9c80ce47614c9db0eb5cb59ec1279365cda410921a5c0064a5dbef3cae6b1964736f6c63430008160033",
   "deployedBytecode": "0x600080fdfea26474726f6e582212203d9c80ce47614c9db0eb5cb59ec1279365cda410921a5c0064a5dbef3cae6b1964736f6c63430008160033",
-  "sourceMap": "411:484:21:-:0;;;;;;;;;;;;;;;;;;;;;",
-  "deployedSourceMap": "411:484:21:-:0;;",
+  "sourceMap": "411:484:23:-:0;;;;;;;;;;;;;;;;;;;;;",
+  "deployedSourceMap": "411:484:23:-:0;;",
   "source": "// SPDX-License-Identifier: MIT\n// OpenZeppelin Contracts (last updated v5.1.0) (utils/Errors.sol)\n\npragma solidity ^0.8.20;\n\n/**\n * @dev Collection of common custom errors used in multiple contracts\n *\n * IMPORTANT: Backwards compatibility is not guaranteed in future versions of the library.\n * It is recommended to avoid relying on the error API for critical functionality.\n *\n * _Available since v5.1._\n */\nlibrary Errors {\n    /**\n     * @dev The ETH balance of the account is not enough to perform the operation.\n     */\n    error InsufficientBalance(uint256 balance, uint256 needed);\n\n    /**\n     * @dev A call to an address target failed. The target may have reverted.\n     */\n    error FailedCall();\n\n    /**\n     * @dev The deployment failed.\n     */\n    error FailedDeployment();\n\n    /**\n     * @dev A necessary precompile is missing.\n     */\n    error MissingPrecompile(address);\n}\n",
   "sourcePath": "@openzeppelin/contracts/utils/Errors.sol",
   "ast": {
     "absolutePath": "@openzeppelin/contracts/utils/Errors.sol",
     "exportedSymbols": {
       "Errors": [
-        4049
+        3792
       ]
     },
-    "id": 4050,
+    "id": 3793,
     "license": "MIT",
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 4029,
+        "id": 3772,
         "literals": [
           "solidity",
           "^",
@@ -65,7 +65,7 @@
           ".20"
         ],
         "nodeType": "PragmaDirective",
-        "src": "100:24:21"
+        "src": "100:24:23"
       },
       {
         "abstract": false,
@@ -74,45 +74,45 @@
         "contractDependencies": [],
         "contractKind": "library",
         "documentation": {
-          "id": 4030,
+          "id": 3773,
           "nodeType": "StructuredDocumentation",
-          "src": "126:284:21",
+          "src": "126:284:23",
           "text": " @dev Collection of common custom errors used in multiple contracts\n IMPORTANT: Backwards compatibility is not guaranteed in future versions of the library.\n It is recommended to avoid relying on the error API for critical functionality.\n _Available since v5.1._"
         },
         "fullyImplemented": true,
-        "id": 4049,
+        "id": 3792,
         "linearizedBaseContracts": [
-          4049
+          3792
         ],
         "name": "Errors",
-        "nameLocation": "419:6:21",
+        "nameLocation": "419:6:23",
         "nodeType": "ContractDefinition",
         "nodes": [
           {
             "documentation": {
-              "id": 4031,
+              "id": 3774,
               "nodeType": "StructuredDocumentation",
-              "src": "432:94:21",
+              "src": "432:94:23",
               "text": " @dev The ETH balance of the account is not enough to perform the operation."
             },
             "errorSelector": "cf479181",
-            "id": 4037,
+            "id": 3780,
             "name": "InsufficientBalance",
-            "nameLocation": "537:19:21",
+            "nameLocation": "537:19:23",
             "nodeType": "ErrorDefinition",
             "parameters": {
-              "id": 4036,
+              "id": 3779,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 4033,
+                  "id": 3776,
                   "mutability": "mutable",
                   "name": "balance",
-                  "nameLocation": "565:7:21",
+                  "nameLocation": "565:7:23",
                   "nodeType": "VariableDeclaration",
-                  "scope": 4037,
-                  "src": "557:15:21",
+                  "scope": 3780,
+                  "src": "557:15:23",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -120,10 +120,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 4032,
+                    "id": 3775,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "557:7:21",
+                    "src": "557:7:23",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -133,13 +133,13 @@
                 },
                 {
                   "constant": false,
-                  "id": 4035,
+                  "id": 3778,
                   "mutability": "mutable",
                   "name": "needed",
-                  "nameLocation": "582:6:21",
+                  "nameLocation": "582:6:23",
                   "nodeType": "VariableDeclaration",
-                  "scope": 4037,
-                  "src": "574:14:21",
+                  "scope": 3780,
+                  "src": "574:14:23",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -147,10 +147,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 4034,
+                    "id": 3777,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "574:7:21",
+                    "src": "574:7:23",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -159,75 +159,75 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "556:33:21"
+              "src": "556:33:23"
             },
-            "src": "531:59:21"
+            "src": "531:59:23"
           },
           {
             "documentation": {
-              "id": 4038,
+              "id": 3781,
               "nodeType": "StructuredDocumentation",
-              "src": "596:89:21",
+              "src": "596:89:23",
               "text": " @dev A call to an address target failed. The target may have reverted."
             },
             "errorSelector": "d6bda275",
-            "id": 4040,
+            "id": 3783,
             "name": "FailedCall",
-            "nameLocation": "696:10:21",
+            "nameLocation": "696:10:23",
             "nodeType": "ErrorDefinition",
             "parameters": {
-              "id": 4039,
+              "id": 3782,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "706:2:21"
+              "src": "706:2:23"
             },
-            "src": "690:19:21"
+            "src": "690:19:23"
           },
           {
             "documentation": {
-              "id": 4041,
+              "id": 3784,
               "nodeType": "StructuredDocumentation",
-              "src": "715:46:21",
+              "src": "715:46:23",
               "text": " @dev The deployment failed."
             },
             "errorSelector": "b06ebf3d",
-            "id": 4043,
+            "id": 3786,
             "name": "FailedDeployment",
-            "nameLocation": "772:16:21",
+            "nameLocation": "772:16:23",
             "nodeType": "ErrorDefinition",
             "parameters": {
-              "id": 4042,
+              "id": 3785,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "788:2:21"
+              "src": "788:2:23"
             },
-            "src": "766:25:21"
+            "src": "766:25:23"
           },
           {
             "documentation": {
-              "id": 4044,
+              "id": 3787,
               "nodeType": "StructuredDocumentation",
-              "src": "797:58:21",
+              "src": "797:58:23",
               "text": " @dev A necessary precompile is missing."
             },
             "errorSelector": "42b01bce",
-            "id": 4048,
+            "id": 3791,
             "name": "MissingPrecompile",
-            "nameLocation": "866:17:21",
+            "nameLocation": "866:17:23",
             "nodeType": "ErrorDefinition",
             "parameters": {
-              "id": 4047,
+              "id": 3790,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 4046,
+                  "id": 3789,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 4048,
-                  "src": "884:7:21",
+                  "scope": 3791,
+                  "src": "884:7:23",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -235,10 +235,10 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 4045,
+                    "id": 3788,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "884:7:21",
+                    "src": "884:7:23",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -248,37 +248,37 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "883:9:21"
+              "src": "883:9:23"
             },
-            "src": "860:33:21"
+            "src": "860:33:23"
           }
         ],
-        "scope": 4050,
-        "src": "411:484:21",
+        "scope": 3793,
+        "src": "411:484:23",
         "usedErrors": [
-          4037,
-          4040,
-          4043,
-          4048
+          3780,
+          3783,
+          3786,
+          3791
         ],
         "usedEvents": []
       }
     ],
-    "src": "100:796:21"
+    "src": "100:796:23"
   },
   "legacyAST": {
     "absolutePath": "@openzeppelin/contracts/utils/Errors.sol",
     "exportedSymbols": {
       "Errors": [
-        4049
+        3792
       ]
     },
-    "id": 4050,
+    "id": 3793,
     "license": "MIT",
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 4029,
+        "id": 3772,
         "literals": [
           "solidity",
           "^",
@@ -286,7 +286,7 @@
           ".20"
         ],
         "nodeType": "PragmaDirective",
-        "src": "100:24:21"
+        "src": "100:24:23"
       },
       {
         "abstract": false,
@@ -295,45 +295,45 @@
         "contractDependencies": [],
         "contractKind": "library",
         "documentation": {
-          "id": 4030,
+          "id": 3773,
           "nodeType": "StructuredDocumentation",
-          "src": "126:284:21",
+          "src": "126:284:23",
           "text": " @dev Collection of common custom errors used in multiple contracts\n IMPORTANT: Backwards compatibility is not guaranteed in future versions of the library.\n It is recommended to avoid relying on the error API for critical functionality.\n _Available since v5.1._"
         },
         "fullyImplemented": true,
-        "id": 4049,
+        "id": 3792,
         "linearizedBaseContracts": [
-          4049
+          3792
         ],
         "name": "Errors",
-        "nameLocation": "419:6:21",
+        "nameLocation": "419:6:23",
         "nodeType": "ContractDefinition",
         "nodes": [
           {
             "documentation": {
-              "id": 4031,
+              "id": 3774,
               "nodeType": "StructuredDocumentation",
-              "src": "432:94:21",
+              "src": "432:94:23",
               "text": " @dev The ETH balance of the account is not enough to perform the operation."
             },
             "errorSelector": "cf479181",
-            "id": 4037,
+            "id": 3780,
             "name": "InsufficientBalance",
-            "nameLocation": "537:19:21",
+            "nameLocation": "537:19:23",
             "nodeType": "ErrorDefinition",
             "parameters": {
-              "id": 4036,
+              "id": 3779,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 4033,
+                  "id": 3776,
                   "mutability": "mutable",
                   "name": "balance",
-                  "nameLocation": "565:7:21",
+                  "nameLocation": "565:7:23",
                   "nodeType": "VariableDeclaration",
-                  "scope": 4037,
-                  "src": "557:15:21",
+                  "scope": 3780,
+                  "src": "557:15:23",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -341,10 +341,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 4032,
+                    "id": 3775,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "557:7:21",
+                    "src": "557:7:23",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -354,13 +354,13 @@
                 },
                 {
                   "constant": false,
-                  "id": 4035,
+                  "id": 3778,
                   "mutability": "mutable",
                   "name": "needed",
-                  "nameLocation": "582:6:21",
+                  "nameLocation": "582:6:23",
                   "nodeType": "VariableDeclaration",
-                  "scope": 4037,
-                  "src": "574:14:21",
+                  "scope": 3780,
+                  "src": "574:14:23",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -368,10 +368,10 @@
                     "typeString": "uint256"
                   },
                   "typeName": {
-                    "id": 4034,
+                    "id": 3777,
                     "name": "uint256",
                     "nodeType": "ElementaryTypeName",
-                    "src": "574:7:21",
+                    "src": "574:7:23",
                     "typeDescriptions": {
                       "typeIdentifier": "t_uint256",
                       "typeString": "uint256"
@@ -380,75 +380,75 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "556:33:21"
+              "src": "556:33:23"
             },
-            "src": "531:59:21"
+            "src": "531:59:23"
           },
           {
             "documentation": {
-              "id": 4038,
+              "id": 3781,
               "nodeType": "StructuredDocumentation",
-              "src": "596:89:21",
+              "src": "596:89:23",
               "text": " @dev A call to an address target failed. The target may have reverted."
             },
             "errorSelector": "d6bda275",
-            "id": 4040,
+            "id": 3783,
             "name": "FailedCall",
-            "nameLocation": "696:10:21",
+            "nameLocation": "696:10:23",
             "nodeType": "ErrorDefinition",
             "parameters": {
-              "id": 4039,
+              "id": 3782,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "706:2:21"
+              "src": "706:2:23"
             },
-            "src": "690:19:21"
+            "src": "690:19:23"
           },
           {
             "documentation": {
-              "id": 4041,
+              "id": 3784,
               "nodeType": "StructuredDocumentation",
-              "src": "715:46:21",
+              "src": "715:46:23",
               "text": " @dev The deployment failed."
             },
             "errorSelector": "b06ebf3d",
-            "id": 4043,
+            "id": 3786,
             "name": "FailedDeployment",
-            "nameLocation": "772:16:21",
+            "nameLocation": "772:16:23",
             "nodeType": "ErrorDefinition",
             "parameters": {
-              "id": 4042,
+              "id": 3785,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "788:2:21"
+              "src": "788:2:23"
             },
-            "src": "766:25:21"
+            "src": "766:25:23"
           },
           {
             "documentation": {
-              "id": 4044,
+              "id": 3787,
               "nodeType": "StructuredDocumentation",
-              "src": "797:58:21",
+              "src": "797:58:23",
               "text": " @dev A necessary precompile is missing."
             },
             "errorSelector": "42b01bce",
-            "id": 4048,
+            "id": 3791,
             "name": "MissingPrecompile",
-            "nameLocation": "866:17:21",
+            "nameLocation": "866:17:23",
             "nodeType": "ErrorDefinition",
             "parameters": {
-              "id": 4047,
+              "id": 3790,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 4046,
+                  "id": 3789,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 4048,
-                  "src": "884:7:21",
+                  "scope": 3791,
+                  "src": "884:7:23",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -456,10 +456,10 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 4045,
+                    "id": 3788,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "884:7:21",
+                    "src": "884:7:23",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -469,23 +469,23 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "883:9:21"
+              "src": "883:9:23"
             },
-            "src": "860:33:21"
+            "src": "860:33:23"
           }
         ],
-        "scope": 4050,
-        "src": "411:484:21",
+        "scope": 3793,
+        "src": "411:484:23",
         "usedErrors": [
-          4037,
-          4040,
-          4043,
-          4048
+          3780,
+          3783,
+          3786,
+          3791
         ],
         "usedEvents": []
       }
     ],
-    "src": "100:796:21"
+    "src": "100:796:23"
   },
   "compiler": {
     "name": "solc",
@@ -493,5 +493,5 @@
   },
   "networks": {},
   "schemaVersion": "2.0.1",
-  "updatedAt": "2025-10-31T09:04:42.131Z"
+  "updatedAt": "2025-11-04T03:00:11.327Z"
 }

@@ -16,9 +16,9 @@ interface IIDRP {
 
     function burn(address from, uint256 amount) external;
 
-    function freeze(address account) external;
+    function freezeAccount(address account) external;
 
-    function unfreeze(address account) external;
+    function unfreezeAccount(address account) external;
 
     function pause() external;
 
@@ -47,8 +47,8 @@ contract IDRPController is
     enum OperationType {
         Mint,
         Burn,
-        Freeze,
-        Unfreeze,
+        freezeAccount,
+        UnfreezeAccount,
         Pause,
         Unpause
     }
@@ -187,10 +187,10 @@ contract IDRPController is
             IIDRP(idrpToken).mint(amount);
         } else if (operationType == OperationType.Burn) {
             IIDRP(idrpToken).burn(to, amount);
-        } else if (operationType == OperationType.Freeze) {
-            IIDRP(idrpToken).freeze(to);
-        } else if (operationType == OperationType.Unfreeze) {
-            IIDRP(idrpToken).unfreeze(to);
+        } else if (operationType == OperationType.freezeAccount) {
+            IIDRP(idrpToken).freezeAccount(to);
+        } else if (operationType == OperationType.UnfreezeAccount) {
+            IIDRP(idrpToken).unfreezeAccount(to);
         } else if (operationType == OperationType.Pause) {
             IIDRP(idrpToken).pause();
         } else if (operationType == OperationType.Unpause) {

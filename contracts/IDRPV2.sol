@@ -9,7 +9,7 @@ import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract IDRP is
+contract IDRPV2 is
     Initializable,
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
@@ -40,10 +40,10 @@ contract IDRP is
     }
 
     function initialize(address superAdmin) public initializer {
-        __ERC20_init("IDRP", "IDRP");
+        __ERC20_init("IDRPV2", "IDRPV2");
         __ERC20Pausable_init();
         __AccessControl_init();
-        __ERC20Permit_init("IDRP");
+        __ERC20Permit_init("IDRPV2");
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, superAdmin);
@@ -166,7 +166,7 @@ contract IDRP is
         address to,
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(token != address(this), "Cannot withdraw IDRP token");
+        require(token != address(this), "Cannot withdraw IDRPV2 token");
         ERC20Upgradeable(token).transfer(to, amount);
     }
 }
