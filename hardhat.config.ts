@@ -3,12 +3,16 @@ import { vars } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
-// import "@nomicfoundation/hardhat-verify";
-// import hardhatVerify from "@nomicfoundation/hardhat-verify";
+import "@layerzerolabs/hardhat-deploy";
+import "@layerzerolabs/hardhat-tron";
 
 // const PRIVATE_KEY = vars.get("PRIVATE_KEY")
 const IDRP_DEPLOYER_PRIVATE_KEY = vars.get("IDRP_DEPLOYER_PRIVATE_KEY");
 const IDRP_ADMIN_PRIVATE_KEY = vars.get("IDRP_ADMIN_PRIVATE_KEY");
+const IDRP_DEPLOYER_PRIVATE_KEY_TRON = vars.get(
+  "IDRP_DEPLOYER_PRIVATE_KEY_TRON"
+);
+const IDRP_ADMIN_PRIVATE_KEY_TRON = vars.get("IDRP_ADMIN_PRIVATE_KEY_TRON");
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
@@ -75,6 +79,13 @@ const config: HardhatUserConfig = {
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       gasMultiplier: 1.1, // Add 10% buffer to estimated gas
     },
+
+    // TVM: @layerzerolabs/hardhat-tron
+    shasta: {
+      url: "https://api.shasta.trongrid.io/jsonrpc",
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
+      tron: true,
+    },
   },
   etherscan: {
     // apiKey: {
@@ -121,9 +132,24 @@ const config: HardhatUserConfig = {
     // etherscan: vars.get("ETHERSCAN_API_KEY")
   },
   sourcify: {
-    // Disabled by default
-    // Doesn't need an API key
     enabled: true,
+  },
+
+  // TVM: @layerzerolabs/hardhat-tron
+  tronSolc: {
+    enable: true,
+    filter: [], // compile all contracts
+    compilers: [
+      {
+        version: "0.8.22",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    ],
   },
 };
 
