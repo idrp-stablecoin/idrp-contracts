@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { TRON_ADMIN_ADDRESS, TRON_SAFE_ADDRESS } from "./utils/constants";
-import { tronToHex } from "./utils/addressConverter";
+import { ADMIN_ADDRESS, TRON_ADMIN_ADDRESS } from "../scripts/utils/constants";
+import { tronToHex } from "../scripts/utils/addressConverter";
 
 const deployFunction: DeployFunction = async function (
   hre: HardhatRuntimeEnvironment
@@ -16,12 +16,11 @@ const deployFunction: DeployFunction = async function (
   // Convert TRON addresses to hex format
   let adminAddress: string;
   let safeAddress: string;
-  if (hre.network.name === "shasta") {
+  if (hre.network.name === "shasta" || hre.network.name === "tron") {
     adminAddress = tronToHex(TRON_ADMIN_ADDRESS);
-    safeAddress = tronToHex(TRON_SAFE_ADDRESS);
+    safeAddress = tronToHex(TRON_ADMIN_ADDRESS);
   } else {
-    adminAddress = deployer;
-    safeAddress = deployer;
+    throw new Error("this deployment script is only for TRON networks");
   }
 
   console.log(

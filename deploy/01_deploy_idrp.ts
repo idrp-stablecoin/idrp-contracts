@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { TRON_ADMIN_ADDRESS } from "./utils/constants";
-import { tronToHex } from "./utils/addressConverter";
+import { ADMIN_ADDRESS, TRON_ADMIN_ADDRESS } from "../scripts/utils/constants";
+import { tronToHex } from "../scripts/utils/addressConverter";
 
 const deployFunction: DeployFunction = async function (
   hre: HardhatRuntimeEnvironment
@@ -13,10 +13,10 @@ const deployFunction: DeployFunction = async function (
   // Determine admin address based on network
   // Convert TRON base58 addresses to hex format for compatibility with ethers
   let adminAddress: string;
-  if (hre.network.name === "shasta") {
+  if (hre.network.name === "shasta" || hre.network.name === "tron") {
     adminAddress = tronToHex(TRON_ADMIN_ADDRESS);
   } else {
-    adminAddress = deployer;
+    throw new Error("this deployment script is only for TRON networks");
   }
 
   console.log(
