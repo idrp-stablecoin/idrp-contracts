@@ -231,15 +231,13 @@ contract IDRPController is
         require(validCombination, "Invalid signature combination for unpause");
     }
 
-    // Function to withdraw other tokens that might be sent to this contract
+    // Function to withdraw tokens that might be sent to this contract
     function withdrawToken(
         address token,
         address to,
         uint256 amount
     ) external onlyOwner {
-        // Don't allow withdrawing the IDRP token itself through this method
-        require(token != idrpToken, "Cannot withdraw IDRP token");
-
+        require(to != address(0), "Invalid recipient address");
         IERC20(token).safeTransfer(to, amount);
         emit TokensWithdrawn(token, to, amount);
     }

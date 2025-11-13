@@ -75,16 +75,20 @@ contract IDRP is
     /// @notice Burn stablecoins from a specific address
     /// @param from The address from which the stablecoins will be burned
     /// @param amount The amount of stablecoins to burn
+    /// @dev If `from` is the IDRPController (caller), no allowance check is needed
+    /// since the user has already transferred tokens to the controller.
+    /// If `from` is another address, allowance check is required.
     function burn(
         address from,
         uint256 amount
     ) public onlyRole(MINTER_ROLE) whenNotPaused {
         if (frozen[from]) revert FrozenAccount();
 
-        // If `from` is not depositoryWallet, ensure the caller has allowance
-        // depositoryWallet is a cold wallet and can't approve
-        // the contract to burn tokens on its behalf
-        if (from != depositoryWallet) {
+        // If `from` is not the caller (MINTER_ROLE/IDRPController) and not depositoryWallet,
+        // ensure the caller has allowance from 'from'
+        // - depositoryWallet is a cold wallet and can't approve
+        // - controller transfers tokens to itself before burning, so no allowance needed
+        if (from != _msgSender() && from != depositoryWallet) {
             // Ensure the MINTER_ROLE has an allowance from 'from'
             uint256 currentAllowance = allowance(from, _msgSender());
             require(
