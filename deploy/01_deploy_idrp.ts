@@ -34,6 +34,8 @@ const deployFunction: DeployFunction = async function (
         },
       },
     },
+    // proxy: true, // The default Proxy is both ERC-1967 and ERC-173 Compliant
+    // args: [adminAddress],
     log: true,
   });
 
