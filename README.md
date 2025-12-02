@@ -57,6 +57,8 @@ pnpm hardhat lz:deploy --tags IDRPOFTAdapterUpgradeable
 pnpm hardhat lz:deploy --tags IDRPOFTUpgradeable
 ```
 
+> Note: For tron, we must do compile first with `npx hardhat compile --network shasta` command, before do lz:deploy.
+
 ### Initial Setup
 
 - run controller setup script after deploying both contracts

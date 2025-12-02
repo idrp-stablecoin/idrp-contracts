@@ -23,6 +23,13 @@ const sepoliaContract: OmniPointHardhat = {
   contractName: "IDRPOFTUpgradeable",
 };
 
+const tronContract: OmniPointHardhat = {
+  eid: EndpointId.TRON_V2_TESTNET,
+  // contractName: "IDRPOFTUpgradeable",
+  // address: "TGs6gVP1W8m8kqBcfZNjPnmtPPAWdhdGS2", // deployed address on Shasta
+  address: "0x4bA11be2056CCa41Ee31b9b6239a883dcBA8B293", // deployed address on Shasta
+};
+
 // For this example's simplicity, we will use the same enforced options values for sending to all chains
 // For production, you should ensure `gas` is set to the correct value through profiling the gas usage of calling OFT._lzReceive(...) on the destination chain
 // To learn more, read https://docs.layerzero.network/v2/concepts/applications/oapp-standard#execution-options-and-enforced-settings
@@ -61,6 +68,14 @@ const pathways: TwoWayConfig[] = [
     [1, 1], // [A to B confirmations, B to A confirmations]
     [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
   ],
+  // Base <-> Tron
+  [
+    baseContract, // Chain A contract
+    tronContract, // Chain B contract
+    [["LayerZero Labs"], []], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
+    [1, 1], // [A to B confirmations, B to A confirmations]
+    [EVM_ENFORCED_OPTIONS, []], // Chain B enforcedOptions, Chain A enforcedOptions
+  ],
   // Arbitrum <-> Sepolia
   // [
   //   arbitrumContract, // Chain A contract
@@ -80,6 +95,7 @@ export default async function () {
       { contract: baseContract },
       { contract: arbitrumContract },
       { contract: sepoliaContract },
+      { contract: tronContract },
     ],
     connections,
   };

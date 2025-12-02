@@ -1,5 +1,6 @@
 import { HardhatUserConfig } from "hardhat/config";
 import { vars } from "hardhat/config";
+import "dotenv/config";
 import "@nomiclabs/hardhat-ethers";
 import "@nomicfoundation/hardhat-chai-matchers";
 import "@typechain/hardhat";
@@ -10,7 +11,7 @@ import "hardhat-dependency-compiler";
 import "hardhat-deploy";
 import "hardhat-contract-sizer";
 import "@layerzerolabs/toolbox-hardhat";
-import "dotenv/config";
+import "@layerzerolabs/hardhat-tron";
 import "./type-extensions";
 import "./tasks/sendOFT";
 import { EndpointId } from "@layerzerolabs/lz-definitions";
@@ -32,16 +33,16 @@ const config: HardhatUserConfig = {
   },
   solidity: {
     compilers: [
-      {
-        version: "0.8.28",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-          // viaIR: true,
-        },
-      },
+      // {
+      //   version: "0.8.28",
+      //   settings: {
+      //     optimizer: {
+      //       enabled: true,
+      //       runs: 200,
+      //     },
+      //     // viaIR: true,
+      //   },
+      // },
       {
         version: "0.8.22",
         settings: {
@@ -115,6 +116,15 @@ const config: HardhatUserConfig = {
       // lz
       eid: EndpointId.ARBSEP_V2_TESTNET,
     },
+    // TVM: @layerzerolabs/hardhat-tron
+    shasta: {
+      url: "https://api.shasta.trongrid.io/jsonrpc",
+      // accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
+      tron: true,
+      // lz
+      eid: EndpointId.TRON_V2_TESTNET,
+    },
   },
   etherscan: {
     // apiKey: {
@@ -175,6 +185,22 @@ const config: HardhatUserConfig = {
     deploymentSourcePackages: [],
     // You can tell hardhat not to include any artifacts either
     // artifactSourcePackages: [],
+  },
+  // TVM: @layerzerolabs/hardhat-tron
+  tronSolc: {
+    enable: true,
+    filter: [], // compile all contracts
+    compilers: [
+      {
+        version: "0.8.22",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    ],
   },
 };
 

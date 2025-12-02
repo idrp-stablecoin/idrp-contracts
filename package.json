@@ -13,6 +13,7 @@
   "description": "",
   "devDependencies": {
     "@layerzerolabs/devtools-evm-hardhat": "^4.0.3",
+    "@layerzerolabs/hardhat-tron": "^3.0.149",
     "@layerzerolabs/io-devtools": "~0.3.0",
     "@layerzerolabs/lz-definitions": "^3.0.75",
     "@layerzerolabs/lz-evm-messagelib-v2": "^3.0.75",
@@ -35,6 +36,7 @@
     "@typechain/hardhat": "^9.0.0",
     "@types/chai": "^4.2.0",
     "@types/mocha": ">=9.1.0",
+    "@types/node": "^24.10.1",
     "chai": "^4.2.0",
     "dotenv": "^16.4.1",
     "fp-ts": "^2.16.11",
@@ -55,7 +57,8 @@
     "@openzeppelin/hardhat-upgrades": "^1.28.0",
     "@safe-global/safe-contracts": "^1.4.1-2",
     "ethers": "^5.7.2",
-    "hardhat-dependency-compiler": "^1.2.1"
+    "hardhat-dependency-compiler": "^1.2.1",
+    "tronweb": "^5.3.2"
   },
   "resolutions": {
     "ethers": "^5.7.2",
