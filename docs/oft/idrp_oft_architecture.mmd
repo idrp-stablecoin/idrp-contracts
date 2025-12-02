@@ -1,0 +1,49 @@
+graph TD
+    subgraph Canonical_Chain [Canonical Chain - e.g. Base Sepolia]
+        style Canonical_Chain fill:#e1f5fe,stroke:#01579b
+        
+        Admin[Admin / MultiSig / Operator]
+        
+        subgraph Core_Contracts
+            Controller[IDRP Controller]
+            Token[IDRP Token - ERC20]
+        end
+        
+        Adapter[OFT Adapter]
+        
+        Admin -->|1. Mint/Burn/Freeze/Pause| Controller
+        Controller -->|2. Execute Logic| Token
+        
+        Adapter -->|3. Lock - Deposit| Token
+        Token -->|4. Unlock - Withdraw| Adapter
+    end
+
+    subgraph LayerZero_Protocol [LayerZero Messaging Layer]
+        style LayerZero_Protocol fill:#f3e5f5,stroke:#4a148c
+        LZ_Endpoint[LZ Endpoint]
+    end
+
+    subgraph Remote_Chain_A [Remote Chain A - e.g. Arb Sepolia]
+        style Remote_Chain_A fill:#fff3e0,stroke:#e65100
+        OFT_A[OFT Contract]
+        User_A[User A]
+    end
+
+    subgraph Remote_Chain_B [Remote Chain B - e.g. Sepolia]
+        style Remote_Chain_B fill:#fff3e0,stroke:#e65100
+        OFT_B[OFT Contract]
+        User_B[User B]
+    end
+
+    %% Cross Chain Flow
+    Adapter <==>|Send: Lock Token <br/> Receive: Unlock Token| LZ_Endpoint
+    LZ_Endpoint <==>|Receive: Mint Token <br/> Send: Burn Token| OFT_A
+    LZ_Endpoint <==>|Receive: Mint Token <br/> Send: Burn Token| OFT_B
+
+    %% Token Flow Logic
+    OFT_A -.->|Mint on Receive / Burn on Send| User_A
+    OFT_B -.->|Mint on Receive / Burn on Send| User_B
+
+    note[<b>Key Concept:</b><br/>1. Canonical holds the 'Real' Token.<br/>2. Adapter Locks Real Token.<br/>3. Remote OFT Mints 'Representation'.<br/>4. <b>Global Supply</b>: 1 OFT on Remote = 1 Locked IDRP on Canonical.<br/>Total Global Supply = Canonical Total Supply.]
+    
+    click Adapter "https://sepolia.basescan.org/address/0x5d2BC59F49Bd6E8DDfE5066e5a69F56Af723D5d5" "View Adapter"

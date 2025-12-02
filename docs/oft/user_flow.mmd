@@ -1,0 +1,51 @@
+sequenceDiagram
+    autonumber
+    actor User
+
+    box "Canonical Chain" #e1f5fe
+        participant Canonical as Canonical (Adapter)
+    end
+    box "Remote Chains" #fff3e0
+        participant Arb as Arb Sepolia (OFT)
+        participant Sepolia as Sepolia (OFT)
+    end
+
+    note over User, Sepolia: Scenario 1: Canonical to Arb Sepolia
+    User->>Canonical: send(to: Arb, amount: 100)
+    activate Canonical
+    Canonical->>Canonical: Lock 100 IDRP
+    Canonical-->>Arb: LayerZero Packet
+    deactivate Canonical
+    activate Arb
+    Arb->>User: Mint 100 OFT
+    deactivate Arb
+
+    note over User, Sepolia: Scenario 2: Arb Sepolia to Canonical
+    User->>Arb: send(to: Canonical, amount: 50)
+    activate Arb
+    Arb->>Arb: Burn 50 OFT
+    Arb-->>Canonical: LayerZero Packet
+    deactivate Arb
+    activate Canonical
+    Canonical->>User: Unlock 50 IDRP
+    deactivate Canonical
+
+    note over User, Sepolia: Scenario 3: Arb Sepolia to Sepolia (Remote to Remote)
+    User->>Arb: send(to: Sepolia, amount: 25)
+    activate Arb
+    Arb->>Arb: Burn 25 OFT
+    Arb-->>Sepolia: LayerZero Packet
+    deactivate Arb
+    activate Sepolia
+    Sepolia->>User: Mint 25 OFT
+    deactivate Sepolia
+
+    note over User, Sepolia: Scenario 4: Sepolia to Arb Sepolia (Remote to Remote)
+    User->>Sepolia: send(to: Arb, amount: 10)
+    activate Sepolia
+    Sepolia->>Sepolia: Burn 10 OFT
+    Sepolia-->>Arb: LayerZero Packet
+    deactivate Sepolia
+    activate Arb
+    Arb->>User: Mint 10 OFT
+    deactivate Arb

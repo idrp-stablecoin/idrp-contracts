@@ -3,6 +3,13 @@ import { vars } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
+import "hardhat-deploy";
+import "hardhat-contract-sizer";
+import "@layerzerolabs/toolbox-hardhat";
+import "dotenv/config";
+import "./type-extensions";
+import "./tasks/sendOFT";
+import { EndpointId } from "@layerzerolabs/lz-definitions";
 // import "@nomicfoundation/hardhat-verify";
 // import hardhatVerify from "@nomicfoundation/hardhat-verify";
 
@@ -16,15 +23,31 @@ const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
 const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
 
 const config: HardhatUserConfig = {
+  paths: {
+    cache: "cache/hardhat",
+  },
   solidity: {
-    version: "0.8.28",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    compilers: [
+      {
+        version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          // viaIR: true,
+        },
       },
-      // viaIR: true,
-    },
+      {
+        version: "0.8.22",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    ],
   },
   networks: {
     hardhat: {
@@ -40,6 +63,7 @@ const config: HardhatUserConfig = {
       chainId: 11155111,
       url: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
+      eid: EndpointId.SEPOLIA_V2_TESTNET,
     },
     polygon: {
       chainId: 137,
@@ -74,6 +98,18 @@ const config: HardhatUserConfig = {
       url: `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       gasMultiplier: 1.1, // Add 10% buffer to estimated gas
+      // lz
+      eid: EndpointId.BASESEP_V2_TESTNET,
+      oftAdapter: {
+        tokenAddress: "0x817d0C3D4e63231d88B2d73217B7fB75b87e0606",
+      },
+    },
+    arbitrumSepolia: {
+      chainId: 421614,
+      url: `https://arbitrum-sepolia.infura.io/v3/${INFURA_API_KEY}`,
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
+      // lz
+      eid: EndpointId.ARBSEP_V2_TESTNET,
     },
   },
   etherscan: {
@@ -124,6 +160,17 @@ const config: HardhatUserConfig = {
     // Disabled by default
     // Doesn't need an API key
     enabled: true,
+  },
+  namedAccounts: {
+    deployer: {
+      default: 0, // wallet address of index[0]
+    },
+  },
+  layerZero: {
+    // You can tell hardhat toolbox not to include any deployments (hover over the property name to see full docs)
+    deploymentSourcePackages: [],
+    // You can tell hardhat not to include any artifacts either
+    // artifactSourcePackages: [],
   },
 };
 

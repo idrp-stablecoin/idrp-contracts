@@ -29,7 +29,6 @@ The documentation for the smart contract architecture can be read [here](./docs/
 
 The documentation for the smart contract bussiness process can be read [here](./docs/bussiness-proccess/SMART_CONTRACT_BUSSINESS_PROCESS.md).
 
-
 ## Deployment
 
 Since this contract is upgradeable, it should be deployed using a proxy pattern. You can use OpenZeppelin's Upgrades Plugin to deploy and manage upgrades.
@@ -46,12 +45,29 @@ npx hardhat run scripts/deploy.ts --network <your-network>
 npx hardhat run scripts/deploy-controller.ts --network <your-network>
 ```
 
+### IDRP OFT Adapter Upgradeable
+
+```sh
+pnpm hardhat lz:deploy --tags IDRPOFTAdapterUpgradeable
+```
+
+### IDRP OFT Upgradeable
+
+```sh
+pnpm hardhat lz:deploy --tags IDRPOFTUpgradeable
+```
+
 ### Initial Setup
+
 - run controller setup script after deploying both contracts
-    ```sh
-    npx hardhat run scripts/setup-controller.ts --network <your-network>
-    ```
+  ```sh
+  npx hardhat run scripts/setup-controller.ts --network <your-network>
+  ```
 - hit `setDepository` on IDRP contract, to set depository address.
+- layerzero wireup
+  ```sh
+  npx hardhat lz:oapp:wire --oapp-config layerzero.config.ts
+  ```
 
 ## Security Considerations
 

@@ -1,0 +1,25 @@
+graph LR
+    subgraph Canonical [Canonical: Base Sepolia - eid: 40161]
+        Adapter[OFT Adapter]
+    end
+
+    subgraph Remote1 [Remote: Arb Sepolia - eid: 40231]
+        OFT1[OFT Contract]
+    end
+
+    subgraph Remote2 [Remote: Tron - eid: 4xxxx]
+        OFT2[OFT Contract]
+    end
+
+    %% Wiring Connections
+    Adapter --"setPeer(40231, address(OFT1))"--> OFT1
+    OFT1 --"setPeer(40161, address(Adapter))"--> Adapter
+
+    Adapter --"setPeer(4xxxx, address(OFT2))"--> OFT2
+    OFT2 --"setPeer(40161, address(Adapter))"--> Adapter
+
+    %% Styling
+    linkStyle 0,1 stroke:#2ecc71,stroke-width:2px,color:green;
+    linkStyle 2,3 stroke:#3498db,stroke-width:2px,color:blue;
+
+    note[<b>Wiring Requirement:</b><br/>Contracts must trust each other via setPeer.<br/>This creates the pathway for packets.]
