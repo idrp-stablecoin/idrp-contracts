@@ -103,7 +103,8 @@ export async function sendEvm(
 
   // 4️⃣ fetch decimals from the underlying token
   const erc20 = await srcEidHre.ethers.getContractAt(
-    "ERC20",
+    // "ERC20",
+    "IDRP",
     underlying,
     signer
   );
