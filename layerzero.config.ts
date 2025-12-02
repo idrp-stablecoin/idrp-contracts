@@ -27,6 +27,14 @@ const sepoliaContract: OmniPointHardhat = {
 // For production, you should ensure `gas` is set to the correct value through profiling the gas usage of calling OFT._lzReceive(...) on the destination chain
 // To learn more, read https://docs.layerzero.network/v2/concepts/applications/oapp-standard#execution-options-and-enforced-settings
 const EVM_ENFORCED_OPTIONS: OAppEnforcedOption[] = [
+  // BROADCAST message type (custom)
+  {
+    msgType: 0,
+    optionType: ExecutorOptionType.LZ_RECEIVE,
+    gas: 65000,
+    value: 0,
+  },
+  // SEND message type
   {
     msgType: 1,
     optionType: ExecutorOptionType.LZ_RECEIVE,

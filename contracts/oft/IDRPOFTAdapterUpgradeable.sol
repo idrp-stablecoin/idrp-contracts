@@ -3,6 +3,7 @@ pragma solidity ^0.8.22;
 
 import { OFTAdapterUpgradeable } from "@layerzerolabs/oft-evm-upgradeable/contracts/oft/OFTAdapterUpgradeable.sol";
 import { MessagingFee } from "@layerzerolabs/oft-evm/contracts/OFTCore.sol";
+import { MessagingParams } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
 interface IIDRP {
     function frozen(address account) external view returns (bool);
@@ -49,9 +50,14 @@ contract IDRPOFTAdapterUpgradeable is OFTAdapterUpgradeable {
         uint32[] calldata dstEids
     ) external view returns (uint256 total) {
         bytes memory payload = abi.encodePacked(msgType, account);
+        bytes memory emptyOptions = "";
+        
+        // Use combineOptions similar to _buildMsgAndOptions in OFTCore
+        // msgType 0 for broadcast (different from OFT's SEND/SEND_AND_CALL)
         for (uint256 i = 0; i < dstEids.length; i++) {
             require(peers(dstEids[i]) != bytes32(0), "No peer");
-            MessagingFee memory fee = _quote(dstEids[i], payload, "", false);
+            bytes memory options = this.combineOptions(dstEids[i], 0, emptyOptions);
+            MessagingFee memory fee = _quote(dstEids[i], payload, options, false);
             total += fee.nativeFee;
         }
     }
@@ -75,12 +81,44 @@ contract IDRPOFTAdapterUpgradeable is OFTAdapterUpgradeable {
     function _broadcast(uint8 msgType, address account, uint32[] calldata dstEids) internal {
         require(dstEids.length > 0, "No destinations");
         bytes memory payload = abi.encodePacked(msgType, account);
-        uint256 feePerChain = msg.value / dstEids.length;
-
+        bytes memory emptyOptions = "";
+        
+        uint256 totalRequired = 0;
+        MessagingFee[] memory fees = new MessagingFee[](dstEids.length);
+        
+        // First pass: quote all destinations and calculate total required
         for (uint256 i = 0; i < dstEids.length; i++) {
             require(peers(dstEids[i]) != bytes32(0), "No peer");
-            _lzSend(dstEids[i], payload, "", MessagingFee(feePerChain, 0), payable(msg.sender));
+            bytes memory options = this.combineOptions(dstEids[i], 0, emptyOptions);
+            fees[i] = _quote(dstEids[i], payload, options, false);
+            totalRequired += fees[i].nativeFee;
+        }
+        
+        // Verify we have enough native token
+        if (msg.value < totalRequired) {
+            revert NotEnoughNative(msg.value);
+        }
+        
+        // Second pass: send to all destinations
+        uint256 totalUsed = 0;
+        for (uint256 i = 0; i < dstEids.length; i++) {
+            bytes memory options = this.combineOptions(dstEids[i], 0, emptyOptions);
+            
+            // Use internal send that doesn't validate msg.value
+            endpoint.send{value: fees[i].nativeFee}(
+                MessagingParams(dstEids[i], _getPeerOrRevert(dstEids[i]), payload, options, false),
+                payable(msg.sender)
+            );
+            
+            totalUsed += fees[i].nativeFee;
             emit Broadcast(dstEids[i], msgType, account);
+        }
+        
+        // Refund any excess native tokens
+        if (msg.value > totalUsed) {
+            uint256 refund = msg.value - totalUsed;
+            (bool success, ) = msg.sender.call{value: refund}("");
+            require(success, "Refund failed");
         }
     }
 }

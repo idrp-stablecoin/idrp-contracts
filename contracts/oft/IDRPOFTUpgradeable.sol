@@ -30,6 +30,13 @@ contract IDRPOFTUpgradeable is OFTUpgradeable {
         __Ownable_init(_delegate);
     }
 
+    /**
+     * @dev Returns 6 decimals to match IDRP token on canonical chain.
+     */
+    function decimals() public pure override returns (uint8) {
+        return 6;
+    }
+
     function _lzReceive(
         Origin calldata _origin,
         bytes32 _guid,
