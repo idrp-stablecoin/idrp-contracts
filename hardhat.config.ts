@@ -1,6 +1,10 @@
 import { HardhatUserConfig } from "hardhat/config";
 import { vars } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
+import "@nomiclabs/hardhat-ethers";
+import "@nomicfoundation/hardhat-chai-matchers";
+import "@typechain/hardhat";
+import "hardhat-gas-reporter";
+import "solidity-coverage";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
 import "hardhat-deploy";

@@ -1,21 +1,22 @@
 import hre from "hardhat";
+import { ethers } from "ethers";
 import { expect } from "chai";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("IDRPController - Transfer Approach Burn Tests", function () {
-  const OFFICER_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("OFFICER_ROLE")
+  const OFFICER_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("OFFICER_ROLE")
   );
-  const MANAGER_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("MANAGER_ROLE")
+  const MANAGER_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("MANAGER_ROLE")
   );
-  const DIRECTOR_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("DIRECTOR_ROLE")
+  const DIRECTOR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("DIRECTOR_ROLE")
   );
 
-  const ONE_HUNDRED_MILLION = hre.ethers.parseUnits("100000000", 6);
-  const FIVE_HUNDRED_MILLION = hre.ethers.parseUnits("500000000", 6);
-  const ONE_BILLION = hre.ethers.parseUnits("1000000000", 6);
+  const ONE_HUNDRED_MILLION = ethers.utils.parseUnits("100000000", 6);
+  const FIVE_HUNDRED_MILLION = ethers.utils.parseUnits("500000000", 6);
+  const ONE_BILLION = ethers.utils.parseUnits("1000000000", 6);
 
   enum OperationType {
     Mint,
@@ -40,23 +41,23 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
     const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
-    await idrp.waitForDeployment();
+    await idrp.deployed();
 
     // Set depositoryWallet
     await idrp.connect(admin).setDepositoryWallet(depository.address);
 
     const controller = await hre.upgrades.deployProxy(
       await hre.ethers.getContractFactory("IDRPController"),
-      [await idrp.getAddress(), admin.address]
+      [idrp.address, admin.address]
     );
-    await controller.waitForDeployment();
+    await controller.deployed();
 
     // Domain for EIP-712
     const domain = {
       name: "IDRPController",
       version: "1",
       chainId: 31337,
-      verifyingContract: await controller.getAddress(),
+      verifyingContract: controller.address,
     };
 
     const types = {
@@ -74,9 +75,9 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
     await controller.grantRole(MANAGER_ROLE, manager.address);
     await controller.grantRole(DIRECTOR_ROLE, director.address);
 
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.address);
+    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.address);
+    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.address);
 
     // Set quorum rules for burn operations
     await controller.setQuorumRules(OperationType.Burn, [
@@ -145,10 +146,10 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         types,
       } = await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const idrpAddress = await idrp.getAddress();
-      const mintAmount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
-      const burnAmount = hre.ethers.parseUnits("30000000", 6); // 30M tokens
+      const controllerAddress = controller.address;
+      const idrpAddress = idrp.address;
+      const mintAmount = ethers.utils.parseUnits("50000000", 6); // 50M tokens
+      const burnAmount = ethers.utils.parseUnits("30000000", 6); // 30M tokens
 
       // Step 1: Mint tokens to depository wallet
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -161,7 +162,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
@@ -185,7 +186,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       // Verify user1 received tokens
       expect(await idrp.balanceOf(user1.address)).to.equal(burnAmount);
       expect(await idrp.balanceOf(depository.address)).to.equal(
-        mintAmount - burnAmount
+        mintAmount.sub(burnAmount)
       );
 
       // Step 3: User1 transfers tokens to controller (user initiates burn)
@@ -206,7 +207,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: burnDeadline,
       };
 
-      const officerBurnSignature = await officer.signTypedData(
+      const officerBurnSignature = await officer._signTypedData(
         domain,
         types,
         burnOperation
@@ -223,16 +224,16 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       // Step 5: Verify burn was successful - tokens removed from controller
       expect(await idrp.balanceOf(controllerAddress)).to.equal(0);
-      expect(await idrp.totalSupply()).to.equal(mintAmount - burnAmount);
+      expect(await idrp.totalSupply()).to.equal(mintAmount.sub(burnAmount));
     });
 
     it("Should burn from controller without allowance", async function () {
       const { idrp, controller, officer, user1, depository, domain, types } =
         await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("50000000", 6);
-      const burnAmount = hre.ethers.parseUnits("30000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("50000000", 6);
+      const burnAmount = ethers.utils.parseUnits("30000000", 6);
 
       // Mint and transfer to user
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -245,7 +246,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
@@ -283,7 +284,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: burnDeadline,
       };
 
-      const officerBurnSignature = await officer.signTypedData(
+      const officerBurnSignature = await officer._signTypedData(
         domain,
         types,
         burnOperation
@@ -306,9 +307,9 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const { idrp, controller, officer, user1, depository, domain, types } =
         await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("50000000", 6);
-      const transferAmount = hre.ethers.parseUnits("25000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("50000000", 6);
+      const transferAmount = ethers.utils.parseUnits("25000000", 6);
 
       // Mint and transfer to user
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -321,7 +322,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
@@ -363,10 +364,10 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         types,
       } = await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("100000000", 6);
-      const user1BurnAmount = hre.ethers.parseUnits("40000000", 6);
-      const user2BurnAmount = hre.ethers.parseUnits("60000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("100000000", 6);
+      const user1BurnAmount = ethers.utils.parseUnits("40000000", 6);
+      const user2BurnAmount = ethers.utils.parseUnits("60000000", 6);
 
       // Mint total amount (100M requires OFFICER + MANAGER)
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -379,13 +380,13 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
       );
 
-      const managerMintSignature = await manager.signTypedData(
+      const managerMintSignature = await manager._signTypedData(
         domain,
         types,
         mintOperation
@@ -412,7 +413,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       // Verify controller has all tokens
       expect(await idrp.balanceOf(controllerAddress)).to.equal(
-        user1BurnAmount + user2BurnAmount
+        user1BurnAmount.add(user2BurnAmount)
       );
 
       // User1 burn operation
@@ -426,7 +427,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: burn1Deadline,
       };
 
-      const officerBurn1Signature = await officer.signTypedData(
+      const officerBurn1Signature = await officer._signTypedData(
         domain,
         types,
         burn1Operation
@@ -455,13 +456,13 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: burn2Deadline,
       };
 
-      const officerBurn2Signature = await officer.signTypedData(
+      const officerBurn2Signature = await officer._signTypedData(
         domain,
         types,
         burn2Operation
       );
 
-      const managerBurn2Signature = await manager.signTypedData(
+      const managerBurn2Signature = await manager._signTypedData(
         domain,
         types,
         burn2Operation
@@ -485,7 +486,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const { idrp, controller, officer, user1, depository, domain, types } =
         await loadFixture(deployFixture);
 
-      const burnAmount = hre.ethers.parseUnits("50000000", 6);
+      const burnAmount = ethers.utils.parseUnits("50000000", 6);
 
       // Try to burn from user1 address without transfer (should fail - no balance)
       const burnDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -498,7 +499,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: burnDeadline,
       };
 
-      const officerBurnSignature = await officer.signTypedData(
+      const officerBurnSignature = await officer._signTypedData(
         domain,
         types,
         burnOperation
@@ -530,10 +531,10 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         types,
       } = await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("50000000", 6);
-      const transferAmount = hre.ethers.parseUnits("30000000", 6);
-      const withdrawAmount = hre.ethers.parseUnits("20000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("50000000", 6);
+      const transferAmount = ethers.utils.parseUnits("30000000", 6);
+      const withdrawAmount = ethers.utils.parseUnits("20000000", 6);
 
       // Mint and transfer to user, then user transfers to controller
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -546,7 +547,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
@@ -570,11 +571,11 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       // Owner withdraws tokens
       await controller
         .connect(admin)
-        .withdrawToken(await idrp.getAddress(), user1.address, withdrawAmount);
+        .withdrawToken(idrp.address, user1.address, withdrawAmount);
 
       // Verify withdrawal
       expect(await idrp.balanceOf(controllerAddress)).to.equal(
-        transferAmount - withdrawAmount
+        transferAmount.sub(withdrawAmount)
       );
       expect(await idrp.balanceOf(user1.address)).to.equal(withdrawAmount);
     });
@@ -591,9 +592,9 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         types,
       } = await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("50000000", 6);
-      const transferAmount = hre.ethers.parseUnits("30000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("50000000", 6);
+      const transferAmount = ethers.utils.parseUnits("30000000", 6);
 
       // Setup: mint and transfer
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -606,7 +607,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
@@ -627,7 +628,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       // Withdraw all tokens
       await controller
         .connect(admin)
-        .withdrawToken(await idrp.getAddress(), user1.address, transferAmount);
+        .withdrawToken(idrp.address, user1.address, transferAmount);
 
       // Verify complete withdrawal
       expect(await idrp.balanceOf(controllerAddress)).to.equal(0);
@@ -638,9 +639,9 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const { idrp, controller, officer, user1, depository, domain, types } =
         await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("50000000", 6);
-      const transferAmount = hre.ethers.parseUnits("30000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("50000000", 6);
+      const transferAmount = ethers.utils.parseUnits("30000000", 6);
 
       // Setup
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -653,7 +654,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
@@ -675,7 +676,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       await expect(
         controller
           .connect(user1)
-          .withdrawToken(await idrp.getAddress(), user1.address, transferAmount)
+          .withdrawToken(idrp.address, user1.address, transferAmount)
       ).to.be.reverted;
     });
 
@@ -691,9 +692,9 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         types,
       } = await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("50000000", 6);
-      const transferAmount = hre.ethers.parseUnits("30000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("50000000", 6);
+      const transferAmount = ethers.utils.parseUnits("30000000", 6);
 
       // Setup
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -706,7 +707,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
@@ -729,8 +730,8 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         controller
           .connect(admin)
           .withdrawToken(
-            await idrp.getAddress(),
-            hre.ethers.ZeroAddress,
+            idrp.address,
+            ethers.constants.AddressZero,
             transferAmount
           )
       ).to.be.reverted;
@@ -748,10 +749,10 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         types,
       } = await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("50000000", 6);
-      const transferAmount = hre.ethers.parseUnits("30000000", 6);
-      const withdrawAmount = hre.ethers.parseUnits("20000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("50000000", 6);
+      const transferAmount = ethers.utils.parseUnits("30000000", 6);
+      const withdrawAmount = ethers.utils.parseUnits("20000000", 6);
 
       // Setup
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -764,7 +765,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
@@ -786,10 +787,10 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       await expect(
         controller
           .connect(admin)
-          .withdrawToken(await idrp.getAddress(), user1.address, withdrawAmount)
+          .withdrawToken(idrp.address, user1.address, withdrawAmount)
       )
         .to.emit(controller, "TokensWithdrawn")
-        .withArgs(await idrp.getAddress(), user1.address, withdrawAmount);
+        .withArgs(idrp.address, user1.address, withdrawAmount);
     });
   });
 
@@ -806,10 +807,10 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         types,
       } = await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("100000000", 6);
-      const transferAmount = hre.ethers.parseUnits("50000000", 6);
-      const burnAmount = hre.ethers.parseUnits("30000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("100000000", 6);
+      const transferAmount = ethers.utils.parseUnits("50000000", 6);
+      const burnAmount = ethers.utils.parseUnits("30000000", 6);
 
       // Mint and setup (100M requires OFFICER + MANAGER)
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -822,13 +823,13 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
       );
 
-      const managerMintSignature = await manager.signTypedData(
+      const managerMintSignature = await manager._signTypedData(
         domain,
         types,
         mintOperation
@@ -857,7 +858,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: burnDeadline,
       };
 
-      const officerBurnSignature = await officer.signTypedData(
+      const officerBurnSignature = await officer._signTypedData(
         domain,
         types,
         burnOperation
@@ -874,9 +875,9 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       // Verify remaining tokens
       expect(await idrp.balanceOf(controllerAddress)).to.equal(
-        transferAmount - burnAmount
+        transferAmount.sub(burnAmount)
       );
-      expect(await idrp.totalSupply()).to.equal(mintAmount - burnAmount);
+      expect(await idrp.totalSupply()).to.equal(mintAmount.sub(burnAmount));
     });
 
     it("Should prevent double-spending from same token batch", async function () {
@@ -891,10 +892,10 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         types,
       } = await loadFixture(deployFixture);
 
-      const controllerAddress = await controller.getAddress();
-      const mintAmount = hre.ethers.parseUnits("100000000", 6);
-      const transferAmount = hre.ethers.parseUnits("50000000", 6);
-      const burnAmount = hre.ethers.parseUnits("30000000", 6);
+      const controllerAddress = controller.address;
+      const mintAmount = ethers.utils.parseUnits("100000000", 6);
+      const transferAmount = ethers.utils.parseUnits("50000000", 6);
+      const burnAmount = ethers.utils.parseUnits("30000000", 6);
 
       // Mint and setup (100M requires OFFICER + MANAGER)
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -907,13 +908,13 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: mintDeadline,
       };
 
-      const officerMintSignature = await officer.signTypedData(
+      const officerMintSignature = await officer._signTypedData(
         domain,
         types,
         mintOperation
       );
 
-      const managerMintSignature = await manager.signTypedData(
+      const managerMintSignature = await manager._signTypedData(
         domain,
         types,
         mintOperation
@@ -942,7 +943,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: burn1Deadline,
       };
 
-      const officerBurn1Signature = await officer.signTypedData(
+      const officerBurn1Signature = await officer._signTypedData(
         domain,
         types,
         burn1Operation
@@ -968,13 +969,13 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
         deadline: burn2Deadline,
       };
 
-      const officerBurn2Signature = await officer.signTypedData(
+      const officerBurn2Signature = await officer._signTypedData(
         domain,
         types,
         burn2Operation
       );
 
-      const managerBurn2Signature = await manager.signTypedData(
+      const managerBurn2Signature = await manager._signTypedData(
         domain,
         types,
         burn2Operation

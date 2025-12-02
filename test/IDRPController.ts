@@ -1,26 +1,27 @@
 import hre from "hardhat";
+import { ethers } from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 describe("IDRPController", function () {
-  const OFFICER_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("OFFICER_ROLE")
+  const OFFICER_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("OFFICER_ROLE")
   );
-  const MANAGER_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("MANAGER_ROLE")
+  const MANAGER_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("MANAGER_ROLE")
   );
-  const DIRECTOR_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("DIRECTOR_ROLE")
+  const DIRECTOR_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("DIRECTOR_ROLE")
   );
-  const COMMISSIONER_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("COMMISSIONER_ROLE")
+  const COMMISSIONER_ROLE = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("COMMISSIONER_ROLE")
   );
-  const ADMIN_ROLE = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("ADMIN_ROLE"));
+  const ADMIN_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("ADMIN_ROLE"));
 
-  const ONE_HUNDRED_MILLION = hre.ethers.parseUnits("100000000", 6);
-  const FIVE_HUNDRED_MILLION = hre.ethers.parseUnits("500000000", 6);
-  const ONE_BILLION = hre.ethers.parseUnits("1000000000", 6);
-  const TEN_BILLION = hre.ethers.parseUnits("10000000000", 6);
+  const ONE_HUNDRED_MILLION = ethers.utils.parseUnits("100000000", 6);
+  const FIVE_HUNDRED_MILLION = ethers.utils.parseUnits("500000000", 6);
+  const ONE_BILLION = ethers.utils.parseUnits("1000000000", 6);
+  const TEN_BILLION = ethers.utils.parseUnits("10000000000", 6);
 
   enum OperationType {
     Mint,
@@ -33,18 +34,18 @@ describe("IDRPController", function () {
 
   async function deployFixture() {
     const [admin, officer, manager, director, commissioner, user, depository] =
-      await hre.ethers.getSigners();
+      await ethers.getSigners();
 
-    const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
+    const IDRPFactory = await ethers.getContractFactory("IDRP");
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
 
     // Set depositoryWallet
     await idrp.connect(admin).setDepositoryWallet(depository.address);
-    //const IDRPControllerFactory = await hre.ethers.getContractFactory("IDRPController")
+    //const IDRPControllerFactory = await ethers.getContractFactory("IDRPController")
     //const controller = await IDRPControllerFactory.deploy(await idrp.getAddress(), admin.address)
     const controller = await hre.upgrades.deployProxy(
-      await hre.ethers.getContractFactory("IDRPController"),
+      await ethers.getContractFactory("IDRPController"),
       [await idrp.getAddress(), admin.address]
     );
     await controller.waitForDeployment();
@@ -152,7 +153,7 @@ describe("IDRPController", function () {
       },
       {
         minAmount: TEN_BILLION,
-        maxAmount: hre.ethers.MaxUint256,
+        maxAmount: ethers.constants.MaxUint256,
         requiredRoles: [
           OFFICER_ROLE,
           MANAGER_ROLE,
@@ -180,7 +181,7 @@ describe("IDRPController", function () {
       },
       {
         minAmount: TEN_BILLION,
-        maxAmount: hre.ethers.MaxUint256,
+        maxAmount: ethers.constants.MaxUint256,
         requiredRoles: [
           OFFICER_ROLE,
           MANAGER_ROLE,
@@ -194,7 +195,7 @@ describe("IDRPController", function () {
     await controller.setQuorumRules(OperationType.Pause, [
       {
         minAmount: 0,
-        maxAmount: hre.ethers.MaxUint256,
+        maxAmount: ethers.constants.MaxUint256,
         requiredRoles: [MANAGER_ROLE, DIRECTOR_ROLE],
       },
     ]);
@@ -202,7 +203,7 @@ describe("IDRPController", function () {
     await controller.setQuorumRules(OperationType.Unpause, [
       {
         minAmount: 0,
-        maxAmount: hre.ethers.MaxUint256,
+        maxAmount: ethers.constants.MaxUint256,
         requiredRoles: [
           OFFICER_ROLE,
           MANAGER_ROLE,
@@ -268,7 +269,7 @@ describe("IDRPController", function () {
       const { controller } = await loadFixture(deployFixture);
       const rule = await controller.getQuorumRule(OperationType.Pause, 0);
       expect(rule.minAmount).to.equal(0);
-      expect(rule.maxAmount).to.equal(hre.ethers.MaxUint256);
+      expect(rule.maxAmount).to.equal(ethers.constants.MaxUint256);
       expect(rule.requiredRoles.length).to.equal(2);
       expect(rule.requiredRoles[0]).to.equal(MANAGER_ROLE);
       expect(rule.requiredRoles[1]).to.equal(DIRECTOR_ROLE);
@@ -279,7 +280,7 @@ describe("IDRPController", function () {
     it("Should execute operation with proper signatures - small amount", async function () {
       const { controller, idrp, officer, depository, user, domain, types } =
         await loadFixture(deployFixture);
-      const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
+      const amount = ethers.utils.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const operationIdentifier = "tx1001"; // Use operation ID
 
@@ -329,7 +330,7 @@ describe("IDRPController", function () {
         domain,
         types,
       } = await loadFixture(deployFixture);
-      const amount = hre.ethers.parseUnits("1500000000", 6); // 1.5B tokens
+      const amount = ethers.utils.parseUnits("1500000000", 6); // 1.5B tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const operationIdentifier = "tx1002"; // Use operation ID
 
@@ -389,7 +390,7 @@ describe("IDRPController", function () {
     it("Should fail if signatures are insufficient", async function () {
       const { controller, idrp, officer, manager, user, domain, types } =
         await loadFixture(deployFixture);
-      const amount = hre.ethers.parseUnits("1500000000", 6); // 1.5B tokens
+      const amount = ethers.utils.parseUnits("1500000000", 6); // 1.5B tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const operationIdentifier = "tx1003"; // Use operation ID
 
@@ -439,7 +440,7 @@ describe("IDRPController", function () {
     it("Should execute mint operation", async function () {
       const { controller, idrp, officer, depository, user, domain, types } =
         await loadFixture(deployFixture);
-      const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
+      const amount = ethers.utils.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const operationIdentifier = "tx1001"; // Use operation ID
 
@@ -487,7 +488,7 @@ describe("IDRPController", function () {
         domain,
         types,
       } = await loadFixture(deployFixture);
-      const amount = hre.ethers.parseUnits("200000000", 6); // 200M tokens
+      const amount = ethers.utils.parseUnits("200000000", 6); // 200M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const operationIdentifier = "tx1002"; // Use operation ID
 
@@ -548,7 +549,7 @@ describe("IDRPController", function () {
         await loadFixture(deployFixture);
 
       // First mint some tokens to the user
-      const mintAmount = hre.ethers.parseUnits("50000000", 6);
+      const mintAmount = ethers.utils.parseUnits("50000000", 6);
 
       // Mint operation
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -583,7 +584,7 @@ describe("IDRPController", function () {
       expect(await idrp.balanceOf(user.address)).to.equal(mintAmount);
 
       // Then burn half the tokens
-      const burnAmount = hre.ethers.parseUnits("25000000", 6);
+      const burnAmount = ethers.utils.parseUnits("25000000", 6);
 
       // User needs to approve controller for burn
       await idrp
@@ -627,7 +628,7 @@ describe("IDRPController", function () {
         await loadFixture(deployFixture);
 
       // First mint some tokens to the user so we can test freezing affects transfers
-      const mintAmount = hre.ethers.parseUnits("50000000", 6);
+      const mintAmount = ethers.utils.parseUnits("50000000", 6);
 
       // Mint operation - simplified to focus on freeze test
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
@@ -684,7 +685,7 @@ describe("IDRPController", function () {
       await expect(
         idrp
           .connect(user)
-          .transfer(admin.address, hre.ethers.parseUnits("1000", 6))
+          .transfer(admin.address, ethers.utils.parseUnits("1000", 6))
       ).to.be.rejected;
     });
 
@@ -700,7 +701,7 @@ describe("IDRPController", function () {
         types,
       } = await loadFixture(deployFixture);
 
-      const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
+      const amount = ethers.utils.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const operationIdentifier = "tx1007"; // Use operation ID
 
@@ -751,7 +752,7 @@ describe("IDRPController", function () {
 
       // Create pause operation data
       const pauseOperation = {
-        to: hre.ethers.ZeroAddress, // Address doesn't matter for pause
+        to: ethers.constants.AddressZero, // Address doesn't matter for pause
         operationType: OperationType.Pause,
         amount: 0, // Amount doesn't matter for pause
         operationIdentifier: operationIdentifier,
@@ -797,7 +798,7 @@ describe("IDRPController", function () {
 
       // Create pause operation data
       const pauseOperation = {
-        to: hre.ethers.ZeroAddress, // Address doesn't matter for pause
+        to: ethers.constants.AddressZero, // Address doesn't matter for pause
         operationType: OperationType.Pause,
         amount: 0, // Amount doesn't matter for pause
         operationIdentifier: operationIdentifier,
@@ -838,7 +839,7 @@ describe("IDRPController", function () {
       // First pause the token
       const pauseDeadline = Math.floor(Date.now() / 1000) + 3600;
       const pauseOperation = {
-        to: hre.ethers.ZeroAddress,
+        to: ethers.constants.AddressZero,
         operationType: OperationType.Pause,
         amount: 0,
         operationIdentifier: "tx1010", // Use operation ID
@@ -871,7 +872,7 @@ describe("IDRPController", function () {
       // Now unpause with officer+manager+director
       const unpauseDeadline = Math.floor(Date.now() / 1000) + 3600;
       const unpauseOperation = {
-        to: hre.ethers.ZeroAddress,
+        to: ethers.constants.AddressZero,
         operationType: OperationType.Unpause,
         amount: 0,
         operationIdentifier: "tx1011", // Use operation ID
@@ -921,7 +922,7 @@ describe("IDRPController", function () {
       // First pause the token
       const pauseDeadline = Math.floor(Date.now() / 1000) + 3600;
       const pauseOperation = {
-        to: hre.ethers.ZeroAddress,
+        to: ethers.constants.AddressZero,
         operationType: OperationType.Pause,
         amount: 0,
         operationIdentifier: "tx1012", // Use operation ID
@@ -954,7 +955,7 @@ describe("IDRPController", function () {
       // Now unpause with manager+director+commissioner
       const unpauseDeadline = Math.floor(Date.now() / 1000) + 3600;
       const unpauseOperation = {
-        to: hre.ethers.ZeroAddress,
+        to: ethers.constants.AddressZero,
         operationType: OperationType.Unpause,
         amount: 0,
         operationIdentifier: "tx1013", // Use operation ID
@@ -1005,7 +1006,7 @@ describe("IDRPController", function () {
       // First pause the token
       const pauseDeadline = Math.floor(Date.now() / 1000) + 3600;
       const pauseOperation = {
-        to: hre.ethers.ZeroAddress,
+        to: ethers.constants.AddressZero,
         operationType: OperationType.Pause,
         amount: 0,
         operationIdentifier: "tx1014", // Use operation ID
@@ -1039,7 +1040,7 @@ describe("IDRPController", function () {
       // Try to unpause with invalid combination: officer+manager+commissioner (missing director)
       const unpauseDeadline = Math.floor(Date.now() / 1000) + 3600;
       const unpauseOperation = {
-        to: hre.ethers.ZeroAddress,
+        to: ethers.constants.AddressZero,
         operationType: OperationType.Unpause,
         amount: 0,
         operationIdentifier: "tx1015", // Use operation ID
@@ -1085,7 +1086,7 @@ describe("IDRPController", function () {
       );
 
       // Deploy a test ERC20 token
-      const TestTokenFactory = await hre.ethers.getContractFactory("IDRP"); // Reusing IDRP for simplicity
+      const TestTokenFactory = await ethers.getContractFactory("IDRP"); // Reusing IDRP for simplicity
       const testToken = await hre.upgrades.deployProxy(TestTokenFactory, [
         admin.address,
       ]);
@@ -1095,10 +1096,10 @@ describe("IDRPController", function () {
       await testToken.connect(admin).setDepositoryWallet(depository.address);
 
       // Mint some tokens to the depository
-      await testToken.connect(admin).mint(hre.ethers.parseUnits("1000", 6));
+      await testToken.connect(admin).mint(ethers.utils.parseUnits("1000", 6));
 
       // Transfer some tokens to the controller
-      const transferAmount = hre.ethers.parseUnits("1000", 6);
+      const transferAmount = ethers.utils.parseUnits("1000", 6);
       await testToken
         .connect(depository)
         .transfer(await controller.getAddress(), transferAmount);
@@ -1122,7 +1123,7 @@ describe("IDRPController", function () {
         0
       );
       expect(await testToken.balanceOf(admin.address)).to.equal(
-        hre.ethers.parseUnits("1000", 6)
+        ethers.utils.parseUnits("1000", 6)
       );
     });
 
@@ -1132,14 +1133,14 @@ describe("IDRPController", function () {
       );
 
       // Mint some IDRP tokens to the controller for testing
-      await idrp.connect(admin).mint(hre.ethers.parseUnits("100", 6));
+      await idrp.connect(admin).mint(ethers.utils.parseUnits("100", 6));
 
       // Transfer some IDRP tokens to the controller
       await idrp
         .connect(depository)
         .transfer(
           await controller.getAddress(),
-          hre.ethers.parseUnits("100", 6)
+          ethers.utils.parseUnits("100", 6)
         );
 
       // Attempt to withdraw IDRP tokens, should fail
@@ -1149,13 +1150,13 @@ describe("IDRPController", function () {
           .withdrawToken(
             await idrp.getAddress(),
             admin.address,
-            hre.ethers.parseUnits("100", 6)
+            ethers.utils.parseUnits("100", 6)
           )
       ).to.be.revertedWith("Cannot withdraw IDRP token");
 
       // Verify tokens still in controller
       expect(await idrp.balanceOf(await controller.getAddress())).to.equal(
-        hre.ethers.parseUnits("100", 6)
+        ethers.utils.parseUnits("100", 6)
       );
     });
   });
