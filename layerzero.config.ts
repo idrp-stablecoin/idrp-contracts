@@ -25,7 +25,7 @@ const sepoliaContract: OmniPointHardhat = {
 
 const tronContract: OmniPointHardhat = {
   eid: EndpointId.TRON_V2_TESTNET,
-  // contractName: "IDRPOFTUpgradeable",
+  contractName: "IDRPOFTUpgradeable",
   // address: "TGs6gVP1W8m8kqBcfZNjPnmtPPAWdhdGS2", // deployed address on Shasta
   address: "0x4bA11be2056CCa41Ee31b9b6239a883dcBA8B293", // deployed address on Shasta
 };
@@ -57,7 +57,7 @@ const pathways: TwoWayConfig[] = [
     baseContract, // Chain A contract
     arbitrumContract, // Chain B contract
     [["LayerZero Labs"], []], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
-    [1, 1], // [A to B confirmations, B to A confirmations]
+    [3, 3], // [A to B confirmations, B to A confirmations]
     [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
   ],
   // Base <-> Sepolia
@@ -65,7 +65,7 @@ const pathways: TwoWayConfig[] = [
     baseContract, // Chain A contract
     sepoliaContract, // Chain B contract
     [["LayerZero Labs"], []], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
-    [1, 1], // [A to B confirmations, B to A confirmations]
+    [3, 3], // [A to B confirmations, B to A confirmations]
     [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
   ],
   // Base <-> Tron
@@ -73,15 +73,15 @@ const pathways: TwoWayConfig[] = [
     baseContract, // Chain A contract
     tronContract, // Chain B contract
     [["LayerZero Labs"], []], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
-    [1, 1], // [A to B confirmations, B to A confirmations]
-    [EVM_ENFORCED_OPTIONS, []], // Chain B enforcedOptions, Chain A enforcedOptions
+    [3, 3], // [A to B confirmations, B to A confirmations]
+    [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
   ],
   // Arbitrum <-> Sepolia
   // [
   //   arbitrumContract, // Chain A contract
   //   sepoliaContract, // Chain B contract
   //   [["LayerZero Labs"], []], // [ requiredDVN[], [ optionalDVN[], threshold ] ]
-  //   [1, 1], // [A to B confirmations, B to A confirmations]
+  //   [3, 3], // [A to B confirmations, B to A confirmations]
   //   [EVM_ENFORCED_OPTIONS, EVM_ENFORCED_OPTIONS], // Chain B enforcedOptions, Chain A enforcedOptions
   // ],
 ];
