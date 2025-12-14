@@ -83,16 +83,16 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: {
-      holesky: ETHERSCAN_API_KEY,
-      sepolia: ETHERSCAN_API_KEY,
-      polygon: ETHERSCAN_API_KEY,
-      mainnet: ETHERSCAN_API_KEY,
-      kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
-      bsc: ETHERSCAN_API_KEY,
-      kaia: KAIA_API_KEY || "unnecessary",
-    },
-    // apiKey: ETHERSCAN_API_KEY,
+    // apiKey: {
+    //   holesky: ETHERSCAN_API_KEY,
+    //   sepolia: ETHERSCAN_API_KEY,
+    //   polygon: ETHERSCAN_API_KEY,
+    //   mainnet: ETHERSCAN_API_KEY,
+    //   kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
+    //   bsc: ETHERSCAN_API_KEY,
+    //   kaia: KAIA_API_KEY || "unnecessary",
+    // },
+    apiKey: ETHERSCAN_API_KEY,
     customChains: [
       {
         chainId: 1001,

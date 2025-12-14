@@ -9,7 +9,7 @@ async function main() {
     "./deployment"
   );
   const signers = await hre.ethers.getSigners();
-  const admin = signers[1];
+  const admin = signers[0];
   console.log("admin", admin.address);
 
   if (!fs.existsSync(deploymentDir)) {
@@ -28,7 +28,15 @@ async function main() {
   console.log("Upgrading IDRP to:", proxyAddress);
   const IDRP = await hre.ethers.getContractFactory("IDRP", admin);
   // console.log("IDRP:", IDRP);
-  const upgraded = await hre.upgrades.upgradeProxy(proxyAddress, IDRP);
+  // force import will import obejcts to json file for the network in .openzeppelin folder
+  // const upgradeForceImport = await hre.upgrades.forceImport(proxyAddress, IDRP);
+  const upgraded = await hre.upgrades.upgradeProxy(
+    proxyAddress,
+    IDRP
+    // {
+    //   redeployImplementation: "always",
+    // }
+  );
   // console.log("Upgraded:", upgraded);
   await upgraded.waitForDeployment();
 
