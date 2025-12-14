@@ -3,8 +3,8 @@ import { vars } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
-// import "@nomicfoundation/hardhat-verify";
-// import hardhatVerify from "@nomicfoundation/hardhat-verify";
+import "@nomicfoundation/hardhat-verify";
+import "hardhat-gas-reporter";
 
 // const PRIVATE_KEY = vars.get("PRIVATE_KEY")
 const IDRP_DEPLOYER_PRIVATE_KEY = vars.get("IDRP_DEPLOYER_PRIVATE_KEY");
@@ -14,6 +14,7 @@ const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
 const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
 const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
+const KAIA_API_KEY = vars.get("KAIA_API_KEY");
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -75,17 +76,23 @@ const config: HardhatUserConfig = {
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       gasMultiplier: 1.1, // Add 10% buffer to estimated gas
     },
+    kaia: {
+      chainId: 8217,
+      url: `https://public-en.node.kaia.io`,
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
+    },
   },
   etherscan: {
-    // apiKey: {
-    //   holesky: ETHERSCAN_API_KEY,
-    //   sepolia: ETHERSCAN_API_KEY,
-    //   polygon: ETHERSCAN_API_KEY,
-    //   mainnet: ETHERSCAN_API_KEY,
-    //   kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
-    //   bsc: ETHERSCAN_API_KEY,
-    // },
-    apiKey: ETHERSCAN_API_KEY,
+    apiKey: {
+      holesky: ETHERSCAN_API_KEY,
+      sepolia: ETHERSCAN_API_KEY,
+      polygon: ETHERSCAN_API_KEY,
+      mainnet: ETHERSCAN_API_KEY,
+      kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
+      bsc: ETHERSCAN_API_KEY,
+      kaia: KAIA_API_KEY || "unnecessary",
+    },
+    // apiKey: ETHERSCAN_API_KEY,
     customChains: [
       {
         chainId: 1001,
@@ -101,6 +108,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.etherscan.io/v2/api?chainid=56",
           browserURL: "https://bscscan.com",
+        },
+      },
+      {
+        network: "kaia",
+        chainId: 8217,
+        urls: {
+          apiURL: "https://mainnet-api.kaiascan.io/hardhat-verify",
+          browserURL: "https://kaiascan.io",
         },
       },
     ],

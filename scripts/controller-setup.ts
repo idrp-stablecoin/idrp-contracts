@@ -8,6 +8,7 @@ import {
   DIRECTOR_ADDRESS,
   MANAGER_ADDRESS,
   OFFICER_ADDRESS,
+  DEPOSITORY_WALLET_ADDRESS,
 } from "./utils/constants";
 import { delay } from "./utils/misc";
 
@@ -16,8 +17,19 @@ async function main() {
   const signers = await ethers.getSigners();
   const admin = signers[1];
 
-  const [officerAddress, managerAddress, directorAddress, commissionerAddress] =
-    [OFFICER_ADDRESS, MANAGER_ADDRESS, DIRECTOR_ADDRESS, COMMISSIONER_ADDRESS];
+  const [
+    officerAddress,
+    managerAddress,
+    directorAddress,
+    commissionerAddress,
+    depositoryWalletAddress,
+  ] = [
+    OFFICER_ADDRESS,
+    MANAGER_ADDRESS,
+    DIRECTOR_ADDRESS,
+    COMMISSIONER_ADDRESS,
+    DEPOSITORY_WALLET_ADDRESS,
+  ];
 
   console.log("admin", admin.address);
   console.log("approver", {
@@ -80,6 +92,10 @@ async function main() {
     .connect(admin)
     .grantRole(await idrp.PAUSER_ROLE(), await controller.getAddress());
   console.log("Controller granted roles on IDRP token");
+
+  // Set depository wallet
+  await idrp.connect(admin).setDepositoryWallet(depositoryWalletAddress);
+  console.log("Depository wallet set to:", depositoryWalletAddress);
 
   // Set quorum rules
   const ONE_HUNDRED_MILLION = ethers.parseUnits("100000000", 6);
