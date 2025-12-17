@@ -6,7 +6,7 @@ async function main() {
   const name = "IDRPController";
   const networkId = hre.network.config.chainId ?? 8545;
   const signers = await hre.ethers.getSigners();
-  const admin = signers[1];
+  const admin = signers[0];
   console.log("admin", admin.address);
 
   const deploymentDir = path.join(
