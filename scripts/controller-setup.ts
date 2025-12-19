@@ -103,6 +103,13 @@ async function main() {
   const ONE_BILLION = ethers.parseUnits("1000000000", 6);
   const TEN_BILLION = ethers.parseUnits("10000000000", 6);
 
+  console.log("Setting quorum rules...", {
+    ONE_HUNDRED_MILLION: ONE_HUNDRED_MILLION.toString(),
+    FIVE_HUNDRED_MILLION: FIVE_HUNDRED_MILLION.toString(),
+    ONE_BILLION: ONE_BILLION.toString(),
+    TEN_BILLION: TEN_BILLION.toString(),
+  });
+
   // Set mint/burn quorum rules
   await controller.connect(admin).setQuorumRules(
     0, // OperationType.Mint
