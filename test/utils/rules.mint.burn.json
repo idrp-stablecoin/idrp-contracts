@@ -1,13 +1,6 @@
 [
   {
     "minAmount": "0",
-    "maxAmount": "100000000000000",
-    "requiredRoles": [
-      "0xbbecb2568601cb27e6ced525237c463da94c4fb7a9b98ac79fd30fd56d8e1b53"
-    ]
-  },
-  {
-    "minAmount": "100000000000000",
     "maxAmount": "500000000000000",
     "requiredRoles": [
       "0xbbecb2568601cb27e6ced525237c463da94c4fb7a9b98ac79fd30fd56d8e1b53",

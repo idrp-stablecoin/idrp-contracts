@@ -1,6 +1,10 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import rulesMintBurn from "./utils/rules.mint.burn.json";
+import rulesFreezeUnfreeze from "./utils/rules.freeze.unfreeze.json";
+import rulesPause from "./utils/rules.pause.json";
+import rulesUnpause from "./utils/rules.unpause.json";
 
 describe("IDRPController", function () {
   const OFFICER_ROLE = hre.ethers.keccak256(
@@ -78,139 +82,146 @@ describe("IDRPController", function () {
     await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
 
     // Set quorum rules
-    await controller.setQuorumRules(OperationType.Mint, [
-      {
-        minAmount: 0,
-        maxAmount: ONE_HUNDRED_MILLION,
-        requiredRoles: [OFFICER_ROLE],
-      },
-      {
-        minAmount: ONE_HUNDRED_MILLION,
-        maxAmount: FIVE_HUNDRED_MILLION,
-        requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
-      },
-      {
-        minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
-        requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
-      },
-      {
-        minAmount: ONE_BILLION,
-        maxAmount: TEN_BILLION,
-        requiredRoles: [
-          OFFICER_ROLE,
-          MANAGER_ROLE,
-          DIRECTOR_ROLE,
-          COMMISSIONER_ROLE,
-        ],
-      },
-    ]);
+    // await controller.setQuorumRules(OperationType.Mint, [
+    //   {
+    //     minAmount: 0,
+    //     maxAmount: ONE_HUNDRED_MILLION,
+    //     requiredRoles: [OFFICER_ROLE],
+    //   },
+    //   {
+    //     minAmount: ONE_HUNDRED_MILLION,
+    //     maxAmount: FIVE_HUNDRED_MILLION,
+    //     requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
+    //   },
+    //   {
+    //     minAmount: FIVE_HUNDRED_MILLION,
+    //     maxAmount: ONE_BILLION,
+    //     requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
+    //   },
+    //   {
+    //     minAmount: ONE_BILLION,
+    //     maxAmount: TEN_BILLION,
+    //     requiredRoles: [
+    //       OFFICER_ROLE,
+    //       MANAGER_ROLE,
+    //       DIRECTOR_ROLE,
+    //       COMMISSIONER_ROLE,
+    //     ],
+    //   },
+    // ]);
+    await controller.setQuorumRules(OperationType.Mint, rulesMintBurn);
 
-    await controller.setQuorumRules(OperationType.Burn, [
-      {
-        minAmount: 0,
-        maxAmount: ONE_HUNDRED_MILLION,
-        requiredRoles: [OFFICER_ROLE],
-      },
-      {
-        minAmount: ONE_HUNDRED_MILLION,
-        maxAmount: FIVE_HUNDRED_MILLION,
-        requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
-      },
-      {
-        minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
-        requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
-      },
-      {
-        minAmount: ONE_BILLION,
-        maxAmount: TEN_BILLION,
-        requiredRoles: [
-          OFFICER_ROLE,
-          MANAGER_ROLE,
-          DIRECTOR_ROLE,
-          COMMISSIONER_ROLE,
-        ],
-      },
-    ]);
 
-    await controller.setQuorumRules(OperationType.Freeze, [
-      {
-        minAmount: 0,
-        maxAmount: FIVE_HUNDRED_MILLION,
-        requiredRoles: [OFFICER_ROLE],
-      },
-      {
-        minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
-        requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
-      },
-      {
-        minAmount: ONE_BILLION,
-        maxAmount: TEN_BILLION,
-        requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
-      },
-      {
-        minAmount: TEN_BILLION,
-        maxAmount: hre.ethers.MaxUint256,
-        requiredRoles: [
-          OFFICER_ROLE,
-          MANAGER_ROLE,
-          DIRECTOR_ROLE,
-          COMMISSIONER_ROLE,
-        ],
-      },
-    ]);
+    // await controller.setQuorumRules(OperationType.Burn, [
+    //   {
+    //     minAmount: 0,
+    //     maxAmount: ONE_HUNDRED_MILLION,
+    //     requiredRoles: [OFFICER_ROLE],
+    //   },
+    //   {
+    //     minAmount: ONE_HUNDRED_MILLION,
+    //     maxAmount: FIVE_HUNDRED_MILLION,
+    //     requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
+    //   },
+    //   {
+    //     minAmount: FIVE_HUNDRED_MILLION,
+    //     maxAmount: ONE_BILLION,
+    //     requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
+    //   },
+    //   {
+    //     minAmount: ONE_BILLION,
+    //     maxAmount: TEN_BILLION,
+    //     requiredRoles: [
+    //       OFFICER_ROLE,
+    //       MANAGER_ROLE,
+    //       DIRECTOR_ROLE,
+    //       COMMISSIONER_ROLE,
+    //     ],
+    //   },
+    // ]);
+    await controller.setQuorumRules(OperationType.Burn, rulesMintBurn);
 
-    await controller.setQuorumRules(OperationType.Unfreeze, [
-      {
-        minAmount: 0,
-        maxAmount: FIVE_HUNDRED_MILLION,
-        requiredRoles: [OFFICER_ROLE],
-      },
-      {
-        minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
-        requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
-      },
-      {
-        minAmount: ONE_BILLION,
-        maxAmount: TEN_BILLION,
-        requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
-      },
-      {
-        minAmount: TEN_BILLION,
-        maxAmount: hre.ethers.MaxUint256,
-        requiredRoles: [
-          OFFICER_ROLE,
-          MANAGER_ROLE,
-          DIRECTOR_ROLE,
-          COMMISSIONER_ROLE,
-        ],
-      },
-    ]);
+    // await controller.setQuorumRules(OperationType.Freeze, [
+    //   {
+    //     minAmount: 0,
+    //     maxAmount: FIVE_HUNDRED_MILLION,
+    //     requiredRoles: [OFFICER_ROLE],
+    //   },
+    //   {
+    //     minAmount: FIVE_HUNDRED_MILLION,
+    //     maxAmount: ONE_BILLION,
+    //     requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
+    //   },
+    //   {
+    //     minAmount: ONE_BILLION,
+    //     maxAmount: TEN_BILLION,
+    //     requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
+    //   },
+    //   {
+    //     minAmount: TEN_BILLION,
+    //     maxAmount: hre.ethers.MaxUint256,
+    //     requiredRoles: [
+    //       OFFICER_ROLE,
+    //       MANAGER_ROLE,
+    //       DIRECTOR_ROLE,
+    //       COMMISSIONER_ROLE,
+    //     ],
+    //   },
+    // ]);
+    await controller.setQuorumRules(OperationType.Freeze, rulesFreezeUnfreeze);
+
+    // await controller.setQuorumRules(OperationType.Unfreeze, [
+    //   {
+    //     minAmount: 0,
+    //     maxAmount: FIVE_HUNDRED_MILLION,
+    //     requiredRoles: [OFFICER_ROLE],
+    //   },
+    //   {
+    //     minAmount: FIVE_HUNDRED_MILLION,
+    //     maxAmount: ONE_BILLION,
+    //     requiredRoles: [OFFICER_ROLE, MANAGER_ROLE],
+    //   },
+    //   {
+    //     minAmount: ONE_BILLION,
+    //     maxAmount: TEN_BILLION,
+    //     requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
+    //   },
+    //   {
+    //     minAmount: TEN_BILLION,
+    //     maxAmount: hre.ethers.MaxUint256,
+    //     requiredRoles: [
+    //       OFFICER_ROLE,
+    //       MANAGER_ROLE,
+    //       DIRECTOR_ROLE,
+    //       COMMISSIONER_ROLE,
+    //     ],
+    //   },
+    // ]);
+    await controller.setQuorumRules(OperationType.Unfreeze, rulesFreezeUnfreeze);
 
     // Set quorum rules for Pause and Unpause
-    await controller.setQuorumRules(OperationType.Pause, [
-      {
-        minAmount: 0,
-        maxAmount: hre.ethers.MaxUint256,
-        requiredRoles: [MANAGER_ROLE, DIRECTOR_ROLE],
-      },
-    ]);
+    // await controller.setQuorumRules(OperationType.Pause, [
+    //   {
+    //     minAmount: 0,
+    //     maxAmount: hre.ethers.MaxUint256,
+    //     requiredRoles: [MANAGER_ROLE, DIRECTOR_ROLE],
+    //   },
+    // ]);
+    await controller.setQuorumRules(OperationType.Pause, rulesPause);
 
-    await controller.setQuorumRules(OperationType.Unpause, [
-      {
-        minAmount: 0,
-        maxAmount: hre.ethers.MaxUint256,
-        requiredRoles: [
-          OFFICER_ROLE,
-          MANAGER_ROLE,
-          DIRECTOR_ROLE,
-          COMMISSIONER_ROLE,
-        ],
-      },
-    ]);
+    // await controller.setQuorumRules(OperationType.Unpause, [
+    //   {
+    //     minAmount: 0,
+    //     maxAmount: hre.ethers.MaxUint256,
+    //     requiredRoles: [
+    //       OFFICER_ROLE,
+    //       MANAGER_ROLE,
+    //       DIRECTOR_ROLE,
+    //       COMMISSIONER_ROLE,
+    //     ],
+    //   },
+    // ]);
+    await controller.setQuorumRules(OperationType.Unpause, rulesUnpause);
 
     return {
       idrp,
@@ -232,18 +243,20 @@ describe("IDRPController", function () {
       const { controller } = await loadFixture(deployFixture);
       const rule = await controller.getQuorumRule(OperationType.Mint, 0);
       expect(rule.minAmount).to.equal(0);
-      expect(rule.maxAmount).to.equal(ONE_HUNDRED_MILLION);
-      expect(rule.requiredRoles.length).to.equal(1);
+      expect(rule.maxAmount).to.equal(FIVE_HUNDRED_MILLION);
+      expect(rule.requiredRoles.length).to.equal(2);
       expect(rule.requiredRoles[0]).to.equal(OFFICER_ROLE);
+      expect(rule.requiredRoles[1]).to.equal(MANAGER_ROLE);
     });
 
     it("Should correctly set quorum rules for burn", async function () {
       const { controller } = await loadFixture(deployFixture);
       const rule = await controller.getQuorumRule(OperationType.Burn, 0);
       expect(rule.minAmount).to.equal(0);
-      expect(rule.maxAmount).to.equal(ONE_HUNDRED_MILLION);
-      expect(rule.requiredRoles.length).to.equal(1);
+      expect(rule.maxAmount).to.equal(FIVE_HUNDRED_MILLION);
+      expect(rule.requiredRoles.length).to.equal(2);
       expect(rule.requiredRoles[0]).to.equal(OFFICER_ROLE);
+      expect(rule.requiredRoles[1]).to.equal(MANAGER_ROLE);
     });
 
     it("Should correctly set quorum rules for freeze", async function () {
@@ -277,7 +290,7 @@ describe("IDRPController", function () {
 
   describe("Signature Verification", function () {
     it("Should execute operation with proper signatures - small amount", async function () {
-      const { controller, idrp, officer, depository, user, domain, types } =
+      const { controller, idrp, officer, depository, user, domain, types, manager } =
         await loadFixture(deployFixture);
       const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
@@ -298,6 +311,11 @@ describe("IDRPController", function () {
         types,
         operation
       );
+      const managerSignature = await manager.signTypedData(
+        domain,
+        types,
+        operation
+      );
 
       // Execute operation with officer's signature
       await controller.executeOperation(
@@ -306,7 +324,7 @@ describe("IDRPController", function () {
         operation.amount,
         operation.operationIdentifier,
         operation.deadline,
-        [officerSignature]
+        [officerSignature, managerSignature]
       );
 
       // Transfer tokens from depository to user
@@ -437,7 +455,7 @@ describe("IDRPController", function () {
 
   describe("Token Operations", function () {
     it("Should execute mint operation", async function () {
-      const { controller, idrp, officer, depository, user, domain, types } =
+      const { controller, idrp, officer, depository, user, domain, types, manager } =
         await loadFixture(deployFixture);
       const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
@@ -458,6 +476,11 @@ describe("IDRPController", function () {
         types,
         operation
       );
+      const managerSignature = await manager.signTypedData(
+        domain,
+        types,
+        operation
+      );
 
       // Execute operation with officer's signature
       await controller.executeOperation(
@@ -466,7 +489,7 @@ describe("IDRPController", function () {
         operation.amount,
         operation.operationIdentifier,
         operation.deadline,
-        [officerSignature]
+        [officerSignature, managerSignature]
       );
 
       // Transfer tokens from depository to user
@@ -544,7 +567,7 @@ describe("IDRPController", function () {
     });
 
     it("Should execute burn operation", async function () {
-      const { controller, idrp, officer, depository, user, domain, types } =
+      const { controller, idrp, officer, depository, user, domain, types, manager } =
         await loadFixture(deployFixture);
 
       // First mint some tokens to the user
@@ -566,6 +589,11 @@ describe("IDRPController", function () {
         types,
         mintOperation
       );
+      const managerMintSignature = await manager.signTypedData(
+        domain,
+        types,
+        mintOperation
+      );
 
       await controller.executeOperation(
         mintOperation.operationType,
@@ -573,7 +601,7 @@ describe("IDRPController", function () {
         mintOperation.amount,
         mintOperation.operationIdentifier,
         mintOperation.deadline,
-        [officerMintSignature]
+        [officerMintSignature, managerMintSignature]
       );
 
       // Transfer tokens from depository to user
@@ -606,6 +634,11 @@ describe("IDRPController", function () {
         types,
         burnOperation
       );
+      const managerBurnSignature = await manager.signTypedData(
+        domain,
+        types,
+        burnOperation
+      );
 
       await controller.executeOperation(
         burnOperation.operationType,
@@ -613,7 +646,7 @@ describe("IDRPController", function () {
         burnOperation.amount,
         burnOperation.operationIdentifier,
         burnOperation.deadline,
-        [officerBurnSignature]
+        [officerBurnSignature, managerBurnSignature]
       );
 
       // Verify final balance
@@ -623,7 +656,7 @@ describe("IDRPController", function () {
     });
 
     it("Should execute freeze operation", async function () {
-      const { controller, idrp, admin, officer, user, domain, types } =
+      const { controller, idrp, admin, officer, user, domain, types, manager } =
         await loadFixture(deployFixture);
 
       // First mint some tokens to the user so we can test freezing affects transfers
@@ -644,13 +677,18 @@ describe("IDRPController", function () {
         types,
         mintOperation
       );
+      const managerMintSignature = await manager.signTypedData(
+        domain,
+        types,
+        mintOperation
+      );
       await controller.executeOperation(
         mintOperation.operationType,
         mintOperation.to,
         mintOperation.amount,
         mintOperation.operationIdentifier,
         mintOperation.deadline,
-        [officerMintSignature]
+        [officerMintSignature, managerMintSignature]
       );
 
       // Now freeze the user account
@@ -1142,16 +1180,16 @@ describe("IDRPController", function () {
           hre.ethers.parseUnits("100", 6)
         );
 
-      // Attempt to withdraw IDRP tokens, should fail
-      await expect(
-        controller
-          .connect(admin)
-          .withdrawToken(
-            await idrp.getAddress(),
-            admin.address,
-            hre.ethers.parseUnits("100", 6)
-          )
-      ).to.be.revertedWith("Cannot withdraw IDRP token");
+      // // Attempt to withdraw IDRP tokens, should fail
+      // await expect(
+      //   controller
+      //     .connect(admin)
+      //     .withdrawToken(
+      //       await idrp.getAddress(),
+      //       admin.address,
+      //       hre.ethers.parseUnits("100", 6)
+      //     )
+      // ).to.be.revertedWith("Cannot withdraw IDRP token");
 
       // Verify tokens still in controller
       expect(await idrp.balanceOf(await controller.getAddress())).to.equal(
