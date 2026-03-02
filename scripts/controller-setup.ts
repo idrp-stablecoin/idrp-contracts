@@ -165,7 +165,7 @@ async function main() {
       },
       {
         minAmount: ONE_BILLION,
-        maxAmount: TEN_BILLION,
+        maxAmount: ethers.MaxUint256,
         requiredRoles: [
           OFFICER_ROLE,
           MANAGER_ROLE,
