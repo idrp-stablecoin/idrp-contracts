@@ -1,23 +1,23 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import rulesMintBurn from "./utils/rules.mint.burn.json";
+import rulesMintBurn from "./utils/rules.mint.burn.v2.json";
 import rulesFreezeUnfreeze from "./utils/rules.freeze.unfreeze.json";
 import rulesPause from "./utils/rules.pause.json";
 import rulesUnpause from "./utils/rules.unpause.json";
 
 describe("IDRPController", function () {
   const OFFICER_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("OFFICER_ROLE")
+    hre.ethers.toUtf8Bytes("OFFICER_ROLE"),
   );
   const MANAGER_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("MANAGER_ROLE")
+    hre.ethers.toUtf8Bytes("MANAGER_ROLE"),
   );
   const DIRECTOR_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("DIRECTOR_ROLE")
+    hre.ethers.toUtf8Bytes("DIRECTOR_ROLE"),
   );
   const COMMISSIONER_ROLE = hre.ethers.keccak256(
-    hre.ethers.toUtf8Bytes("COMMISSIONER_ROLE")
+    hre.ethers.toUtf8Bytes("COMMISSIONER_ROLE"),
   );
   const ADMIN_ROLE = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("ADMIN_ROLE"));
 
@@ -49,7 +49,7 @@ describe("IDRPController", function () {
     //const controller = await IDRPControllerFactory.deploy(await idrp.getAddress(), admin.address)
     const controller = await hre.upgrades.deployProxy(
       await hre.ethers.getContractFactory("IDRPController"),
-      [await idrp.getAddress(), admin.address]
+      [await idrp.getAddress(), admin.address],
     );
     await controller.waitForDeployment();
 
@@ -110,7 +110,6 @@ describe("IDRPController", function () {
     //   },
     // ]);
     await controller.setQuorumRules(OperationType.Mint, rulesMintBurn);
-
 
     // await controller.setQuorumRules(OperationType.Burn, [
     //   {
@@ -197,7 +196,10 @@ describe("IDRPController", function () {
     //     ],
     //   },
     // ]);
-    await controller.setQuorumRules(OperationType.Unfreeze, rulesFreezeUnfreeze);
+    await controller.setQuorumRules(
+      OperationType.Unfreeze,
+      rulesFreezeUnfreeze,
+    );
 
     // Set quorum rules for Pause and Unpause
     // await controller.setQuorumRules(OperationType.Pause, [
@@ -290,8 +292,16 @@ describe("IDRPController", function () {
 
   describe("Signature Verification", function () {
     it("Should execute operation with proper signatures - small amount", async function () {
-      const { controller, idrp, officer, depository, user, domain, types, manager } =
-        await loadFixture(deployFixture);
+      const {
+        controller,
+        idrp,
+        officer,
+        depository,
+        user,
+        domain,
+        types,
+        manager,
+      } = await loadFixture(deployFixture);
       const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const operationIdentifier = "tx1001"; // Use operation ID
@@ -309,12 +319,12 @@ describe("IDRPController", function () {
       const officerSignature = await officer.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
 
       // Execute operation with officer's signature
@@ -324,7 +334,7 @@ describe("IDRPController", function () {
         operation.amount,
         operation.operationIdentifier,
         operation.deadline,
-        [officerSignature, managerSignature]
+        [officerSignature, managerSignature],
       );
 
       // Transfer tokens from depository to user
@@ -364,22 +374,22 @@ describe("IDRPController", function () {
       const officerSignature = await officer.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
       const directorSignature = await director.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
       const commissionerSignature = await commissioner.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
 
       // Execute operation with all signatures
@@ -394,7 +404,7 @@ describe("IDRPController", function () {
           managerSignature,
           directorSignature,
           commissionerSignature,
-        ]
+        ],
       );
 
       // Transfer tokens from depository to user
@@ -424,12 +434,12 @@ describe("IDRPController", function () {
       const officerSignature = await officer.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
 
       // Use try/catch to verify the operation fails
@@ -441,7 +451,7 @@ describe("IDRPController", function () {
           operation.amount,
           operation.operationIdentifier,
           operation.deadline,
-          [officerSignature, managerSignature]
+          [officerSignature, managerSignature],
         );
       } catch (error) {
         // The operation should fail, so we catch the error
@@ -455,8 +465,16 @@ describe("IDRPController", function () {
 
   describe("Token Operations", function () {
     it("Should execute mint operation", async function () {
-      const { controller, idrp, officer, depository, user, domain, types, manager } =
-        await loadFixture(deployFixture);
+      const {
+        controller,
+        idrp,
+        officer,
+        depository,
+        user,
+        domain,
+        types,
+        manager,
+      } = await loadFixture(deployFixture);
       const amount = hre.ethers.parseUnits("50000000", 6); // 50M tokens
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const operationIdentifier = "tx1001"; // Use operation ID
@@ -474,12 +492,12 @@ describe("IDRPController", function () {
       const officerSignature = await officer.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
 
       // Execute operation with officer's signature
@@ -489,7 +507,7 @@ describe("IDRPController", function () {
         operation.amount,
         operation.operationIdentifier,
         operation.deadline,
-        [officerSignature, managerSignature]
+        [officerSignature, managerSignature],
       );
 
       // Transfer tokens from depository to user
@@ -525,13 +543,13 @@ describe("IDRPController", function () {
       const officerSignature = await officer.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
 
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
 
       await controller.executeOperation(
@@ -540,7 +558,7 @@ describe("IDRPController", function () {
         operation.amount,
         operation.operationIdentifier,
         operation.deadline,
-        [officerSignature, managerSignature]
+        [officerSignature, managerSignature],
       );
 
       // Transfer tokens from depository to user
@@ -557,7 +575,7 @@ describe("IDRPController", function () {
           operation.amount,
           operation.operationIdentifier,
           operation.deadline,
-          [officerSignature]
+          [officerSignature],
         );
       } catch (error) {
         failedAsExpected = true;
@@ -567,8 +585,16 @@ describe("IDRPController", function () {
     });
 
     it("Should execute burn operation", async function () {
-      const { controller, idrp, officer, depository, user, domain, types, manager } =
-        await loadFixture(deployFixture);
+      const {
+        controller,
+        idrp,
+        officer,
+        depository,
+        user,
+        domain,
+        types,
+        manager,
+      } = await loadFixture(deployFixture);
 
       // First mint some tokens to the user
       const mintAmount = hre.ethers.parseUnits("50000000", 6);
@@ -587,12 +613,12 @@ describe("IDRPController", function () {
       const officerMintSignature = await officer.signTypedData(
         domain,
         types,
-        mintOperation
+        mintOperation,
       );
       const managerMintSignature = await manager.signTypedData(
         domain,
         types,
-        mintOperation
+        mintOperation,
       );
 
       await controller.executeOperation(
@@ -601,7 +627,7 @@ describe("IDRPController", function () {
         mintOperation.amount,
         mintOperation.operationIdentifier,
         mintOperation.deadline,
-        [officerMintSignature, managerMintSignature]
+        [officerMintSignature, managerMintSignature],
       );
 
       // Transfer tokens from depository to user
@@ -632,12 +658,12 @@ describe("IDRPController", function () {
       const officerBurnSignature = await officer.signTypedData(
         domain,
         types,
-        burnOperation
+        burnOperation,
       );
       const managerBurnSignature = await manager.signTypedData(
         domain,
         types,
-        burnOperation
+        burnOperation,
       );
 
       await controller.executeOperation(
@@ -646,12 +672,12 @@ describe("IDRPController", function () {
         burnOperation.amount,
         burnOperation.operationIdentifier,
         burnOperation.deadline,
-        [officerBurnSignature, managerBurnSignature]
+        [officerBurnSignature, managerBurnSignature],
       );
 
       // Verify final balance
       expect(await idrp.balanceOf(user.address)).to.equal(
-        mintAmount - burnAmount
+        mintAmount - burnAmount,
       );
     });
 
@@ -675,12 +701,12 @@ describe("IDRPController", function () {
       const officerMintSignature = await officer.signTypedData(
         domain,
         types,
-        mintOperation
+        mintOperation,
       );
       const managerMintSignature = await manager.signTypedData(
         domain,
         types,
-        mintOperation
+        mintOperation,
       );
       await controller.executeOperation(
         mintOperation.operationType,
@@ -688,7 +714,7 @@ describe("IDRPController", function () {
         mintOperation.amount,
         mintOperation.operationIdentifier,
         mintOperation.deadline,
-        [officerMintSignature, managerMintSignature]
+        [officerMintSignature, managerMintSignature],
       );
 
       // Now freeze the user account
@@ -704,7 +730,7 @@ describe("IDRPController", function () {
       const officerFreezeSignature = await officer.signTypedData(
         domain,
         types,
-        freezeOperation
+        freezeOperation,
       );
       await controller.executeOperation(
         freezeOperation.operationType,
@@ -712,7 +738,7 @@ describe("IDRPController", function () {
         freezeOperation.amount,
         freezeOperation.operationIdentifier,
         freezeOperation.deadline,
-        [officerFreezeSignature]
+        [officerFreezeSignature],
       );
 
       // Verify account is frozen
@@ -722,7 +748,7 @@ describe("IDRPController", function () {
       await expect(
         idrp
           .connect(user)
-          .transfer(admin.address, hre.ethers.parseUnits("1000", 6))
+          .transfer(admin.address, hre.ethers.parseUnits("1000", 6)),
       ).to.be.rejected;
     });
 
@@ -753,13 +779,13 @@ describe("IDRPController", function () {
       const officerSignature = await officer.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
 
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        operation
+        operation,
       );
 
       await controller.executeOperation(
@@ -768,7 +794,7 @@ describe("IDRPController", function () {
         operation.amount,
         operation.operationIdentifier,
         operation.deadline,
-        [officerSignature, managerSignature]
+        [officerSignature, managerSignature],
       );
 
       // Transfer tokens from depository to user
@@ -800,12 +826,12 @@ describe("IDRPController", function () {
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        pauseOperation
+        pauseOperation,
       );
       const directorSignature = await director.signTypedData(
         domain,
         types,
-        pauseOperation
+        pauseOperation,
       );
 
       // Execute pause operation
@@ -815,7 +841,7 @@ describe("IDRPController", function () {
         pauseOperation.amount,
         pauseOperation.operationIdentifier,
         pauseOperation.deadline,
-        [managerSignature, directorSignature]
+        [managerSignature, directorSignature],
       );
 
       // Verify token is now paused
@@ -824,7 +850,7 @@ describe("IDRPController", function () {
 
     it("Should fail pause operation without required signatures", async function () {
       const { controller, idrp, manager, domain, types } = await loadFixture(
-        deployFixture
+        deployFixture,
       );
 
       // Verify token is not paused initially
@@ -846,7 +872,7 @@ describe("IDRPController", function () {
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        pauseOperation
+        pauseOperation,
       );
 
       // Attempt pause operation, should fail
@@ -858,7 +884,7 @@ describe("IDRPController", function () {
           pauseOperation.amount,
           pauseOperation.operationIdentifier,
           pauseOperation.deadline,
-          [managerSignature]
+          [managerSignature],
         );
       } catch (error) {
         failedAsExpected = true;
@@ -886,12 +912,12 @@ describe("IDRPController", function () {
       const managerPauseSignature = await manager.signTypedData(
         domain,
         types,
-        pauseOperation
+        pauseOperation,
       );
       const directorPauseSignature = await director.signTypedData(
         domain,
         types,
-        pauseOperation
+        pauseOperation,
       );
 
       await controller.executeOperation(
@@ -900,7 +926,7 @@ describe("IDRPController", function () {
         pauseOperation.amount,
         pauseOperation.operationIdentifier,
         pauseOperation.deadline,
-        [managerPauseSignature, directorPauseSignature]
+        [managerPauseSignature, directorPauseSignature],
       );
 
       // Verify token is paused
@@ -919,17 +945,17 @@ describe("IDRPController", function () {
       const officerSignature = await officer.signTypedData(
         domain,
         types,
-        unpauseOperation
+        unpauseOperation,
       );
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        unpauseOperation
+        unpauseOperation,
       );
       const directorSignature = await director.signTypedData(
         domain,
         types,
-        unpauseOperation
+        unpauseOperation,
       );
 
       await controller.executeOperation(
@@ -938,7 +964,7 @@ describe("IDRPController", function () {
         unpauseOperation.amount,
         unpauseOperation.operationIdentifier,
         unpauseOperation.deadline,
-        [officerSignature, managerSignature, directorSignature]
+        [officerSignature, managerSignature, directorSignature],
       );
 
       // Verify token is unpaused
@@ -969,12 +995,12 @@ describe("IDRPController", function () {
       const managerPauseSignature = await manager.signTypedData(
         domain,
         types,
-        pauseOperation
+        pauseOperation,
       );
       const directorPauseSignature = await director.signTypedData(
         domain,
         types,
-        pauseOperation
+        pauseOperation,
       );
 
       await controller.executeOperation(
@@ -983,7 +1009,7 @@ describe("IDRPController", function () {
         pauseOperation.amount,
         pauseOperation.operationIdentifier,
         pauseOperation.deadline,
-        [managerPauseSignature, directorPauseSignature]
+        [managerPauseSignature, directorPauseSignature],
       );
 
       // Verify token is paused
@@ -1002,17 +1028,17 @@ describe("IDRPController", function () {
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        unpauseOperation
+        unpauseOperation,
       );
       const directorSignature = await director.signTypedData(
         domain,
         types,
-        unpauseOperation
+        unpauseOperation,
       );
       const commissionerSignature = await commissioner.signTypedData(
         domain,
         types,
-        unpauseOperation
+        unpauseOperation,
       );
 
       await controller.executeOperation(
@@ -1021,7 +1047,7 @@ describe("IDRPController", function () {
         unpauseOperation.amount,
         unpauseOperation.operationIdentifier,
         unpauseOperation.deadline,
-        [managerSignature, directorSignature, commissionerSignature]
+        [managerSignature, directorSignature, commissionerSignature],
       );
 
       // Verify token is unpaused
@@ -1054,12 +1080,12 @@ describe("IDRPController", function () {
       const managerPauseSignature = await manager.signTypedData(
         domain,
         types,
-        pauseOperation
+        pauseOperation,
       );
       const directorPauseSignature = await director.signTypedData(
         domain,
         types,
-        pauseOperation
+        pauseOperation,
       );
 
       await controller.executeOperation(
@@ -1068,7 +1094,7 @@ describe("IDRPController", function () {
         pauseOperation.amount,
         pauseOperation.operationIdentifier,
         pauseOperation.deadline,
-        [managerPauseSignature, directorPauseSignature]
+        [managerPauseSignature, directorPauseSignature],
       );
 
       // Verify token is paused
@@ -1089,17 +1115,17 @@ describe("IDRPController", function () {
       const officerSignature = await officer.signTypedData(
         domain,
         types,
-        unpauseOperation
+        unpauseOperation,
       );
       const managerSignature = await manager.signTypedData(
         domain,
         types,
-        unpauseOperation
+        unpauseOperation,
       );
       const commissionerSignature = await commissioner.signTypedData(
         domain,
         types,
-        unpauseOperation
+        unpauseOperation,
       );
 
       // Attempt unpause operation with invalid combination, should fail
@@ -1110,8 +1136,8 @@ describe("IDRPController", function () {
           unpauseOperation.amount,
           unpauseOperation.operationIdentifier,
           unpauseOperation.deadline,
-          [officerSignature, managerSignature, commissionerSignature]
-        )
+          [officerSignature, managerSignature, commissionerSignature],
+        ),
       ).to.be.revertedWith("Invalid signature combination for unpause");
     });
   });
@@ -1119,7 +1145,7 @@ describe("IDRPController", function () {
   describe("Withdrawal", function () {
     it("Should allow withdrawal of other tokens", async function () {
       const { controller, depository, admin } = await loadFixture(
-        deployFixture
+        deployFixture,
       );
 
       // Deploy a test ERC20 token
@@ -1143,7 +1169,7 @@ describe("IDRPController", function () {
 
       // Verify controller has the tokens
       expect(await testToken.balanceOf(await controller.getAddress())).to.equal(
-        transferAmount
+        transferAmount,
       );
 
       // Admin withdraws the tokens
@@ -1152,21 +1178,21 @@ describe("IDRPController", function () {
         .withdrawToken(
           await testToken.getAddress(),
           admin.address,
-          transferAmount
+          transferAmount,
         );
 
       // Verify balances after withdrawal
       expect(await testToken.balanceOf(await controller.getAddress())).to.equal(
-        0
+        0,
       );
       expect(await testToken.balanceOf(admin.address)).to.equal(
-        hre.ethers.parseUnits("1000", 6)
+        hre.ethers.parseUnits("1000", 6),
       );
     });
 
     it("Should not allow withdrawal of IDRP token", async function () {
       const { controller, idrp, admin, depository } = await loadFixture(
-        deployFixture
+        deployFixture,
       );
 
       // Mint some IDRP tokens to the controller for testing
@@ -1177,7 +1203,7 @@ describe("IDRPController", function () {
         .connect(depository)
         .transfer(
           await controller.getAddress(),
-          hre.ethers.parseUnits("100", 6)
+          hre.ethers.parseUnits("100", 6),
         );
 
       // // Attempt to withdraw IDRP tokens, should fail
@@ -1193,7 +1219,7 @@ describe("IDRPController", function () {
 
       // Verify tokens still in controller
       expect(await idrp.balanceOf(await controller.getAddress())).to.equal(
-        hre.ethers.parseUnits("100", 6)
+        hre.ethers.parseUnits("100", 6),
       );
     });
   });
