@@ -16,6 +16,14 @@ interface IIDRP {
 
     function burn(address from, uint256 amount) external;
 
+    function seize(
+        address from,
+        address to,
+        uint256 amount,
+        string calldata legalCaseId,
+        bytes32 courtOrderHash
+    ) external;
+
     function freeze(address account) external;
 
     function unfreeze(address account) external;
@@ -50,7 +58,8 @@ contract IDRPController is
         Freeze,
         Unfreeze,
         Pause,
-        Unpause
+        Unpause,
+        Seize
     }
 
     // Quorum rule structure
@@ -66,6 +75,11 @@ contract IDRPController is
     // Mapping to track used signatures
     mapping(bytes32 => bool) public usedSignatures;
 
+    // Timelock controls for seizure operations
+    uint256 public constant MIN_SEIZE_TIMELOCK = 1 hours;
+    uint256 public seizeTimelock;
+    mapping(bytes32 => uint256) public seizeReadyAt;
+
     // Domain separator for EIP-712
     bytes32 private DOMAIN_SEPARATOR;
 
@@ -73,6 +87,10 @@ contract IDRPController is
     bytes32 private constant OPERATION_TYPEHASH =
         keccak256(
             "Operation(address to,uint8 operationType,uint256 amount,string operationIdentifier,uint256 deadline)"
+        );
+    bytes32 private constant SEIZE_OPERATION_TYPEHASH =
+        keccak256(
+            "SeizeOperation(address from,address to,uint256 amount,string operationIdentifier,string legalCaseId,bytes32 courtOrderHash,uint256 deadline)"
         );
 
     // Events
@@ -87,6 +105,26 @@ contract IDRPController is
         address indexed token,
         address indexed to,
         uint256 amount
+    );
+    event SeizeTimelockUpdated(uint256 previousTimelock, uint256 newTimelock);
+    event SeizeOperationQueued(
+        bytes32 indexed operationHash,
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        string operationIdentifier,
+        string legalCaseId,
+        bytes32 courtOrderHash,
+        uint256 readyAt
+    );
+    event SeizeOperationExecuted(
+        bytes32 indexed operationHash,
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        string operationIdentifier,
+        string legalCaseId,
+        bytes32 courtOrderHash
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -107,6 +145,9 @@ contract IDRPController is
         // Setup roles - set Safe address as the admin
         _grantRole(DEFAULT_ADMIN_ROLE, _safeAddress);
         _grantRole(ADMIN_ROLE, _safeAddress);
+
+        // Default to 24h timelock for seizure execution.
+        seizeTimelock = 24 hours;
 
         // Initialize domain separator for EIP-712
         DOMAIN_SEPARATOR = keccak256(
@@ -135,6 +176,116 @@ contract IDRPController is
         emit QuorumRulesUpdated(operationType);
     }
 
+    function setSeizeTimelock(uint256 newTimelock) external onlyRole(ADMIN_ROLE) {
+        require(
+            newTimelock >= MIN_SEIZE_TIMELOCK,
+            "Seize timelock below minimum"
+        );
+
+        uint256 previousTimelock = seizeTimelock;
+        seizeTimelock = newTimelock;
+        emit SeizeTimelockUpdated(previousTimelock, newTimelock);
+    }
+
+    function queueSeizeOperation(
+        address from,
+        address to,
+        uint256 amount,
+        string calldata operationIdentifier,
+        string calldata legalCaseId,
+        bytes32 courtOrderHash,
+        uint256 deadline
+    ) external {
+        _requireOperatorRole();
+        require(block.timestamp <= deadline, "Operation expired");
+        require(amount > 0, "Amount must be greater than zero");
+        require(bytes(legalCaseId).length > 0, "Legal case id required");
+
+        bytes32 operationHash = getSeizeOperationHash(
+            from,
+            to,
+            amount,
+            operationIdentifier,
+            legalCaseId,
+            courtOrderHash,
+            deadline
+        );
+
+        require(!usedSignatures[operationHash], "Operation hash already used");
+        require(
+            seizeReadyAt[operationHash] == 0,
+            "Seize operation already queued"
+        );
+
+        uint256 readyAt = block.timestamp + seizeTimelock;
+        require(readyAt <= deadline, "Deadline shorter than timelock");
+
+        seizeReadyAt[operationHash] = readyAt;
+
+        emit SeizeOperationQueued(
+            operationHash,
+            from,
+            to,
+            amount,
+            operationIdentifier,
+            legalCaseId,
+            courtOrderHash,
+            readyAt
+        );
+    }
+
+    function executeSeizeOperation(
+        address from,
+        address to,
+        uint256 amount,
+        string calldata operationIdentifier,
+        string calldata legalCaseId,
+        bytes32 courtOrderHash,
+        uint256 deadline,
+        bytes[] calldata signatures
+    ) external {
+        _requireOperatorRole();
+        require(block.timestamp <= deadline, "Operation expired");
+        require(amount > 0, "Amount must be greater than zero");
+        require(bytes(legalCaseId).length > 0, "Legal case id required");
+
+        bytes32 operationHash = getSeizeOperationHash(
+            from,
+            to,
+            amount,
+            operationIdentifier,
+            legalCaseId,
+            courtOrderHash,
+            deadline
+        );
+
+        uint256 readyAt = seizeReadyAt[operationHash];
+        require(readyAt != 0, "Seize operation not queued");
+        require(block.timestamp >= readyAt, "Seize timelock active");
+
+        QuorumRule memory rule = getQuorumRule(OperationType.Seize, amount);
+        require(rule.requiredRoles.length >= 3, "Seize requires higher quorum");
+
+        verifySignatures(operationHash, rule.requiredRoles, signatures);
+
+        usedSignatures[operationHash] = true;
+        delete seizeReadyAt[operationHash];
+        nonce++;
+
+        IIDRP(idrpToken).seize(from, to, amount, legalCaseId, courtOrderHash);
+
+        emit OperationExecuted(OperationType.Seize, to, amount, operationIdentifier);
+        emit SeizeOperationExecuted(
+            operationHash,
+            from,
+            to,
+            amount,
+            operationIdentifier,
+            legalCaseId,
+            courtOrderHash
+        );
+    }
+
     // Main execution function - updated to use operationIdentifier instead of nonce
     function executeOperation(
         OperationType operationType,
@@ -144,15 +295,8 @@ contract IDRPController is
         uint256 deadline,
         bytes[] calldata signatures
     ) external {
-        // Ensure only Admin, Officer, Manager, Director, or Commissioner can call this
-        require(
-            hasRole(ADMIN_ROLE, msg.sender) ||
-                hasRole(OFFICER_ROLE, msg.sender) ||
-                hasRole(MANAGER_ROLE, msg.sender) ||
-                hasRole(DIRECTOR_ROLE, msg.sender) ||
-                hasRole(COMMISSIONER_ROLE, msg.sender),
-            "Caller does not have the required role"
-        );
+        _requireOperatorRole();
+        require(operationType != OperationType.Seize, "Use executeSeizeOperation");
 
         // Ensure the operation is not expired
         require(block.timestamp <= deadline, "Operation expired");
@@ -283,6 +427,34 @@ contract IDRPController is
             );
     }
 
+    function getSeizeOperationHash(
+        address from,
+        address to,
+        uint256 amount,
+        string calldata operationIdentifier,
+        string calldata legalCaseId,
+        bytes32 courtOrderHash,
+        uint256 deadline
+    ) public view returns (bytes32) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                SEIZE_OPERATION_TYPEHASH,
+                from,
+                to,
+                amount,
+                keccak256(bytes(operationIdentifier)),
+                keccak256(bytes(legalCaseId)),
+                courtOrderHash,
+                deadline
+            )
+        );
+
+        return
+            keccak256(
+                abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash)
+            );
+    }
+
     // Verify that all required signatures are present and valid
     function verifySignatures(
         bytes32 operationHash,
@@ -338,6 +510,17 @@ contract IDRPController is
         require(v == 27 || v == 28, "Invalid signature 'v' value");
 
         return ecrecover(hash, v, r, s);
+    }
+
+    function _requireOperatorRole() internal view {
+        require(
+            hasRole(ADMIN_ROLE, msg.sender) ||
+                hasRole(OFFICER_ROLE, msg.sender) ||
+                hasRole(MANAGER_ROLE, msg.sender) ||
+                hasRole(DIRECTOR_ROLE, msg.sender) ||
+                hasRole(COMMISSIONER_ROLE, msg.sender),
+            "Caller does not have the required role"
+        );
     }
 
     // Override required by UUPSUpgradeable

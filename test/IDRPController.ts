@@ -1,6 +1,9 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import {
+  loadFixture,
+  time,
+} from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import rulesMintBurn from "./utils/rules.mint.burn.v2.json";
 import rulesFreezeUnfreeze from "./utils/rules.freeze.unfreeze.json";
 import rulesPause from "./utils/rules.pause.json";
@@ -33,6 +36,7 @@ describe("IDRPController", function () {
     Unfreeze,
     Pause,
     Unpause,
+    Seize,
   }
 
   async function deployFixture() {
@@ -71,6 +75,18 @@ describe("IDRPController", function () {
       ],
     };
 
+    const seizeTypes = {
+      SeizeOperation: [
+        { name: "from", type: "address" },
+        { name: "to", type: "address" },
+        { name: "amount", type: "uint256" },
+        { name: "operationIdentifier", type: "string" },
+        { name: "legalCaseId", type: "string" },
+        { name: "courtOrderHash", type: "bytes32" },
+        { name: "deadline", type: "uint256" },
+      ],
+    };
+
     // Set up roles
     await controller.grantRole(OFFICER_ROLE, officer.address);
     await controller.grantRole(MANAGER_ROLE, manager.address);
@@ -80,6 +96,7 @@ describe("IDRPController", function () {
     await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
     await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
     await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await idrp.grantRole(await idrp.SEIZER_ROLE(), controller.getAddress());
 
     // Set quorum rules
     // await controller.setQuorumRules(OperationType.Mint, [
@@ -225,6 +242,14 @@ describe("IDRPController", function () {
     // ]);
     await controller.setQuorumRules(OperationType.Unpause, rulesUnpause);
 
+    await controller.setQuorumRules(OperationType.Seize, [
+      {
+        minAmount: 0,
+        maxAmount: hre.ethers.MaxUint256,
+        requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
+      },
+    ]);
+
     return {
       idrp,
       controller,
@@ -237,6 +262,7 @@ describe("IDRPController", function () {
       depository,
       domain,
       types,
+      seizeTypes,
     };
   }
 
@@ -1139,6 +1165,286 @@ describe("IDRPController", function () {
           [officerSignature, managerSignature, commissionerSignature],
         ),
       ).to.be.revertedWith("Invalid signature combination for unpause");
+    });
+  });
+
+  describe("Seize Operations", function () {
+    it("Should execute timelocked seize with required quorum", async function () {
+      const {
+        controller,
+        idrp,
+        officer,
+        manager,
+        director,
+        user,
+        depository,
+        commissioner,
+        domain,
+        types,
+        seizeTypes,
+      } = await loadFixture(deployFixture);
+
+      const mintAmount = hre.ethers.parseUnits("1000000", 6);
+      const seizeAmount = hre.ethers.parseUnits("400000", 6);
+      const legalCaseId = "CASE-2026-001";
+      const courtOrderHash = hre.ethers.keccak256(
+        hre.ethers.toUtf8Bytes("court-order-2026-001"),
+      );
+
+      // Mint to depository and move to user account.
+      const mintDeadline = (await time.latest()) + 3600;
+      const mintOperation = {
+        to: user.address,
+        operationType: OperationType.Mint,
+        amount: mintAmount,
+        operationIdentifier: "mint-seize-prereq",
+        deadline: mintDeadline,
+      };
+
+      const officerMintSignature = await officer.signTypedData(
+        domain,
+        types,
+        mintOperation,
+      );
+      const managerMintSignature = await manager.signTypedData(
+        domain,
+        types,
+        mintOperation,
+      );
+
+      await controller.executeOperation(
+        mintOperation.operationType,
+        mintOperation.to,
+        mintOperation.amount,
+        mintOperation.operationIdentifier,
+        mintOperation.deadline,
+        [officerMintSignature, managerMintSignature],
+      );
+
+      await idrp.connect(depository).transfer(user.address, mintAmount);
+      await expect(
+        idrp.connect(user).transfer(commissioner.address, hre.ethers.parseUnits("1", 6)),
+      ).to.not.be.rejected;
+
+      // Freeze account before seizure.
+      const freezeDeadline = (await time.latest()) + 3600;
+      const freezeOperation = {
+        to: user.address,
+        operationType: OperationType.Freeze,
+        amount: 0,
+        operationIdentifier: "freeze-seize-prereq",
+        deadline: freezeDeadline,
+      };
+
+      const officerFreezeSignature = await officer.signTypedData(
+        domain,
+        types,
+        freezeOperation,
+      );
+
+      await controller.executeOperation(
+        freezeOperation.operationType,
+        freezeOperation.to,
+        freezeOperation.amount,
+        freezeOperation.operationIdentifier,
+        freezeOperation.deadline,
+        [officerFreezeSignature],
+      );
+
+      expect(await idrp.frozen(user.address)).to.equal(true);
+
+      const seizeDeadline = (await time.latest()) + 2 * 24 * 60 * 60;
+      const seizeOperation = {
+        from: user.address,
+        to: commissioner.address,
+        amount: seizeAmount,
+        operationIdentifier: "seize-op-001",
+        legalCaseId,
+        courtOrderHash,
+        deadline: seizeDeadline,
+      };
+
+      const officerSeizeSignature = await officer.signTypedData(
+        domain,
+        seizeTypes,
+        seizeOperation,
+      );
+      const managerSeizeSignature = await manager.signTypedData(
+        domain,
+        seizeTypes,
+        seizeOperation,
+      );
+      const directorSeizeSignature = await director.signTypedData(
+        domain,
+        seizeTypes,
+        seizeOperation,
+      );
+
+      await controller.queueSeizeOperation(
+        seizeOperation.from,
+        seizeOperation.to,
+        seizeOperation.amount,
+        seizeOperation.operationIdentifier,
+        seizeOperation.legalCaseId,
+        seizeOperation.courtOrderHash,
+        seizeOperation.deadline,
+      );
+
+      await expect(
+        controller.executeSeizeOperation(
+          seizeOperation.from,
+          seizeOperation.to,
+          seizeOperation.amount,
+          seizeOperation.operationIdentifier,
+          seizeOperation.legalCaseId,
+          seizeOperation.courtOrderHash,
+          seizeOperation.deadline,
+          [officerSeizeSignature, managerSeizeSignature, directorSeizeSignature],
+        ),
+      ).to.be.revertedWith("Seize timelock active");
+
+      const timelock = await controller.seizeTimelock();
+      await time.increase(Number(timelock) + 1);
+
+      await controller.executeSeizeOperation(
+        seizeOperation.from,
+        seizeOperation.to,
+        seizeOperation.amount,
+        seizeOperation.operationIdentifier,
+        seizeOperation.legalCaseId,
+        seizeOperation.courtOrderHash,
+        seizeOperation.deadline,
+        [officerSeizeSignature, managerSeizeSignature, directorSeizeSignature],
+      );
+
+      expect(await idrp.balanceOf(user.address)).to.equal(
+        mintAmount - seizeAmount - hre.ethers.parseUnits("1", 6),
+      );
+      expect(await idrp.balanceOf(commissioner.address)).to.equal(
+        seizeAmount + hre.ethers.parseUnits("1", 6),
+      );
+    });
+
+    it("Should fail seize execution when quorum signatures are insufficient", async function () {
+      const {
+        controller,
+        idrp,
+        officer,
+        manager,
+        user,
+        depository,
+        commissioner,
+        domain,
+        types,
+        seizeTypes,
+      } = await loadFixture(deployFixture);
+
+      const mintAmount = hre.ethers.parseUnits("1000", 6);
+      const seizeAmount = hre.ethers.parseUnits("100", 6);
+
+      const mintDeadline = (await time.latest()) + 3600;
+      const mintOperation = {
+        to: user.address,
+        operationType: OperationType.Mint,
+        amount: mintAmount,
+        operationIdentifier: "mint-seize-prereq-2",
+        deadline: mintDeadline,
+      };
+
+      const officerMintSignature = await officer.signTypedData(
+        domain,
+        types,
+        mintOperation,
+      );
+      const managerMintSignature = await manager.signTypedData(
+        domain,
+        types,
+        mintOperation,
+      );
+      await controller.executeOperation(
+        mintOperation.operationType,
+        mintOperation.to,
+        mintOperation.amount,
+        mintOperation.operationIdentifier,
+        mintOperation.deadline,
+        [officerMintSignature, managerMintSignature],
+      );
+      await idrp.connect(depository).transfer(user.address, mintAmount);
+
+      const freezeDeadline = (await time.latest()) + 3600;
+      const freezeOperation = {
+        to: user.address,
+        operationType: OperationType.Freeze,
+        amount: 0,
+        operationIdentifier: "freeze-seize-prereq-2",
+        deadline: freezeDeadline,
+      };
+      const officerFreezeSignature = await officer.signTypedData(
+        domain,
+        types,
+        freezeOperation,
+      );
+      await controller.executeOperation(
+        freezeOperation.operationType,
+        freezeOperation.to,
+        freezeOperation.amount,
+        freezeOperation.operationIdentifier,
+        freezeOperation.deadline,
+        [officerFreezeSignature],
+      );
+
+      const seizeDeadline = (await time.latest()) + 2 * 24 * 60 * 60;
+      const seizeOperation = {
+        from: user.address,
+        to: commissioner.address,
+        amount: seizeAmount,
+        operationIdentifier: "seize-op-002",
+        legalCaseId: "CASE-2026-002",
+        courtOrderHash: hre.ethers.ZeroHash,
+        deadline: seizeDeadline,
+      };
+
+      const officerSeizeSignature = await officer.signTypedData(
+        domain,
+        seizeTypes,
+        seizeOperation,
+      );
+      const managerSeizeSignature = await manager.signTypedData(
+        domain,
+        seizeTypes,
+        seizeOperation,
+      );
+
+      await controller.queueSeizeOperation(
+        seizeOperation.from,
+        seizeOperation.to,
+        seizeOperation.amount,
+        seizeOperation.operationIdentifier,
+        seizeOperation.legalCaseId,
+        seizeOperation.courtOrderHash,
+        seizeOperation.deadline,
+      );
+
+      const timelock = await controller.seizeTimelock();
+      await time.increase(Number(timelock) + 1);
+
+      let failedAsExpected = false;
+      try {
+        await controller.executeSeizeOperation(
+          seizeOperation.from,
+          seizeOperation.to,
+          seizeOperation.amount,
+          seizeOperation.operationIdentifier,
+          seizeOperation.legalCaseId,
+          seizeOperation.courtOrderHash,
+          seizeOperation.deadline,
+          [officerSeizeSignature, managerSeizeSignature],
+        );
+      } catch (error) {
+        failedAsExpected = true;
+      }
+
+      expect(failedAsExpected).to.equal(true);
     });
   });
 

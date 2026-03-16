@@ -20,6 +20,7 @@ contract IDRP is
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant FREEZER_ROLE = keccak256("FREEZER_ROLE");
+    bytes32 public constant SEIZER_ROLE = keccak256("SEIZER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     // Mapping to track frozen accounts
@@ -30,9 +31,18 @@ contract IDRP is
     /// @dev Events
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
+    event AssetsSeized(
+        address indexed operator,
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        string legalCaseId,
+        bytes32 courtOrderHash
+    );
 
     /// @dev Errors
     error FrozenAccount();
+    error SourceAccountNotFrozen();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -50,6 +60,7 @@ contract IDRP is
         _grantRole(PAUSER_ROLE, superAdmin);
         _grantRole(MINTER_ROLE, superAdmin);
         _grantRole(FREEZER_ROLE, superAdmin);
+        _grantRole(SEIZER_ROLE, superAdmin);
         _grantRole(UPGRADER_ROLE, superAdmin);
     }
 
@@ -145,6 +156,37 @@ contract IDRP is
     function unfreeze(address account) external onlyRole(FREEZER_ROLE) {
         frozen[account] = false;
         emit AccountUnfrozen(account);
+    }
+
+    /// @notice Seize assets from a frozen account to a legal custodian wallet
+    /// @dev Uses internal transfer to bypass standard transfer freeze hook, but
+    /// enforces frozen source account and role-based authorization.
+    function seize(
+        address from,
+        address to,
+        uint256 amount,
+        string calldata legalCaseId,
+        bytes32 courtOrderHash
+    ) external onlyRole(SEIZER_ROLE) whenNotPaused {
+        require(from != address(0), "Invalid source address");
+        require(to != address(0), "Invalid recipient address");
+        require(from != to, "Source and recipient must differ");
+        require(amount > 0, "Amount must be greater than zero");
+        require(bytes(legalCaseId).length > 0, "Legal case id required");
+
+        if (!frozen[from]) revert SourceAccountNotFrozen();
+        if (frozen[to]) revert FrozenAccount();
+
+        _transfer(from, to, amount);
+
+        emit AssetsSeized(
+            _msgSender(),
+            from,
+            to,
+            amount,
+            legalCaseId,
+            courtOrderHash
+        );
     }
 
     /// @notice Set the depository wallet address
