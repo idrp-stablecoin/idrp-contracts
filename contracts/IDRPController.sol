@@ -297,12 +297,16 @@ contract IDRPController is
     }
 
     // Verify that all required signatures are present and valid
+    // Each signer can only satisfy one role to prevent multi-role bypass
     function verifySignatures(
         bytes32 operationHash,
         bytes32[] memory requiredRoles,
         bytes[] calldata signatures
     ) internal view {
         require(!usedSignatures[operationHash], "Operation hash already used");
+
+        address[] memory usedSigners = new address[](requiredRoles.length);
+        uint256 usedCount = 0;
 
         // For each required role, verify at least one signature from that role is present
         for (uint256 i = 0; i < requiredRoles.length; i++) {
@@ -314,7 +318,19 @@ contract IDRPController is
                     operationHash,
                     signatures[j]
                 );
-                if (hasRole(role, recoveredSigner)) {
+
+                // Check if this signer was already used for another role
+                bool alreadyUsed = false;
+                for (uint256 k = 0; k < usedCount; k++) {
+                    if (usedSigners[k] == recoveredSigner) {
+                        alreadyUsed = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyUsed && hasRole(role, recoveredSigner)) {
+                    usedSigners[usedCount] = recoveredSigner;
+                    usedCount++;
                     roleSignatureFound = true;
                     break;
                 }
