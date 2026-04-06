@@ -256,33 +256,51 @@ contract IDRPController is
     }
 
     // Specialized function to verify unpause signatures with OR logic
+    // Each signer can only contribute to one role to prevent multi-role bypass
     function verifyUnpauseSignatures(
         bytes32 operationHash,
         bytes[] calldata signatures
     ) internal view {
         require(!usedSignatures[operationHash], "Operation hash already used");
-        
+
         bool hasOfficer = false;
         bool hasManager = false;
         bool hasDirector = false;
         bool hasCommissioner = false;
-        
+
+        address[] memory seenSigners = new address[](signatures.length);
+        uint256 seenCount = 0;
+
         for (uint256 i = 0; i < signatures.length; i++) {
             address signer = recoverSigner(operationHash, signatures[i]);
-            
-            if (hasRole(OFFICER_ROLE, signer)) hasOfficer = true;
-            if (hasRole(MANAGER_ROLE, signer)) hasManager = true;
-            if (hasRole(DIRECTOR_ROLE, signer)) hasDirector = true;
-            if (hasRole(COMMISSIONER_ROLE, signer)) hasCommissioner = true;
+
+            // Check duplicate signer
+            bool isDuplicate = false;
+            for (uint256 j = 0; j < seenCount; j++) {
+                if (seenSigners[j] == signer) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            if (isDuplicate) continue;
+
+            seenSigners[seenCount] = signer;
+            seenCount++;
+
+            // Each signer only contributes to first matching role
+            if (!hasOfficer && hasRole(OFFICER_ROLE, signer)) hasOfficer = true;
+            else if (!hasManager && hasRole(MANAGER_ROLE, signer)) hasManager = true;
+            else if (!hasDirector && hasRole(DIRECTOR_ROLE, signer)) hasDirector = true;
+            else if (!hasCommissioner && hasRole(COMMISSIONER_ROLE, signer)) hasCommissioner = true;
         }
-        
+
         // Check for valid combinations:
         // 1. officer + manager + director
         // 2. manager + director + commissioner
-        bool validCombination = 
-            (hasOfficer && hasManager && hasDirector) || 
+        bool validCombination =
+            (hasOfficer && hasManager && hasDirector) ||
             (hasManager && hasDirector && hasCommissioner);
-            
+
         require(validCombination, "Invalid signature combination for unpause");
     }
 
