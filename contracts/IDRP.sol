@@ -35,6 +35,10 @@ contract IDRP is
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
     event MaxSupplyUpdated(uint256 oldMaxSupply, uint256 newMaxSupply);
+    event DepositoryWalletUpdated(
+        address indexed oldWallet,
+        address indexed newWallet
+    );
 
     /// @dev Errors
     error FrozenAccount();
@@ -149,7 +153,9 @@ contract IDRP is
         address wallet
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(wallet != address(0), "Invalid wallet address");
+        address oldWallet = depositoryWallet;
         depositoryWallet = wallet;
+        emit DepositoryWalletUpdated(oldWallet, wallet);
     }
 
     function _update(
