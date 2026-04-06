@@ -68,6 +68,10 @@ contract IDRP is
     /// @notice Mint stablecoins to a specific address
     /// @param amount The amount of stablecoins to mint
     function mint(uint256 amount) public onlyRole(MINTER_ROLE) whenNotPaused {
+        require(
+            depositoryWallet != address(0),
+            "Depository wallet not set"
+        );
         if (frozen[depositoryWallet]) revert FrozenAccount();
         _mint(depositoryWallet, amount);
     }
