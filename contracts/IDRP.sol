@@ -26,10 +26,12 @@ contract IDRP is
     mapping(address => bool) public frozen;
 
     address public depositoryWallet;
+    uint256 public maxSupply;
 
     /// @dev Events
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
+    event MaxSupplyUpdated(uint256 oldMaxSupply, uint256 newMaxSupply);
 
     /// @dev Errors
     error FrozenAccount();
@@ -73,7 +75,21 @@ contract IDRP is
             "Depository wallet not set"
         );
         if (frozen[depositoryWallet]) revert FrozenAccount();
+        require(
+            maxSupply == 0 || totalSupply() + amount <= maxSupply,
+            "Exceeds max supply"
+        );
         _mint(depositoryWallet, amount);
+    }
+
+    /// @notice Set the maximum supply cap
+    /// @param _maxSupply The max supply (0 = unlimited)
+    function setMaxSupply(
+        uint256 _maxSupply
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 oldMaxSupply = maxSupply;
+        maxSupply = _maxSupply;
+        emit MaxSupplyUpdated(oldMaxSupply, _maxSupply);
     }
 
     /// @notice Burn stablecoins from a specific address
