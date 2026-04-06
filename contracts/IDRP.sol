@@ -8,6 +8,8 @@ import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/toke
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract IDRP is
     Initializable,
@@ -17,6 +19,7 @@ contract IDRP is
     ERC20PermitUpgradeable,
     UUPSUpgradeable
 {
+    using SafeERC20 for IERC20;
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant FREEZER_ROLE = keccak256("FREEZER_ROLE");
@@ -169,6 +172,6 @@ contract IDRP is
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(token != address(this), "Cannot withdraw IDRP token");
-        ERC20Upgradeable(token).transfer(to, amount);
+        IERC20(token).safeTransfer(to, amount);
     }
 }
