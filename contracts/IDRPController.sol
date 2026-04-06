@@ -76,6 +76,9 @@ contract IDRPController is
             "Operation(address to,uint8 operationType,uint256 amount,string operationIdentifier,uint256 deadline)"
         );
 
+    // Max deadline duration for operations
+    uint256 public constant MAX_DEADLINE_DURATION = 7 days;
+
     // Upgrade timelock
     uint256 public constant UPGRADE_DELAY = 48 hours;
     uint256 public upgradeScheduledAt;
@@ -192,6 +195,10 @@ contract IDRPController is
 
         // Ensure the operation is not expired
         require(block.timestamp <= deadline, "Operation expired");
+        require(
+            deadline <= block.timestamp + MAX_DEADLINE_DURATION,
+            "Deadline too far"
+        );
 
         // Validate 'to' parameter based on operation type
         if (
