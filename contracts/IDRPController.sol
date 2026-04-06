@@ -170,6 +170,17 @@ contract IDRPController is
         // Ensure the operation is not expired
         require(block.timestamp <= deadline, "Operation expired");
 
+        // Validate 'to' parameter based on operation type
+        if (
+            operationType == OperationType.Mint ||
+            operationType == OperationType.Pause ||
+            operationType == OperationType.Unpause
+        ) {
+            require(to == address(0), "Invalid 'to' for this operation");
+        } else {
+            require(to != address(0), "Invalid target address");
+        }
+
         // Get the appropriate quorum rule for this operation and amount
         QuorumRule memory rule = getQuorumRule(operationType, amount);
 
