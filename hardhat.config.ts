@@ -118,6 +118,14 @@ const config: HardhatUserConfig = {
           browserURL: "https://kaiascan.io",
         },
       },
+      {
+        network: "kairos",
+        chainId: 1001,
+        urls: {
+          apiURL: "https://compiler-api-v2.kaiascan.io/kairos/hardhat-verify?chainid=1001",
+          browserURL: "https://kairos.kaiascan.io",
+        },
+      },
     ],
   },
   dependencyCompiler: {
