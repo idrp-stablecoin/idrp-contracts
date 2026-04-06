@@ -137,10 +137,32 @@ contract IDRPController is
     }
 
     // Set quorum rules for an operation type
+    // Validates ranges are contiguous: start at 0, no gaps, end at type(uint256).max
     function setQuorumRules(
         OperationType operationType,
         QuorumRule[] calldata rules
     ) external onlyRole(ADMIN_ROLE) {
+        require(rules.length > 0, "Rules cannot be empty");
+
+        for (uint256 i = 0; i < rules.length; i++) {
+            require(
+                rules[i].minAmount < rules[i].maxAmount,
+                "Invalid range"
+            );
+            if (i == 0) {
+                require(rules[i].minAmount == 0, "First rule must start at 0");
+            } else {
+                require(
+                    rules[i].minAmount == rules[i - 1].maxAmount,
+                    "Gap between rules"
+                );
+            }
+        }
+        require(
+            rules[rules.length - 1].maxAmount == type(uint256).max,
+            "Last rule must cover max amount"
+        );
+
         delete quorumRules[operationType];
         for (uint256 i = 0; i < rules.length; i++) {
             quorumRules[operationType].push(rules[i]);
