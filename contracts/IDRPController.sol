@@ -91,7 +91,11 @@ contract IDRPController is
         uint256 amount,
         string indexed operationIdentifier
     );
-    event QuorumRulesUpdated(OperationType indexed operationType);
+    event QuorumRulesUpdated(
+        OperationType indexed operationType,
+        uint256 rulesCount,
+        address indexed updatedBy
+    );
     event TokensWithdrawn(
         address indexed token,
         address indexed to,
@@ -171,7 +175,7 @@ contract IDRPController is
             quorumRules[operationType].push(rules[i]);
         }
 
-        emit QuorumRulesUpdated(operationType);
+        emit QuorumRulesUpdated(operationType, rules.length, msg.sender);
     }
 
     // Main execution function - updated to use operationIdentifier instead of nonce
