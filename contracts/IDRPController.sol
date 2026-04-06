@@ -41,6 +41,7 @@ contract IDRPController is
     bytes32 public constant COMMISSIONER_ROLE = keccak256("COMMISSIONER_ROLE");
 
     address public idrpToken;
+    // @dev Deprecated: nonce is no longer used. Replay protection is via usedSignatures[operationHash].
     uint256 public nonce;
 
     // Operation types
@@ -202,9 +203,6 @@ contract IDRPController is
 
         // Mark operation hash as used to prevent replay
         usedSignatures[operationHash] = true;
-
-        // Increment nonce - keeping for backward compatibility
-        nonce++;
 
         // Execute the operation
         if (operationType == OperationType.Mint) {
