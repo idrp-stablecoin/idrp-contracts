@@ -110,33 +110,6 @@ contract IDRP is
         address newImplementation
     ) internal override onlyRole(UPGRADER_ROLE) {}
 
-    /// @dev Override _beforeTokenTransfer to include pause and frozen account checks
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal view whenNotPaused {
-        if (frozen[from] || frozen[to]) revert FrozenAccount();
-        require(amount > 0, "Transfer amount must be greater than zero");
-    }
-
-    function transfer(
-        address to,
-        uint256 amount
-    ) public override returns (bool) {
-        _beforeTokenTransfer(_msgSender(), to, amount); // Invoke the custom hook
-        return super.transfer(to, amount);
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public override returns (bool) {
-        _beforeTokenTransfer(from, to, amount); // Invoke the custom hook
-        return super.transferFrom(from, to, amount);
-    }
-
     /// @notice Freeze an account, preventing transfers
     /// @param account The address to freeze
     function freeze(address account) external onlyRole(FREEZER_ROLE) {
@@ -165,6 +138,11 @@ contract IDRP is
         address to,
         uint256 value
     ) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
+        // Freeze check for regular transfers (not mint/burn)
+        if (from != address(0) && to != address(0)) {
+            if (frozen[from] || frozen[to]) revert FrozenAccount();
+            require(value > 0, "Transfer amount must be greater than zero");
+        }
         super._update(from, to, value);
     }
 
