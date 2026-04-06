@@ -75,6 +75,11 @@ contract IDRPController is
             "Operation(address to,uint8 operationType,uint256 amount,string operationIdentifier,uint256 deadline)"
         );
 
+    // Upgrade timelock
+    uint256 public constant UPGRADE_DELAY = 48 hours;
+    uint256 public upgradeScheduledAt;
+    address public scheduledImplementation;
+
     // Events
     event OperationExecuted(
         OperationType indexed operationType,
@@ -87,6 +92,14 @@ contract IDRPController is
         address indexed token,
         address indexed to,
         uint256 amount
+    );
+    event UpgradeScheduled(
+        address indexed newImplementation,
+        uint256 executableAfter
+    );
+    event UpgradeCancelled(
+        address indexed newImplementation,
+        address indexed cancelledBy
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -340,8 +353,44 @@ contract IDRPController is
         return ecrecover(hash, v, r, s);
     }
 
-    // Override required by UUPSUpgradeable
+    // Schedule an upgrade with 48h timelock
+    function scheduleUpgrade(
+        address newImplementation
+    ) external onlyOwner {
+        require(
+            newImplementation != address(0),
+            "Invalid implementation address"
+        );
+        scheduledImplementation = newImplementation;
+        upgradeScheduledAt = block.timestamp;
+        emit UpgradeScheduled(
+            newImplementation,
+            block.timestamp + UPGRADE_DELAY
+        );
+    }
+
+    // Cancel a scheduled upgrade
+    function cancelUpgrade() external onlyOwner {
+        address cancelled = scheduledImplementation;
+        require(cancelled != address(0), "No pending upgrade");
+        scheduledImplementation = address(0);
+        upgradeScheduledAt = 0;
+        emit UpgradeCancelled(cancelled, msg.sender);
+    }
+
+    // Override required by UUPSUpgradeable — enforces timelock
     function _authorizeUpgrade(
         address newImplementation
-    ) internal override onlyOwner {}
+    ) internal override onlyOwner {
+        require(
+            newImplementation == scheduledImplementation,
+            "Upgrade not scheduled"
+        );
+        require(
+            block.timestamp >= upgradeScheduledAt + UPGRADE_DELAY,
+            "Timelock not expired"
+        );
+        scheduledImplementation = address(0);
+        upgradeScheduledAt = 0;
+    }
 }
