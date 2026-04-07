@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import rulesMintBurn from "../utils/rules.mint.burn.v2.json";
 import rulesFreezeUnfreeze from "../utils/rules.freeze.unfreeze.json";
 import rulesPause from "../utils/rules.pause.json";
@@ -61,7 +61,7 @@ describe("[H-3] Unvalidated 'to' Parameter for Mint/Pause/Unpause", function () 
     await controller.setQuorumRules(OperationType.Pause, rulesPause);
     await controller.setQuorumRules(OperationType.Unpause, rulesUnpause);
 
-    const deadline = Math.floor(Date.now() / 1000) + 3600;
+    const deadline = (await time.latest()) + 3600;
 
     return {
       idrp, controller, admin, officer, manager, director, commissioner,

@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import rulesMintBurn from "../utils/rules.mint.burn.v2.json";
 
 describe("[M-2] Deprecated Nonce Still Being Incremented", function () {
@@ -54,7 +54,7 @@ describe("[M-2] Deprecated Nonce Still Being Incremented", function () {
 
     const nonceBefore = await controller.nonce();
 
-    const deadline = Math.floor(Date.now() / 1000) + 3600;
+    const deadline = (await time.latest()) + 3600;
     const amount = hre.ethers.parseUnits("1000000", 6);
     const message = {
       to: hre.ethers.ZeroAddress,
@@ -80,7 +80,7 @@ describe("[M-2] Deprecated Nonce Still Being Incremented", function () {
     const { controller, officer, manager, domain, types } =
       await loadFixture(deployFixture);
 
-    const deadline = Math.floor(Date.now() / 1000) + 3600;
+    const deadline = (await time.latest()) + 3600;
     const amount = hre.ethers.parseUnits("1000000", 6);
     const message = {
       to: hre.ethers.ZeroAddress,

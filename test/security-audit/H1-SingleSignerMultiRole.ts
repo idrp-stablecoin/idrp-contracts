@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import rulesMintBurn from "../utils/rules.mint.burn.v2.json";
 
 describe("[H-1] Single Signer Can Satisfy Multiple Required Roles", function () {
@@ -97,7 +97,7 @@ describe("[H-1] Single Signer Can Satisfy Multiple Required Roles", function () 
     const { controller, dualRoleUser, director, domain, types } =
       await loadFixture(deployFixture);
 
-    const deadline = Math.floor(Date.now() / 1000) + 3600;
+    const deadline = (await time.latest()) + 3600;
     const amount = FIVE_HUNDRED_MILLION; // Requires Officer + Manager + Director
 
     const message = {
@@ -134,7 +134,7 @@ describe("[H-1] Single Signer Can Satisfy Multiple Required Roles", function () 
     const { controller, officer, manager, director, domain, types } =
       await loadFixture(deployFixture);
 
-    const deadline = Math.floor(Date.now() / 1000) + 3600;
+    const deadline = (await time.latest()) + 3600;
     const amount = FIVE_HUNDRED_MILLION; // Requires Officer + Manager + Director
 
     const message = {
@@ -166,7 +166,7 @@ describe("[H-1] Single Signer Can Satisfy Multiple Required Roles", function () 
     const { controller, officer, manager, domain, types } =
       await loadFixture(deployFixture);
 
-    const deadline = Math.floor(Date.now() / 1000) + 3600;
+    const deadline = (await time.latest()) + 3600;
     const amount = hre.ethers.parseUnits("100000000", 6); // 100M — requires Officer + Manager
 
     const message = {
