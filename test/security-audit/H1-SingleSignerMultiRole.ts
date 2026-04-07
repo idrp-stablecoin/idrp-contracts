@@ -61,19 +61,13 @@ describe("[H-1] Single Signer Can Satisfy Multiple Required Roles", function () 
       ],
     };
 
-    // Setup roles
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
-    await controller.grantRole(COMMISSIONER_ROLE, commissioner.address);
+    // Setup roles — regular holders
+    await controller.setOfficer(officer.address);
+    await controller.setManager(manager.address);
+    await controller.setDirector(director.address);
+    await controller.setCommissioner(commissioner.address);
 
-    // Grant dualRoleUser BOTH officer and manager roles
-    await controller.grantRole(OFFICER_ROLE, dualRoleUser.address);
-    await controller.grantRole(MANAGER_ROLE, dualRoleUser.address);
-
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await idrp.setController(await controller.getAddress());
 
     // Set quorum rules — mint 500M-1B requires Officer + Manager + Director
     await controller.setQuorumRules(OperationType.Mint, rulesMintBurn);
@@ -94,8 +88,12 @@ describe("[H-1] Single Signer Can Satisfy Multiple Required Roles", function () 
   }
 
   it("Should reject when one signer tries to satisfy two roles", async function () {
-    const { controller, dualRoleUser, director, domain, types } =
+    const { controller, admin, dualRoleUser, director, domain, types } =
       await loadFixture(deployFixture);
+
+    // Override officer and manager to point to dualRoleUser (1:1 mapping)
+    await controller.connect(admin).setOfficer(dualRoleUser.address);
+    await controller.connect(admin).setManager(dualRoleUser.address);
 
     const deadline = (await time.latest()) + 3600;
     const amount = FIVE_HUNDRED_MILLION; // Requires Officer + Manager + Director
@@ -108,7 +106,7 @@ describe("[H-1] Single Signer Can Satisfy Multiple Required Roles", function () 
       deadline: deadline,
     };
 
-    // dualRoleUser signs once (has both OFFICER_ROLE and MANAGER_ROLE)
+    // dualRoleUser signs once (holds both OFFICER and MANAGER roles)
     const dualSig = await dualRoleUser.signTypedData(domain, types, message);
     // director signs
     const directorSig = await director.signTypedData(domain, types, message);

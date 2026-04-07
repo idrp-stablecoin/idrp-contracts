@@ -65,14 +65,12 @@ describe("IDRPController - Signature Tests", function () {
     };
 
     // Set up roles
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
-    await controller.grantRole(COMMISSIONER_ROLE, commissioner.address);
+    await controller.setOfficer(officer.address);
+    await controller.setManager(manager.address);
+    await controller.setDirector(director.address);
+    await controller.setCommissioner(commissioner.address);
 
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await idrp.setController(await controller.getAddress());
 
     // Set quorum rules
     await controller.setQuorumRules(OperationType.Mint, [
@@ -88,7 +86,7 @@ describe("IDRPController - Signature Tests", function () {
       },
       {
         minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
       },
     ]);
@@ -106,7 +104,7 @@ describe("IDRPController - Signature Tests", function () {
       },
       {
         minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
       },
     ]);
@@ -114,7 +112,7 @@ describe("IDRPController - Signature Tests", function () {
     await controller.setQuorumRules(OperationType.Freeze, [
       {
         minAmount: 0,
-        maxAmount: FIVE_HUNDRED_MILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE],
       },
     ]);
@@ -122,7 +120,7 @@ describe("IDRPController - Signature Tests", function () {
     await controller.setQuorumRules(OperationType.Unfreeze, [
       {
         minAmount: 0,
-        maxAmount: FIVE_HUNDRED_MILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE],
       },
     ]);
@@ -174,7 +172,7 @@ describe("IDRPController - Signature Tests", function () {
 
       // Create operation data
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -234,8 +232,8 @@ describe("IDRPController - Signature Tests", function () {
       // Verify second attempt succeeded
       expect(secondAttemptSucceeded).to.equal(true);
 
-      // Verify that the nonce has incremented
-      expect(await controller.nonce()).to.equal(1);
+      // Verify that the nonce has NOT incremented (nonce is deprecated)
+      expect(await controller.nonce()).to.equal(0);
     });
 
     it("Should not allow reuse of signatures after successful operation", async function () {
@@ -248,7 +246,7 @@ describe("IDRPController - Signature Tests", function () {
       const operationIdentifier = "tx202"; // First operation ID
 
       const operation1 = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -286,8 +284,8 @@ describe("IDRPController - Signature Tests", function () {
       // Verify first operation succeeded
       expect(firstOperationSucceeded).to.equal(true);
 
-      // Verify nonce has incremented
-      expect(await controller.nonce()).to.equal(1);
+      // Verify nonce has NOT incremented (nonce is deprecated)
+      expect(await controller.nonce()).to.equal(0);
 
       // Try to reuse the same signatures for the same operation
       // Should fail because the operation hash is now marked as used
@@ -312,7 +310,7 @@ describe("IDRPController - Signature Tests", function () {
       // Create a second operation with the same parameters but new operationIdentifier
       const operationIdentifier2 = "tx203"; // New operation ID
       const operation2 = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier2,
@@ -351,8 +349,8 @@ describe("IDRPController - Signature Tests", function () {
       // Verify second operation succeeded
       expect(secondOperationSucceeded).to.equal(true);
 
-      // Verify nonce has incremented again
-      expect(await controller.nonce()).to.equal(2);
+      // Verify nonce has NOT incremented again (nonce is deprecated)
+      expect(await controller.nonce()).to.equal(0);
     });
 
     it("Should not allow signatures to be used after deadline", async function () {
@@ -365,7 +363,7 @@ describe("IDRPController - Signature Tests", function () {
       const operationIdentifier = "tx204"; // Use operation ID
 
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,

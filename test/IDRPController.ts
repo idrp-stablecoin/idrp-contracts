@@ -72,14 +72,12 @@ describe("IDRPController", function () {
     };
 
     // Set up roles
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
-    await controller.grantRole(COMMISSIONER_ROLE, commissioner.address);
+    await controller.setOfficer(officer.address);
+    await controller.setManager(manager.address);
+    await controller.setDirector(director.address);
+    await controller.setCommissioner(commissioner.address);
 
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await idrp.setController(await controller.getAddress());
 
     // Set quorum rules
     // await controller.setQuorumRules(OperationType.Mint, [
@@ -308,7 +306,7 @@ describe("IDRPController", function () {
 
       // Create operation data
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -363,7 +361,7 @@ describe("IDRPController", function () {
 
       // Create operation data
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -423,7 +421,7 @@ describe("IDRPController", function () {
 
       // Create operation data
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -481,7 +479,7 @@ describe("IDRPController", function () {
 
       // Create operation data
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -533,7 +531,7 @@ describe("IDRPController", function () {
       const operationIdentifier = "tx1002"; // Use operation ID
 
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -602,7 +600,7 @@ describe("IDRPController", function () {
       // Mint operation
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: "tx1003", // Use operation ID
@@ -691,7 +689,7 @@ describe("IDRPController", function () {
       // Mint operation - simplified to focus on freeze test
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: "tx1005", // Use operation ID
@@ -769,7 +767,7 @@ describe("IDRPController", function () {
       const operationIdentifier = "tx1007"; // Use operation ID
 
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -1155,8 +1153,9 @@ describe("IDRPController", function () {
       ]);
       await testToken.waitForDeployment();
 
-      // Set depositoryWallet
+      // Set depositoryWallet and controller
       await testToken.connect(admin).setDepositoryWallet(depository.address);
+      await testToken.connect(admin).setController(admin.address);
 
       // Mint some tokens to the depository
       await testToken.connect(admin).mint(hre.ethers.parseUnits("1000", 6));
@@ -1191,19 +1190,37 @@ describe("IDRPController", function () {
     });
 
     it("Should not allow withdrawal of IDRP token", async function () {
-      const { controller, idrp, admin, depository } = await loadFixture(
+      const { controller, idrp, admin, depository, officer, manager, domain, types } = await loadFixture(
         deployFixture,
       );
 
-      // Mint some IDRP tokens to the controller for testing
-      await idrp.connect(admin).mint(hre.ethers.parseUnits("100", 6));
+      // Mint some IDRP tokens via the controller (admin can't mint directly)
+      const mintAmount = hre.ethers.parseUnits("100", 6);
+      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const mintOperation = {
+        to: hre.ethers.ZeroAddress,
+        operationType: OperationType.Mint,
+        amount: mintAmount,
+        operationIdentifier: "tx-withdrawal-test",
+        deadline: deadline,
+      };
+      const officerSig = await officer.signTypedData(domain, types, mintOperation);
+      const managerSig = await manager.signTypedData(domain, types, mintOperation);
+      await controller.executeOperation(
+        mintOperation.operationType,
+        mintOperation.to,
+        mintOperation.amount,
+        mintOperation.operationIdentifier,
+        mintOperation.deadline,
+        [officerSig, managerSig],
+      );
 
       // Transfer some IDRP tokens to the controller
       await idrp
         .connect(depository)
         .transfer(
           await controller.getAddress(),
-          hre.ethers.parseUnits("100", 6),
+          mintAmount,
         );
 
       // // Attempt to withdraw IDRP tokens, should fail

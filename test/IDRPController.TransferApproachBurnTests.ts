@@ -70,13 +70,11 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
     };
 
     // Set up roles
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
+    await controller.setOfficer(officer.address);
+    await controller.setManager(manager.address);
+    await controller.setDirector(director.address);
 
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await idrp.setController(await controller.getAddress());
 
     // Set quorum rules for burn operations
     await controller.setQuorumRules(OperationType.Burn, [
@@ -92,7 +90,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       },
       {
         minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
       },
     ]);
@@ -111,7 +109,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       },
       {
         minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
       },
     ]);
@@ -154,7 +152,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-1";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -169,7 +167,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -238,7 +236,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-2";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -253,7 +251,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -314,7 +312,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-3";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -329,7 +327,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -372,7 +370,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-4";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -393,7 +391,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -539,7 +537,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-5";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -554,7 +552,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -599,7 +597,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-6";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -614,7 +612,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -646,7 +644,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-7";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -661,7 +659,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -699,7 +697,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-8";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -714,7 +712,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -757,7 +755,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-9";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -772,7 +770,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -815,7 +813,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-10";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -836,7 +834,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,
@@ -900,7 +898,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "mint-tx-11";
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -921,7 +919,7 @@ describe("IDRPController - Transfer Approach Burn Tests", function () {
 
       await controller.executeOperation(
         OperationType.Mint,
-        depository.address,
+        hre.ethers.ZeroAddress,
         mintAmount,
         mintOperationId,
         mintDeadline,

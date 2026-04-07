@@ -5,7 +5,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -27,13 +26,12 @@ interface IIDRP {
 
 contract IDRPController is
     Initializable,
-    AccessControlUpgradeable,
     OwnableUpgradeable,
     UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
 
-    // Role definitions
+    // Role identifiers (kept as constants for QuorumRule compatibility)
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OFFICER_ROLE = keccak256("OFFICER_ROLE");
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
@@ -84,6 +82,9 @@ contract IDRPController is
     uint256 public upgradeScheduledAt;
     address public scheduledImplementation;
 
+    // 1:1 role to address mapping
+    mapping(bytes32 => address) private _roleHolder;
+
     // Events
     event OperationExecuted(
         OperationType indexed operationType,
@@ -109,6 +110,32 @@ contract IDRPController is
         address indexed newImplementation,
         address indexed cancelledBy
     );
+    event RoleUpdated(
+        bytes32 indexed role,
+        address indexed oldHolder,
+        address indexed newHolder
+    );
+
+    /// @dev Errors
+    error NotAdmin();
+    error NotAuthorizedRole();
+
+    /// @dev Modifiers
+    modifier onlyAdmin() {
+        if (msg.sender != _roleHolder[ADMIN_ROLE]) revert NotAdmin();
+        _;
+    }
+
+    modifier onlyAuthorizedRole() {
+        if (
+            msg.sender != _roleHolder[ADMIN_ROLE] &&
+            msg.sender != _roleHolder[OFFICER_ROLE] &&
+            msg.sender != _roleHolder[MANAGER_ROLE] &&
+            msg.sender != _roleHolder[DIRECTOR_ROLE] &&
+            msg.sender != _roleHolder[COMMISSIONER_ROLE]
+        ) revert NotAuthorizedRole();
+        _;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -119,15 +146,13 @@ contract IDRPController is
         address _idrpToken,
         address _safeAddress
     ) public initializer {
-        __AccessControl_init();
         __Ownable_init(_safeAddress);
         __UUPSUpgradeable_init();
 
         idrpToken = _idrpToken;
 
-        // Setup roles - set Safe address as the admin
-        _grantRole(DEFAULT_ADMIN_ROLE, _safeAddress);
-        _grantRole(ADMIN_ROLE, _safeAddress);
+        // Setup roles - set Safe address as admin
+        _roleHolder[ADMIN_ROLE] = _safeAddress;
 
         // Initialize domain separator for EIP-712
         DOMAIN_SEPARATOR = keccak256(
@@ -143,12 +168,77 @@ contract IDRPController is
         );
     }
 
+    /// @notice Migrate from AccessControl to explicit roles (upgrade-only)
+    function initializeV2(
+        address _admin,
+        address _officer,
+        address _manager,
+        address _director,
+        address _commissioner
+    ) public reinitializer(2) {
+        _roleHolder[ADMIN_ROLE] = _admin;
+        _roleHolder[OFFICER_ROLE] = _officer;
+        _roleHolder[MANAGER_ROLE] = _manager;
+        _roleHolder[DIRECTOR_ROLE] = _director;
+        _roleHolder[COMMISSIONER_ROLE] = _commissioner;
+    }
+
+    /// @notice Check if an account holds a specific role
+    function hasRole(bytes32 role, address account) public view returns (bool) {
+        return _roleHolder[role] == account;
+    }
+
+    /// @notice Get the address that holds a specific role
+    function getRoleHolder(bytes32 role) public view returns (address) {
+        return _roleHolder[role];
+    }
+
+    /// @notice Set admin role holder (owner-only)
+    function setAdmin(address account) external onlyOwner {
+        require(account != address(0), "Invalid address");
+        address old = _roleHolder[ADMIN_ROLE];
+        _roleHolder[ADMIN_ROLE] = account;
+        emit RoleUpdated(ADMIN_ROLE, old, account);
+    }
+
+    /// @notice Set officer role holder (admin-only)
+    function setOfficer(address account) external onlyAdmin {
+        require(account != address(0), "Invalid address");
+        address old = _roleHolder[OFFICER_ROLE];
+        _roleHolder[OFFICER_ROLE] = account;
+        emit RoleUpdated(OFFICER_ROLE, old, account);
+    }
+
+    /// @notice Set manager role holder (admin-only)
+    function setManager(address account) external onlyAdmin {
+        require(account != address(0), "Invalid address");
+        address old = _roleHolder[MANAGER_ROLE];
+        _roleHolder[MANAGER_ROLE] = account;
+        emit RoleUpdated(MANAGER_ROLE, old, account);
+    }
+
+    /// @notice Set director role holder (admin-only)
+    function setDirector(address account) external onlyAdmin {
+        require(account != address(0), "Invalid address");
+        address old = _roleHolder[DIRECTOR_ROLE];
+        _roleHolder[DIRECTOR_ROLE] = account;
+        emit RoleUpdated(DIRECTOR_ROLE, old, account);
+    }
+
+    /// @notice Set commissioner role holder (admin-only)
+    function setCommissioner(address account) external onlyAdmin {
+        require(account != address(0), "Invalid address");
+        address old = _roleHolder[COMMISSIONER_ROLE];
+        _roleHolder[COMMISSIONER_ROLE] = account;
+        emit RoleUpdated(COMMISSIONER_ROLE, old, account);
+    }
+
     // Set quorum rules for an operation type
     // Validates ranges are contiguous: start at 0, no gaps, end at type(uint256).max
     function setQuorumRules(
         OperationType operationType,
         QuorumRule[] calldata rules
-    ) external onlyRole(ADMIN_ROLE) {
+    ) external onlyAdmin {
         require(rules.length > 0, "Rules cannot be empty");
 
         for (uint256 i = 0; i < rules.length; i++) {
@@ -186,17 +276,7 @@ contract IDRPController is
         string calldata operationIdentifier,
         uint256 deadline,
         bytes[] calldata signatures
-    ) external {
-        // Ensure only Admin, Officer, Manager, Director, or Commissioner can call this
-        require(
-            hasRole(ADMIN_ROLE, msg.sender) ||
-                hasRole(OFFICER_ROLE, msg.sender) ||
-                hasRole(MANAGER_ROLE, msg.sender) ||
-                hasRole(DIRECTOR_ROLE, msg.sender) ||
-                hasRole(COMMISSIONER_ROLE, msg.sender),
-            "Caller does not have the required role"
-        );
-
+    ) external onlyAuthorizedRole {
         // Ensure the operation is not expired
         require(block.timestamp <= deadline, "Operation expired");
         require(

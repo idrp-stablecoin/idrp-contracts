@@ -62,13 +62,11 @@ describe("IDRPController - Burn Tests", function () {
     };
 
     // Set up roles
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
+    await controller.setOfficer(officer.address);
+    await controller.setManager(manager.address);
+    await controller.setDirector(director.address);
 
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await idrp.setController(await controller.getAddress());
 
     // Set quorum rules for burn operations
     await controller.setQuorumRules(OperationType.Burn, [
@@ -84,7 +82,7 @@ describe("IDRPController - Burn Tests", function () {
       },
       {
         minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
       },
     ]);
@@ -103,7 +101,7 @@ describe("IDRPController - Burn Tests", function () {
       },
       {
         minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
       },
     ]);
@@ -134,7 +132,7 @@ describe("IDRPController - Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "tx1"; // Use operation ID from database
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -209,7 +207,7 @@ describe("IDRPController - Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "tx3"; // Use operation ID
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -295,7 +293,7 @@ describe("IDRPController - Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "tx5"; // Use operation ID
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -380,7 +378,7 @@ describe("IDRPController - Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "tx7"; // Use operation ID
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,

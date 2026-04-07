@@ -42,9 +42,9 @@ describe("[M-5] Unbounded Operation Deadline", function () {
       ],
     };
 
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
+    await controller.setOfficer(officer.address);
+    await controller.setManager(manager.address);
+    await idrp.setController(await controller.getAddress());
 
     await controller.setQuorumRules(OperationType.Mint, rulesMintBurn);
 

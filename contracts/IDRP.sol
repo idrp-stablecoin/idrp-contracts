@@ -2,7 +2,6 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.22;
 
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
@@ -15,21 +14,21 @@ contract IDRP is
     Initializable,
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
-    AccessControlUpgradeable,
     ERC20PermitUpgradeable,
     UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant FREEZER_ROLE = keccak256("FREEZER_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     // Mapping to track frozen accounts
     mapping(address => bool) public frozen;
 
     address public depositoryWallet;
     uint256 public maxSupply;
+
+    // Role addresses
+    address public admin;
+    address public controller;
+    address public upgrader;
 
     /// @dev Events
     event AccountFrozen(address indexed account);
@@ -39,44 +38,105 @@ contract IDRP is
         address indexed oldWallet,
         address indexed newWallet
     );
+    event AdminUpdated(address indexed oldAdmin, address indexed newAdmin);
+    event ControllerUpdated(
+        address indexed oldController,
+        address indexed newController
+    );
+    event UpgraderUpdated(
+        address indexed oldUpgrader,
+        address indexed newUpgrader
+    );
 
     /// @dev Errors
     error FrozenAccount();
+    error NotAdmin();
+    error NotController();
+    error NotUpgrader();
+    error ControllerNotSet();
+
+    /// @dev Modifiers
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert NotAdmin();
+        _;
+    }
+
+    modifier onlyController() {
+        if (controller == address(0)) revert ControllerNotSet();
+        if (msg.sender != controller) revert NotController();
+        _;
+    }
+
+    modifier onlyUpgrader() {
+        if (msg.sender != upgrader) revert NotUpgrader();
+        _;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address superAdmin) public initializer {
+    function initialize(address _admin) public initializer {
         __ERC20_init("IDRP", "IDRP");
         __ERC20Pausable_init();
-        __AccessControl_init();
         __ERC20Permit_init("IDRP");
         __UUPSUpgradeable_init();
 
-        _grantRole(DEFAULT_ADMIN_ROLE, superAdmin);
-        _grantRole(PAUSER_ROLE, superAdmin);
-        _grantRole(MINTER_ROLE, superAdmin);
-        _grantRole(FREEZER_ROLE, superAdmin);
-        _grantRole(UPGRADER_ROLE, superAdmin);
+        admin = _admin;
+        upgrader = _admin;
+    }
+
+    /// @notice Migrate from AccessControl to explicit roles (upgrade-only)
+    function initializeV2(
+        address _admin,
+        address _controller,
+        address _upgrader
+    ) public reinitializer(2) {
+        admin = _admin;
+        controller = _controller;
+        upgrader = _upgrader;
+    }
+
+    /// @notice Set admin address
+    function setAdmin(address _admin) external onlyAdmin {
+        require(_admin != address(0), "Invalid address");
+        address old = admin;
+        admin = _admin;
+        emit AdminUpdated(old, _admin);
+    }
+
+    /// @notice Set controller (IDRPController) address
+    function setController(address _controller) external onlyAdmin {
+        require(_controller != address(0), "Invalid address");
+        address old = controller;
+        controller = _controller;
+        emit ControllerUpdated(old, _controller);
+    }
+
+    /// @notice Set upgrader address
+    function setUpgrader(address _upgrader) external onlyAdmin {
+        require(_upgrader != address(0), "Invalid address");
+        address old = upgrader;
+        upgrader = _upgrader;
+        emit UpgraderUpdated(old, _upgrader);
     }
 
     function decimals() public pure override returns (uint8) {
         return 6;
     }
 
-    function pause() public onlyRole(PAUSER_ROLE) {
+    function pause() public onlyController {
         _pause();
     }
 
-    function unpause() public onlyRole(PAUSER_ROLE) {
+    function unpause() public onlyController {
         _unpause();
     }
 
-    /// @notice Mint stablecoins to a specific address
+    /// @notice Mint stablecoins to depository wallet
     /// @param amount The amount of stablecoins to mint
-    function mint(uint256 amount) public onlyRole(MINTER_ROLE) whenNotPaused {
+    function mint(uint256 amount) public onlyController whenNotPaused {
         require(
             depositoryWallet != address(0),
             "Depository wallet not set"
@@ -93,7 +153,7 @@ contract IDRP is
     /// @param _maxSupply The max supply (0 = unlimited)
     function setMaxSupply(
         uint256 _maxSupply
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyAdmin {
         uint256 oldMaxSupply = maxSupply;
         maxSupply = _maxSupply;
         emit MaxSupplyUpdated(oldMaxSupply, _maxSupply);
@@ -108,21 +168,19 @@ contract IDRP is
     function burn(
         address from,
         uint256 amount
-    ) public onlyRole(MINTER_ROLE) whenNotPaused {
+    ) public onlyController whenNotPaused {
         if (frozen[from]) revert FrozenAccount();
 
-        // If `from` is not the caller (MINTER_ROLE/IDRPController) and not depositoryWallet,
+        // If `from` is not the caller (controller) and not depositoryWallet,
         // ensure the caller has allowance from 'from'
         // - depositoryWallet is a cold wallet and can't approve
         // - controller transfers tokens to itself before burning, so no allowance needed
         if (from != _msgSender() && from != depositoryWallet) {
-            // Ensure the MINTER_ROLE has an allowance from 'from'
             uint256 currentAllowance = allowance(from, _msgSender());
             require(
                 currentAllowance >= amount,
                 "Burn amount exceeds allowance"
             );
-            // Deduct the burned amount from the allowance
             _approve(from, _msgSender(), currentAllowance - amount);
         }
 
@@ -131,18 +189,18 @@ contract IDRP is
 
     function _authorizeUpgrade(
         address newImplementation
-    ) internal override onlyRole(UPGRADER_ROLE) {}
+    ) internal override onlyUpgrader {}
 
     /// @notice Freeze an account, preventing transfers
     /// @param account The address to freeze
-    function freeze(address account) external onlyRole(FREEZER_ROLE) {
+    function freeze(address account) external onlyController {
         frozen[account] = true;
         emit AccountFrozen(account);
     }
 
     /// @notice Unfreeze an account, allowing transfers
     /// @param account The address to unfreeze
-    function unfreeze(address account) external onlyRole(FREEZER_ROLE) {
+    function unfreeze(address account) external onlyController {
         frozen[account] = false;
         emit AccountUnfrozen(account);
     }
@@ -151,7 +209,7 @@ contract IDRP is
     /// @param wallet The address of the depository wallet
     function setDepositoryWallet(
         address wallet
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyAdmin {
         require(wallet != address(0), "Invalid wallet address");
         address oldWallet = depositoryWallet;
         depositoryWallet = wallet;
@@ -176,7 +234,7 @@ contract IDRP is
         address token,
         address to,
         uint256 amount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyAdmin {
         require(token != address(this), "Cannot withdraw IDRP token");
         IERC20(token).safeTransfer(to, amount);
     }

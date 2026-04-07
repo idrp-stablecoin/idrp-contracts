@@ -12,6 +12,7 @@ describe("[H-2] Freeze Check Bypass via _update Internal", function () {
     await idrp.waitForDeployment();
 
     await idrp.connect(admin).setDepositoryWallet(depository.address);
+    await idrp.connect(admin).setController(admin.address);
 
     const amount = parseUnits("1000000", 6);
 

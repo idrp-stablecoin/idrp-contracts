@@ -42,17 +42,12 @@ describe("[L-3] Duplicate Signer in verifyUnpauseSignatures", function () {
       ],
     };
 
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
-    await controller.grantRole(COMMISSIONER_ROLE, commissioner.address);
+    await controller.setOfficer(officer.address);
+    await controller.setManager(manager.address);
+    await controller.setDirector(director.address);
+    await controller.setCommissioner(commissioner.address);
 
-    // dualRoleUser has Officer + Manager + Director roles
-    await controller.grantRole(OFFICER_ROLE, dualRoleUser.address);
-    await controller.grantRole(MANAGER_ROLE, dualRoleUser.address);
-    await controller.grantRole(DIRECTOR_ROLE, dualRoleUser.address);
-
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await idrp.setController(await controller.getAddress());
     await controller.setQuorumRules(OperationType.Pause, rulesPause);
     await controller.setQuorumRules(OperationType.Unpause, rulesUnpause);
 
@@ -83,7 +78,12 @@ describe("[L-3] Duplicate Signer in verifyUnpauseSignatures", function () {
   it("Should reject single signer with multiple roles trying to unpause", async function () {
     const fixture = await loadFixture(deployFixture);
     await pauseContract(fixture);
-    const { controller, dualRoleUser, domain, types, deadline } = fixture;
+    const { controller, admin, dualRoleUser, domain, types, deadline } = fixture;
+
+    // Override roles to point to dualRoleUser (1:1 mapping, so dualRoleUser replaces the original holders)
+    await controller.connect(admin).setOfficer(dualRoleUser.address);
+    await controller.connect(admin).setManager(dualRoleUser.address);
+    await controller.connect(admin).setDirector(dualRoleUser.address);
 
     const msg = {
       to: hre.ethers.ZeroAddress,
@@ -93,7 +93,7 @@ describe("[L-3] Duplicate Signer in verifyUnpauseSignatures", function () {
       deadline,
     };
 
-    // dualRoleUser signs once — has Officer+Manager+Director but counts as 1 signer
+    // dualRoleUser signs once — holds Officer+Manager+Director but counts as 1 signer
     const sig = await dualRoleUser.signTypedData(domain, types, msg);
 
     await expect(
@@ -107,7 +107,12 @@ describe("[L-3] Duplicate Signer in verifyUnpauseSignatures", function () {
   it("Should reject same signature submitted multiple times", async function () {
     const fixture = await loadFixture(deployFixture);
     await pauseContract(fixture);
-    const { controller, dualRoleUser, domain, types, deadline } = fixture;
+    const { controller, admin, dualRoleUser, domain, types, deadline } = fixture;
+
+    // Override roles to point to dualRoleUser
+    await controller.connect(admin).setOfficer(dualRoleUser.address);
+    await controller.connect(admin).setManager(dualRoleUser.address);
+    await controller.connect(admin).setDirector(dualRoleUser.address);
 
     const msg = {
       to: hre.ethers.ZeroAddress,

@@ -10,6 +10,7 @@ describe("[L-2] address(0) Freeze Edge Case", function () {
     const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
+    await idrp.connect(admin).setController(admin.address);
 
     return { idrp, admin, depository };
   }
