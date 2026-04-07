@@ -28,7 +28,6 @@ contract IDRP is
     // Role addresses
     address public admin;
     address public controller;
-    address public upgrader;
 
     /// @dev Events
     event AccountFrozen(address indexed account);
@@ -43,16 +42,11 @@ contract IDRP is
         address indexed oldController,
         address indexed newController
     );
-    event UpgraderUpdated(
-        address indexed oldUpgrader,
-        address indexed newUpgrader
-    );
 
     /// @dev Errors
     error FrozenAccount();
     error NotAdmin();
     error NotController();
-    error NotUpgrader();
     error ControllerNotSet();
 
     /// @dev Modifiers
@@ -64,11 +58,6 @@ contract IDRP is
     modifier onlyController() {
         if (controller == address(0)) revert ControllerNotSet();
         if (msg.sender != controller) revert NotController();
-        _;
-    }
-
-    modifier onlyUpgrader() {
-        if (msg.sender != upgrader) revert NotUpgrader();
         _;
     }
 
@@ -84,18 +73,15 @@ contract IDRP is
         __UUPSUpgradeable_init();
 
         admin = _admin;
-        upgrader = _admin;
     }
 
     /// @notice Migrate from AccessControl to explicit roles (upgrade-only)
     function initializeV2(
         address _admin,
-        address _controller,
-        address _upgrader
+        address _controller
     ) public reinitializer(2) {
         admin = _admin;
         controller = _controller;
-        upgrader = _upgrader;
     }
 
     /// @notice Set admin address
@@ -112,14 +98,6 @@ contract IDRP is
         address old = controller;
         controller = _controller;
         emit ControllerUpdated(old, _controller);
-    }
-
-    /// @notice Set upgrader address
-    function setUpgrader(address _upgrader) external onlyAdmin {
-        require(_upgrader != address(0), "Invalid address");
-        address old = upgrader;
-        upgrader = _upgrader;
-        emit UpgraderUpdated(old, _upgrader);
     }
 
     function decimals() public pure override returns (uint8) {
@@ -189,7 +167,7 @@ contract IDRP is
 
     function _authorizeUpgrade(
         address newImplementation
-    ) internal override onlyUpgrader {}
+    ) internal override onlyAdmin {}
 
     /// @notice Freeze an account, preventing transfers
     /// @param account The address to freeze
