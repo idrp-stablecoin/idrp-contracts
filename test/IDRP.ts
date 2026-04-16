@@ -5,12 +5,15 @@ import { parseUnits } from "ethers"
 
 describe("IDRP", function () {
   async function contractFixture() {
-    const [defaultAdmin, user] = await hre.ethers.getSigners()
+    const [defaultAdmin, user, depository] = await hre.ethers.getSigners()
     const IDRP = await hre.ethers.getContractFactory("IDRP")
     const contract = await hre.upgrades.deployProxy(IDRP, [await defaultAdmin.getAddress()])
     await contract.waitForDeployment()
 
-    return { contract, defaultAdmin, user }
+    // Set depository wallet (required before minting)
+    await contract.connect(defaultAdmin).setDepositoryWallet(depository.address)
+
+    return { contract, defaultAdmin, user, depository }
   }
 
   describe("Deployment", function () {
@@ -72,19 +75,22 @@ describe("IDRP", function () {
 
   describe("Minting", function () {
     it("Should mint tokens", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).mint(user.address, amount)
-      expect(await contract.balanceOf(user.address)).to.equal(amount)
+      await contract.connect(defaultAdmin).mint(amount)
+      expect(await contract.balanceOf(depository.address)).to.equal(amount)
     })
 
     it("Should burn tokens", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      // Mint tokens to user
-      await contract.connect(defaultAdmin).mint(user.address, amount)
+      // Mint tokens (goes to depository wallet)
+      await contract.connect(defaultAdmin).mint(amount)
+
+      // Transfer from depository to user
+      await contract.connect(depository).transfer(user.address, amount)
 
       // User set allowance for defaultAdmin to be burned
       await contract.connect(user).approve(await defaultAdmin.getAddress(), amount)
@@ -98,22 +104,27 @@ describe("IDRP", function () {
       const { contract, user } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await expect(contract.connect(user).mint(user.address, amount)).to.be.rejected
+      await expect(contract.connect(user).mint(amount)).to.be.rejected
     })
 
     it("Should not burn tokens if not MINTER_ROLE", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).mint(user.address, amount)
+      // Mint and transfer to user
+      await contract.connect(defaultAdmin).mint(amount)
+      await contract.connect(depository).transfer(user.address, amount)
+
       await expect(contract.connect(user).burn(user.address, amount)).to.be.rejected
     })
 
     it("Should not burn tokens if minter role doesn't have allowance", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).mint(user.address, amount)
+      // Mint and transfer to user
+      await contract.connect(defaultAdmin).mint(amount)
+      await contract.connect(depository).transfer(user.address, amount)
 
       await expect(contract.connect(defaultAdmin).burn(user.address, amount)).to.be.revertedWith(
         "Burn amount exceeds allowance"
@@ -121,35 +132,38 @@ describe("IDRP", function () {
     })
 
     it("Should not mint tokens if paused", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
       await contract.connect(defaultAdmin).pause()
-      await expect(contract.connect(defaultAdmin).mint(user.address, amount)).to.be.rejected
+      await expect(contract.connect(defaultAdmin).mint(amount)).to.be.rejected
     })
 
     it("Should not burn tokens if paused", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).mint(user.address, amount)
+      await contract.connect(defaultAdmin).mint(amount)
       await contract.connect(defaultAdmin).pause()
-      await expect(contract.connect(defaultAdmin).burn(user.address, amount)).to.be.rejected
+      await expect(contract.connect(defaultAdmin).burn(depository.address, amount)).to.be.rejected
     })
 
-    it("Should not mint tokens to frozen account", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+    it("Should not mint tokens to frozen depository wallet", async function () {
+      const { contract, defaultAdmin, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).freeze(user.address)
-      await expect(contract.connect(defaultAdmin).mint(user.address, amount)).to.be.rejected
+      await contract.connect(defaultAdmin).freeze(depository.address)
+      await expect(contract.connect(defaultAdmin).mint(amount)).to.be.rejected
     })
 
     it("Should not burn tokens from frozen account", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).mint(user.address, amount)
+      // Mint and transfer to user
+      await contract.connect(defaultAdmin).mint(amount)
+      await contract.connect(depository).transfer(user.address, amount)
+
       await contract.connect(defaultAdmin).freeze(user.address)
       await expect(contract.connect(defaultAdmin).burn(user.address, amount)).to.be.rejected
     })
@@ -157,39 +171,42 @@ describe("IDRP", function () {
 
   describe("Transfers", function () {
     it("Should transfer tokens", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).mint(defaultAdmin.address, amount)
-      await contract.connect(defaultAdmin).transfer(user.address, amount)
+      // Mint (goes to depository) then transfer to user
+      await contract.connect(defaultAdmin).mint(amount)
+      await contract.connect(depository).transfer(user.address, amount)
       expect(await contract.balanceOf(user.address)).to.equal(amount)
     })
 
     it("Should not transfer tokens if paused", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).mint(defaultAdmin.address, amount)
+      await contract.connect(defaultAdmin).mint(amount)
+      await contract.connect(depository).transfer(user.address, amount)
       await contract.connect(defaultAdmin).pause()
-      await expect(contract.connect(defaultAdmin).transfer(user.address, amount)).to.be.rejected
+      await expect(contract.connect(user).transfer(depository.address, amount)).to.be.rejected
     })
 
     it("Should not transfer tokens from frozen account", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).mint(defaultAdmin.address, amount)
-      await contract.connect(defaultAdmin).freeze(defaultAdmin.address)
-      await expect(contract.connect(defaultAdmin).transfer(user.address, amount)).to.be.rejected
+      await contract.connect(defaultAdmin).mint(amount)
+      await contract.connect(depository).transfer(user.address, amount)
+      await contract.connect(defaultAdmin).freeze(user.address)
+      await expect(contract.connect(user).transfer(depository.address, amount)).to.be.rejected
     })
 
     it("Should not transfer tokens to frozen account", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
+      const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
-      await contract.connect(defaultAdmin).mint(defaultAdmin.address, amount)
+      await contract.connect(defaultAdmin).mint(amount)
       await contract.connect(defaultAdmin).freeze(user.address)
-      await expect(contract.connect(defaultAdmin).transfer(user.address, amount)).to.be.rejected
+      await expect(contract.connect(depository).transfer(user.address, amount)).to.be.rejected
     })
   })
 })

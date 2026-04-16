@@ -308,7 +308,7 @@ describe("IDRPController", function () {
 
       // Create operation data
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -363,7 +363,7 @@ describe("IDRPController", function () {
 
       // Create operation data
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -423,7 +423,7 @@ describe("IDRPController", function () {
 
       // Create operation data
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -481,7 +481,7 @@ describe("IDRPController", function () {
 
       // Create operation data
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -533,7 +533,7 @@ describe("IDRPController", function () {
       const operationIdentifier = "tx1002"; // Use operation ID
 
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -602,7 +602,7 @@ describe("IDRPController", function () {
       // Mint operation
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: "tx1003", // Use operation ID
@@ -691,7 +691,7 @@ describe("IDRPController", function () {
       // Mint operation - simplified to focus on freeze test
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: "tx1005", // Use operation ID
@@ -769,7 +769,7 @@ describe("IDRPController", function () {
       const operationIdentifier = "tx1007"; // Use operation ID
 
       const operation = {
-        to: user.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,

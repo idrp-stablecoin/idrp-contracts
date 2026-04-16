@@ -67,7 +67,7 @@ describe("IDRPController - Operation Tests", function () {
     await controller.setQuorumRules(OperationType.Mint, [
       {
         minAmount: 0,
-        maxAmount: ONE_HUNDRED_MILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE],
       },
     ]);
@@ -75,7 +75,7 @@ describe("IDRPController - Operation Tests", function () {
     await controller.setQuorumRules(OperationType.Freeze, [
       {
         minAmount: 0,
-        maxAmount: ONE_HUNDRED_MILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE],
       },
     ]);
