@@ -2,6 +2,12 @@ import fs from "fs";
 import path from "path";
 import hre from "hardhat";
 
+/**
+ * Upgrade IDRP token contract
+ *
+ * IDRP uses onlyRole(UPGRADER_ROLE) — no timelock.
+ * The caller (signers[1]) must hold UPGRADER_ROLE on the IDRP proxy.
+ */
 async function main() {
   const networkId = hre.network.config.chainId ?? 8545;
   const deploymentDir = path.join(
@@ -9,38 +15,41 @@ async function main() {
     "./deployment"
   );
   const signers = await hre.ethers.getSigners();
-  const admin = signers[0];
-  console.log("admin", admin.address);
-
-  if (!fs.existsSync(deploymentDir)) {
-    fs.mkdirSync(deploymentDir, { recursive: true });
-  }
+  const admin = signers[1]; // must hold UPGRADER_ROLE
+  console.log("Admin (upgrader):", admin.address);
 
   const deploymentFile = path.join(deploymentDir, `chain-${networkId}.json`);
-
-  // Fetch existing deployments
-  let deployments: Record<string, string> = {};
-  if (fs.existsSync(deploymentFile)) {
-    deployments = JSON.parse(fs.readFileSync(deploymentFile, "utf-8"));
+  if (!fs.existsSync(deploymentFile)) {
+    throw new Error(`Deployment file not found: ${deploymentFile}`);
   }
 
-  const proxyAddress = deployments["IDRP"];
-  console.log("Upgrading IDRP to:", proxyAddress);
-  const IDRP = await hre.ethers.getContractFactory("IDRP", admin);
-  // console.log("IDRP:", IDRP);
-  // force import will import obejcts to json file for the network in .openzeppelin folder
-  // const upgradeForceImport = await hre.upgrades.forceImport(proxyAddress, IDRP);
-  const upgraded = await hre.upgrades.upgradeProxy(
-    proxyAddress,
-    IDRP
-    // {
-    //   redeployImplementation: "always",
-    // }
+  const deployments: Record<string, string> = JSON.parse(
+    fs.readFileSync(deploymentFile, "utf-8")
   );
-  // console.log("Upgraded:", upgraded);
+
+  const proxyAddress = deployments["IDRP"];
+  if (!proxyAddress) {
+    throw new Error("IDRP proxy address not found in deployment file");
+  }
+  console.log("IDRP proxy:", proxyAddress);
+
+  // Verify caller has UPGRADER_ROLE
+  const idrp = await hre.ethers.getContractAt("IDRP", proxyAddress, admin);
+  const UPGRADER_ROLE = await idrp.UPGRADER_ROLE();
+  const hasRole = await idrp.hasRole(UPGRADER_ROLE, admin.address);
+  if (!hasRole) {
+    throw new Error(
+      `Admin ${admin.address} does not have UPGRADER_ROLE on IDRP. Cannot upgrade.`
+    );
+  }
+
+  console.log("Upgrading IDRP...");
+  const IDRP = await hre.ethers.getContractFactory("IDRP", admin);
+  const upgraded = await hre.upgrades.upgradeProxy(proxyAddress, IDRP);
   await upgraded.waitForDeployment();
 
-  console.log("Upgraded IDRP to:", await upgraded.getAddress());
+  console.log("IDRP upgraded successfully!");
+  console.log("Proxy:", await upgraded.getAddress());
 }
 
 main()
