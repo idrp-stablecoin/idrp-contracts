@@ -4,11 +4,15 @@ IDRP is a stablecoin pegged to the Indonesian Rupiah (IDR). It is an ERC-20 toke
 
 ### Roles
 
-- `DEFAULT_ADMIN_ROLE`: Manages role assignments.
+- `DEFAULT_ADMIN_ROLE`: Manages role assignments and rotates the single `upgrader`.
 - `PAUSER_ROLE`: Can pause and unpause the contract.
 - `MINTER_ROLE`: Can mint and burn tokens.
 - `FREEZER_ROLE`: Can freeze and unfreeze accounts.
-- `UPGRADER_ROLE`: Can upgrade the contract implementation.
+- `upgrader` (single address, not a role): Can authorize UUPS upgrades. Rotated by
+  `DEFAULT_ADMIN_ROLE` via `setUpgrader(address)`. Replaces the legacy
+  `UPGRADER_ROLE` following the security audit (C-1) — admin/upgrader
+  authority is now bound to exactly one address at a time, while operational
+  roles (pauser/minter/freezer/controller TAP roles) remain multi-address.
 
 ### Main Functions
 

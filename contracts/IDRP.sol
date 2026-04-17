@@ -23,13 +23,20 @@ contract IDRP is
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant FREEZER_ROLE = keccak256("FREEZER_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     // Mapping to track frozen accounts
     mapping(address => bool) public frozen;
 
     address public depositoryWallet;
     uint256 public maxSupply;
+
+    // Single-address upgrader
+    address public upgrader;
+
+    // Upgrade timelock
+    uint256 public constant UPGRADE_DELAY = 48 hours;
+    uint256 public upgradeScheduledAt;
+    address public scheduledImplementation;
 
     /// @dev Events
     event AccountFrozen(address indexed account);
@@ -39,9 +46,28 @@ contract IDRP is
         address indexed oldWallet,
         address indexed newWallet
     );
+    event UpgraderUpdated(
+        address indexed oldUpgrader,
+        address indexed newUpgrader
+    );
+    event UpgradeScheduled(
+        address indexed newImplementation,
+        uint256 executableAfter
+    );
+    event UpgradeCancelled(
+        address indexed newImplementation,
+        address indexed cancelledBy
+    );
 
     /// @dev Errors
     error FrozenAccount();
+    error NotUpgrader();
+
+    /// @dev Modifiers
+    modifier onlyUpgrader() {
+        if (_msgSender() != upgrader) revert NotUpgrader();
+        _;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -59,7 +85,67 @@ contract IDRP is
         _grantRole(PAUSER_ROLE, superAdmin);
         _grantRole(MINTER_ROLE, superAdmin);
         _grantRole(FREEZER_ROLE, superAdmin);
-        _grantRole(UPGRADER_ROLE, superAdmin);
+
+        upgrader = superAdmin;
+        emit UpgraderUpdated(address(0), superAdmin);
+    }
+
+    /// @notice One-time migration for proxies originally deployed with UPGRADER_ROLE.
+    /// @dev Sets the single `upgrader` and revokes the legacy role from historical
+    ///      grantees so stale state does not re-grant authority if the role is ever
+    ///      reintroduced with the same string ("UPGRADER_ROLE") in a future upgrade.
+    ///      Plain AccessControlUpgradeable cannot enumerate holders on-chain, so the
+    ///      caller must pass the per-chain list obtained by replaying RoleGranted /
+    ///      RoleRevoked events (see scripts/list-upgrader-holders.ts).
+    /// @param _upgrader New single-address upgrader (e.g. Safe).
+    /// @param _legacyUpgraderHolders Addresses that ever held UPGRADER_ROLE on this chain.
+    function initializeV2(
+        address _upgrader,
+        address[] calldata _legacyUpgraderHolders
+    ) external reinitializer(2) {
+        require(_upgrader != address(0), "Invalid upgrader");
+
+        address oldUpgrader = upgrader;
+        upgrader = _upgrader;
+        emit UpgraderUpdated(oldUpgrader, _upgrader);
+
+        bytes32 legacyUpgraderRole = keccak256("UPGRADER_ROLE");
+        for (uint256 i = 0; i < _legacyUpgraderHolders.length; i++) {
+            _revokeRole(legacyUpgraderRole, _legacyUpgraderHolders[i]);
+        }
+    }
+
+    /// @notice Rotate the single upgrader address. Only DEFAULT_ADMIN_ROLE (Safe) may rotate.
+    function setUpgrader(address _upgrader) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_upgrader != address(0), "Invalid upgrader");
+        address oldUpgrader = upgrader;
+        upgrader = _upgrader;
+        emit UpgraderUpdated(oldUpgrader, _upgrader);
+    }
+
+    /// @notice Schedule a UUPS upgrade. Starts the 48h timelock window.
+    /// @dev Only the single-address `upgrader` may schedule. The proxy cannot
+    ///      upgrade to any implementation other than the one scheduled here.
+    function scheduleUpgrade(address newImplementation) external onlyUpgrader {
+        require(
+            newImplementation != address(0),
+            "Invalid implementation address"
+        );
+        scheduledImplementation = newImplementation;
+        upgradeScheduledAt = block.timestamp;
+        emit UpgradeScheduled(
+            newImplementation,
+            block.timestamp + UPGRADE_DELAY
+        );
+    }
+
+    /// @notice Cancel a pending scheduled upgrade.
+    function cancelUpgrade() external onlyUpgrader {
+        address cancelled = scheduledImplementation;
+        require(cancelled != address(0), "No pending upgrade");
+        scheduledImplementation = address(0);
+        upgradeScheduledAt = 0;
+        emit UpgradeCancelled(cancelled, _msgSender());
     }
 
     function decimals() public pure override returns (uint8) {
@@ -129,9 +215,22 @@ contract IDRP is
         _burn(from, amount);
     }
 
+    // Enforces single-upgrader auth AND 48h timelock.
+    // Clears scheduled state on execution so the slot can't be reused silently.
     function _authorizeUpgrade(
         address newImplementation
-    ) internal override onlyRole(UPGRADER_ROLE) {}
+    ) internal override onlyUpgrader {
+        require(
+            newImplementation == scheduledImplementation,
+            "Upgrade not scheduled"
+        );
+        require(
+            block.timestamp >= upgradeScheduledAt + UPGRADE_DELAY,
+            "Timelock not expired"
+        );
+        scheduledImplementation = address(0);
+        upgradeScheduledAt = 0;
+    }
 
     /// @notice Freeze an account, preventing transfers
     /// @param account The address to freeze
