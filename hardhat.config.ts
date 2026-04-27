@@ -27,6 +27,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 200,
       },
+      evmVersion: "cancun", // Required for OZ 5.6.x (uses mcopy / EIP-5656)
       // viaIR: true,
     },
   },
@@ -94,6 +95,12 @@ const config: HardhatUserConfig = {
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
       tron: true,
     },
+    tron: {
+      // Tron mainnet JSON-RPC endpoint via TronGrid (free tier: https://www.trongrid.io/)
+      url: "https://api.trongrid.io/jsonrpc",
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
+      tron: true,
+    },
   },
   etherscan: {
     // apiKey: {
@@ -149,12 +156,15 @@ const config: HardhatUserConfig = {
     filter: [], // compile all contracts
     compilers: [
       {
-        version: "0.8.22",
+        version: "0.8.28", // Align with main compiler; 0.8.28 supports Cancun
         settings: {
           optimizer: {
             enabled: true,
             runs: 200,
           },
+          // "cancun" required by OZ 5.6.x (mcopy). TVM Nile+ supports this.
+          // If deploying to older TVM nodes (pre-Nile), downgrade OZ to <5.6.0.
+          evmVersion: "cancun",
         },
       },
     ],

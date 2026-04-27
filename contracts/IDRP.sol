@@ -7,7 +7,9 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
 import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {TronUUPSUpgradeable} from "./utils/TronUUPSUpgradeable.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract IDRP is
     Initializable,
@@ -15,8 +17,10 @@ contract IDRP is
     ERC20PausableUpgradeable,
     AccessControlUpgradeable,
     ERC20PermitUpgradeable,
-    UUPSUpgradeable
+    TronUUPSUpgradeable
 {
+    using SafeERC20 for IERC20;
+
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant FREEZER_ROLE = keccak256("FREEZER_ROLE");
@@ -27,12 +31,20 @@ contract IDRP is
 
     address public depositoryWallet;
 
+    /// @notice Maximum token supply enforcing the 1:1 Rupiah reserve peg.
+    /// @dev    0 means uncapped (only valid before admin calls setMaxSupply for the first time).
+    ///         Once set it can only be raised or lowered by DEFAULT_ADMIN_ROLE.
+    uint256 public maxSupply;
+
     /// @dev Events
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
+    event DepositoryWalletSet(address indexed previousWallet, address indexed newWallet);
+    event MaxSupplyUpdated(uint256 indexed previousMaxSupply, uint256 indexed newMaxSupply);
 
     /// @dev Errors
     error FrozenAccount();
+    error ExceedsMaxSupply(uint256 requested, uint256 available);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -44,7 +56,7 @@ contract IDRP is
         __ERC20Pausable_init();
         __AccessControl_init();
         __ERC20Permit_init("IDRP");
-        __UUPSUpgradeable_init();
+        __TronUUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, superAdmin);
         _grantRole(PAUSER_ROLE, superAdmin);
@@ -68,8 +80,15 @@ contract IDRP is
     /// @notice Mint stablecoins to a specific address
     /// @param amount The amount of stablecoins to mint
     function mint(uint256 amount) public onlyRole(MINTER_ROLE) whenNotPaused {
-        if (frozen[depositoryWallet]) revert FrozenAccount();
-        _mint(depositoryWallet, amount);
+        // Cache storage reads — each SLOAD costs 100 energy on Tron (warm) / 2100 (cold)
+        address wallet = depositoryWallet;
+        require(wallet != address(0), "Depository wallet not set");
+        if (frozen[wallet]) revert FrozenAccount();
+        if (maxSupply != 0) {
+            uint256 available = maxSupply - totalSupply();
+            if (amount > available) revert ExceedsMaxSupply(amount, available);
+        }
+        _mint(wallet, amount);
     }
 
     /// @notice Burn stablecoins from a specific address
@@ -84,19 +103,15 @@ contract IDRP is
     ) public onlyRole(MINTER_ROLE) whenNotPaused {
         if (frozen[from]) revert FrozenAccount();
 
-        // If `from` is not the caller (MINTER_ROLE/IDRPController) and not depositoryWallet,
-        // ensure the caller has allowance from 'from'
-        // - depositoryWallet is a cold wallet and can't approve
-        // - controller transfers tokens to itself before burning, so no allowance needed
-        if (from != _msgSender() && from != depositoryWallet) {
-            // Ensure the MINTER_ROLE has an allowance from 'from'
-            uint256 currentAllowance = allowance(from, _msgSender());
+        // Cache _msgSender() — avoids a repeated virtual call
+        address caller = _msgSender();
+        if (from != caller && from != depositoryWallet) {
+            uint256 currentAllowance = allowance(from, caller);
             require(
                 currentAllowance >= amount,
                 "Burn amount exceeds allowance"
             );
-            // Deduct the burned amount from the allowance
-            _approve(from, _msgSender(), currentAllowance - amount);
+            _approve(from, caller, currentAllowance - amount);
         }
 
         _burn(from, amount);
@@ -105,33 +120,6 @@ contract IDRP is
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyRole(UPGRADER_ROLE) {}
-
-    /// @dev Override _beforeTokenTransfer to include pause and frozen account checks
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal view whenNotPaused {
-        if (frozen[from] || frozen[to]) revert FrozenAccount();
-        require(amount > 0, "Transfer amount must be greater than zero");
-    }
-
-    function transfer(
-        address to,
-        uint256 amount
-    ) public override returns (bool) {
-        _beforeTokenTransfer(_msgSender(), to, amount); // Invoke the custom hook
-        return super.transfer(to, amount);
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public override returns (bool) {
-        _beforeTokenTransfer(from, to, amount); // Invoke the custom hook
-        return super.transferFrom(from, to, amount);
-    }
 
     /// @notice Freeze an account, preventing transfers
     /// @param account The address to freeze
@@ -153,14 +141,36 @@ contract IDRP is
         address wallet
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(wallet != address(0), "Invalid wallet address");
+        address previous = depositoryWallet;
         depositoryWallet = wallet;
+        emit DepositoryWalletSet(previous, wallet);
     }
 
+    /// @notice Set the maximum token supply cap (on-chain 1:1 peg safety net).
+    /// @dev    newMax must be >= current totalSupply() to avoid making existing
+    ///         circulating supply invalid. Set to 0 to remove the cap (not recommended
+    ///         in production — only during initial bootstrap before reserves are set).
+    /// @param newMax New maximum supply in token base units (6 decimals).
+    function setMaxSupply(uint256 newMax) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(
+            newMax == 0 || newMax >= totalSupply(),
+            "Max supply below current total supply"
+        );
+        uint256 previous = maxSupply;
+        maxSupply = newMax;
+        emit MaxSupplyUpdated(previous, newMax);
+    }
+
+    /// @dev Central hook for all token movements (mint, burn, transfer).
+    /// ERC20PausableUpgradeable._update enforces whenNotPaused.
+    /// Freeze checks are enforced here for every transfer path.
     function _update(
         address from,
         address to,
         uint256 value
     ) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
+        if (from != address(0) && frozen[from]) revert FrozenAccount();
+        if (to != address(0) && frozen[to]) revert FrozenAccount();
         super._update(from, to, value);
     }
 
@@ -171,6 +181,7 @@ contract IDRP is
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(token != address(this), "Cannot withdraw IDRP token");
-        ERC20Upgradeable(token).transfer(to, amount);
+        require(to != address(0), "Invalid recipient address");
+        IERC20(token).safeTransfer(to, amount);
     }
 }
