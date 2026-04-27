@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -28,10 +27,18 @@ interface IIDRP {
 contract IDRPController is
     Initializable,
     AccessControlUpgradeable,
-    OwnableUpgradeable,
     UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
+
+    /// @dev Preserved storage namespace of the removed OwnableUpgradeable parent
+    ///      (audit v4.0 finding V4-2). OZ Upgrades requires the namespace to
+    ///      remain declared so v1→v2 layout comparison passes; the slot still
+    ///      holds its legacy `_owner` value but is no longer read by any path.
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable
+    struct OwnableStorageDeprecated {
+        address _owner;
+    }
 
     // Role definitions
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -84,6 +91,12 @@ contract IDRPController is
     uint256 public upgradeScheduledAt;
     address public scheduledImplementation;
 
+    // Single-address upgrader (audit v4.0 finding V4-2: removed OwnableUpgradeable
+    // in favour of an explicit, rotatable upgrader — same shape as IDRP.sol).
+    // Appended at the end of storage so existing v1 proxies preserve their layout
+    // on upgrade (slot is zero-initialized → migration runs via initializeV2).
+    address public upgrader;
+
     // Events
     event OperationExecuted(
         OperationType indexed operationType,
@@ -109,6 +122,19 @@ contract IDRPController is
         address indexed newImplementation,
         address indexed cancelledBy
     );
+    event UpgraderUpdated(
+        address indexed oldUpgrader,
+        address indexed newUpgrader
+    );
+
+    // Errors
+    error NotUpgrader();
+
+    // Modifiers
+    modifier onlyUpgrader() {
+        if (msg.sender != upgrader) revert NotUpgrader();
+        _;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -120,7 +146,6 @@ contract IDRPController is
         address _safeAddress
     ) public initializer {
         __AccessControl_init();
-        __Ownable_init(_safeAddress);
         __UUPSUpgradeable_init();
 
         idrpToken = _idrpToken;
@@ -128,6 +153,12 @@ contract IDRPController is
         // Setup roles - set Safe address as the admin
         _grantRole(DEFAULT_ADMIN_ROLE, _safeAddress);
         _grantRole(ADMIN_ROLE, _safeAddress);
+
+        // Single-address upgrader. Safe is the same address that was previously
+        // wired to OwnableUpgradeable's _owner — fresh deploys keep the same
+        // authorisation semantics, just via the rotatable upgrader slot.
+        upgrader = _safeAddress;
+        emit UpgraderUpdated(address(0), _safeAddress);
 
         // Initialize domain separator for EIP-712
         DOMAIN_SEPARATOR = keccak256(
@@ -141,6 +172,31 @@ contract IDRPController is
                 address(this)
             )
         );
+    }
+
+    /// @notice One-time migration for proxies originally deployed with OwnableUpgradeable.
+    /// @dev Sets `upgrader` for existing v1 proxies whose slot is still zero.
+    ///      Gated by DEFAULT_ADMIN_ROLE so an attacker cannot frontrun the
+    ///      post-upgrade migration tx (audit v4.0 finding V4-1, mirrored on
+    ///      controller for V4-2). The orphaned `_owner` slot in the OZ Ownable
+    ///      ERC-7201 namespace is harmless — it is no longer read by any path.
+    function initializeV2(
+        address _upgrader
+    ) external reinitializer(2) onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_upgrader != address(0), "Invalid upgrader");
+        address oldUpgrader = upgrader;
+        upgrader = _upgrader;
+        emit UpgraderUpdated(oldUpgrader, _upgrader);
+    }
+
+    /// @notice Rotate the single upgrader address. Only DEFAULT_ADMIN_ROLE (Safe) may rotate.
+    function setUpgrader(
+        address _upgrader
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_upgrader != address(0), "Invalid upgrader");
+        address oldUpgrader = upgrader;
+        upgrader = _upgrader;
+        emit UpgraderUpdated(oldUpgrader, _upgrader);
     }
 
     // Set quorum rules for an operation type
@@ -309,7 +365,7 @@ contract IDRPController is
         address token,
         address to,
         uint256 amount
-    ) external onlyOwner {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(to != address(0), "Invalid recipient address");
         IERC20(token).safeTransfer(to, amount);
         emit TokensWithdrawn(token, to, amount);
@@ -432,7 +488,7 @@ contract IDRPController is
     // Schedule an upgrade with 48h timelock
     function scheduleUpgrade(
         address newImplementation
-    ) external onlyOwner {
+    ) external onlyUpgrader {
         require(
             newImplementation != address(0),
             "Invalid implementation address"
@@ -446,7 +502,7 @@ contract IDRPController is
     }
 
     // Cancel a scheduled upgrade
-    function cancelUpgrade() external onlyOwner {
+    function cancelUpgrade() external onlyUpgrader {
         address cancelled = scheduledImplementation;
         require(cancelled != address(0), "No pending upgrade");
         scheduledImplementation = address(0);
@@ -457,7 +513,7 @@ contract IDRPController is
     // Override required by UUPSUpgradeable — enforces timelock
     function _authorizeUpgrade(
         address newImplementation
-    ) internal override onlyOwner {
+    ) internal override onlyUpgrader {
         require(
             newImplementation == scheduledImplementation,
             "Upgrade not scheduled"
