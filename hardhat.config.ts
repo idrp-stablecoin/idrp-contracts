@@ -157,6 +157,7 @@ const config: HardhatUserConfig = {
     compilers: [
       {
         version: "0.8.28", // Align with main compiler; 0.8.28 supports Cancun
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         settings: {
           optimizer: {
             enabled: true,
@@ -165,7 +166,7 @@ const config: HardhatUserConfig = {
           // "cancun" required by OZ 5.6.x (mcopy). TVM Nile+ supports this.
           // If deploying to older TVM nodes (pre-Nile), downgrade OZ to <5.6.0.
           evmVersion: "cancun",
-        },
+        } as any,
       },
     ],
   },
