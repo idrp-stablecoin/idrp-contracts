@@ -856,60 +856,24 @@
   "ast": {
     "absolutePath": "/Users/spidey/parallax/idrp/idrp-contracts/contracts/IDRPController.sol",
     "exportedSymbols": {
-      "AccessControlUpgradeable": [
-        1206
-      ],
-      "ContextUpgradeable": [
-        2514
-      ],
-      "ERC165Upgradeable": [
-        2554
-      ],
-      "ERC1967Utils": [
-        3189
-      ],
-      "ERC20Upgradeable": [
-        2468
-      ],
-      "IAccessControl": [
-        2637
-      ],
-      "IDRPController": [
-        841
-      ],
-      "IERC1363": [
-        2719
-      ],
-      "IERC165": [
-        4185
-      ],
-      "IERC1822Proxiable": [
-        2758
-      ],
-      "IERC20": [
-        3277
-      ],
-      "IERC20Errors": [
-        2800
-      ],
-      "IERC20Metadata": [
-        3303
-      ],
-      "IIDRP": [
-        36
-      ],
-      "Initializable": [
-        1669
-      ],
-      "OwnableUpgradeable": [
-        1401
-      ],
-      "SafeERC20": [
-        3767
-      ],
-      "UUPSUpgradeable": [
-        1851
-      ]
+      "AccessControlUpgradeable": [1206],
+      "ContextUpgradeable": [2514],
+      "ERC165Upgradeable": [2554],
+      "ERC1967Utils": [3189],
+      "ERC20Upgradeable": [2468],
+      "IAccessControl": [2637],
+      "IDRPController": [841],
+      "IERC1363": [2719],
+      "IERC165": [4185],
+      "IERC1822Proxiable": [2758],
+      "IERC20": [3277],
+      "IERC20Errors": [2800],
+      "IERC20Metadata": [3303],
+      "IIDRP": [36],
+      "Initializable": [1669],
+      "OwnableUpgradeable": [1401],
+      "SafeERC20": [3767],
+      "UUPSUpgradeable": [1851]
     },
     "id": 842,
     "license": "MIT",
@@ -917,12 +881,7 @@
     "nodes": [
       {
         "id": 1,
-        "literals": [
-          "solidity",
-          "^",
-          "0.8",
-          ".22"
-        ],
+        "literals": ["solidity", "^", "0.8", ".22"],
         "nodeType": "PragmaDirective",
         "src": "32:24:0"
       },
@@ -1006,9 +965,7 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "id": 36,
-        "linearizedBaseContracts": [
-          36
-        ],
+        "linearizedBaseContracts": [36],
         "name": "IIDRP",
         "nameLocation": "569:5:0",
         "nodeType": "ContractDefinition",
@@ -1330,9 +1287,7 @@
             "baseName": {
               "id": 37,
               "name": "Initializable",
-              "nameLocations": [
-                "878:13:0"
-              ],
+              "nameLocations": ["878:13:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 1669,
               "src": "878:13:0"
@@ -1345,9 +1300,7 @@
             "baseName": {
               "id": 39,
               "name": "AccessControlUpgradeable",
-              "nameLocations": [
-                "897:24:0"
-              ],
+              "nameLocations": ["897:24:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 1206,
               "src": "897:24:0"
@@ -1360,9 +1313,7 @@
             "baseName": {
               "id": 41,
               "name": "OwnableUpgradeable",
-              "nameLocations": [
-                "927:18:0"
-              ],
+              "nameLocations": ["927:18:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 1401,
               "src": "927:18:0"
@@ -1375,9 +1326,7 @@
             "baseName": {
               "id": 43,
               "name": "UUPSUpgradeable",
-              "nameLocations": [
-                "951:15:0"
-              ],
+              "nameLocations": ["951:15:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 1851,
               "src": "951:15:0"
@@ -1393,16 +1342,7 @@
         "fullyImplemented": true,
         "id": 841,
         "linearizedBaseContracts": [
-          841,
-          1851,
-          2758,
-          1401,
-          1206,
-          2554,
-          4185,
-          2637,
-          2514,
-          1669
+          841, 1851, 2758, 1401, 1206, 2554, 4185, 2637, 2514, 1669
         ],
         "name": "IDRPController",
         "nameLocation": "856:14:0",
@@ -1414,9 +1354,7 @@
             "libraryName": {
               "id": 45,
               "name": "SafeERC20",
-              "nameLocations": [
-                "979:9:0"
-              ],
+              "nameLocations": ["979:9:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 3767,
               "src": "979:9:0"
@@ -1429,9 +1367,7 @@
               "pathNode": {
                 "id": 46,
                 "name": "IERC20",
-                "nameLocations": [
-                  "993:6:0"
-                ],
+                "nameLocations": ["993:6:0"],
                 "nodeType": "IdentifierPath",
                 "referencedDeclaration": 3277,
                 "src": "993:6:0"
@@ -2086,9 +2022,7 @@
                 "pathNode": {
                   "id": 93,
                   "name": "OperationType",
-                  "nameLocations": [
-                    "1805:13:0"
-                  ],
+                  "nameLocations": ["1805:13:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 84,
                   "src": "1805:13:0"
@@ -2115,9 +2049,7 @@
                   "pathNode": {
                     "id": 95,
                     "name": "QuorumRule",
-                    "nameLocations": [
-                      "1822:10:0"
-                    ],
+                    "nameLocations": ["1822:10:0"],
                     "nodeType": "IdentifierPath",
                     "referencedDeclaration": 92,
                     "src": "1822:10:0"
@@ -2331,9 +2263,7 @@
                     "pathNode": {
                       "id": 111,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "2366:13:0"
-                      ],
+                      "nameLocations": ["2366:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "2366:13:0"
@@ -2470,9 +2400,7 @@
                     "pathNode": {
                       "id": 122,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "2534:13:0"
-                      ],
+                      "nameLocations": ["2534:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "2534:13:0"
@@ -3465,9 +3393,7 @@
                 "modifierName": {
                   "id": 148,
                   "name": "initializer",
-                  "nameLocations": [
-                    "2896:11:0"
-                  ],
+                  "nameLocations": ["2896:11:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1509,
                   "src": "2896:11:0"
@@ -3803,9 +3729,7 @@
                   },
                   "id": 244,
                   "initializationExpression": {
-                    "assignments": [
-                      224
-                    ],
+                    "assignments": [224],
                     "declarations": [
                       {
                         "constant": false,
@@ -3972,9 +3896,7 @@
                 "modifierName": {
                   "id": 214,
                   "name": "onlyRole",
-                  "nameLocations": [
-                    "3815:8:0"
-                  ],
+                  "nameLocations": ["3815:8:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 901,
                   "src": "3815:8:0"
@@ -4011,9 +3933,7 @@
                     "pathNode": {
                       "id": 206,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "3735:13:0"
-                      ],
+                      "nameLocations": ["3735:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "3735:13:0"
@@ -4049,9 +3969,7 @@
                       "pathNode": {
                         "id": 209,
                         "name": "QuorumRule",
-                        "nameLocations": [
-                          "3772:10:0"
-                        ],
+                        "nameLocations": ["3772:10:0"],
                         "nodeType": "IdentifierPath",
                         "referencedDeclaration": 92,
                         "src": "3772:10:0"
@@ -4600,10 +4518,7 @@
                       "id": 267,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "4472:7:0",
                       "typeDescriptions": {
@@ -4722,10 +4637,7 @@
                       "id": 300,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "4864:7:0",
                       "typeDescriptions": {
@@ -4754,9 +4666,7 @@
                   "src": "4864:57:0"
                 },
                 {
-                  "assignments": [
-                    310
-                  ],
+                  "assignments": [310],
                   "declarations": [
                     {
                       "constant": false,
@@ -4779,9 +4689,7 @@
                         "pathNode": {
                           "id": 308,
                           "name": "QuorumRule",
-                          "nameLocations": [
-                            "5005:10:0"
-                          ],
+                          "nameLocations": ["5005:10:0"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 92,
                           "src": "5005:10:0"
@@ -4866,9 +4774,7 @@
                   "src": "5005:61:0"
                 },
                 {
-                  "assignments": [
-                    317
-                  ],
+                  "assignments": [317],
                   "declarations": [
                     {
                       "constant": false,
@@ -6592,9 +6498,7 @@
                     "pathNode": {
                       "id": 251,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "4179:13:0"
-                      ],
+                      "nameLocations": ["4179:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "4179:13:0"
@@ -6860,10 +6764,7 @@
                       "id": 450,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "6737:7:0",
                       "typeDescriptions": {
@@ -6892,9 +6793,7 @@
                   "src": "6737:70:0"
                 },
                 {
-                  "assignments": [
-                    459
-                  ],
+                  "assignments": [459],
                   "declarations": [
                     {
                       "constant": false,
@@ -6945,9 +6844,7 @@
                   "src": "6826:23:0"
                 },
                 {
-                  "assignments": [
-                    463
-                  ],
+                  "assignments": [463],
                   "declarations": [
                     {
                       "constant": false,
@@ -6998,9 +6895,7 @@
                   "src": "6859:23:0"
                 },
                 {
-                  "assignments": [
-                    467
-                  ],
+                  "assignments": [467],
                   "declarations": [
                     {
                       "constant": false,
@@ -7051,9 +6946,7 @@
                   "src": "6892:24:0"
                 },
                 {
-                  "assignments": [
-                    471
-                  ],
+                  "assignments": [471],
                   "declarations": [
                     {
                       "constant": false,
@@ -7110,9 +7003,7 @@
                     "src": "7021:374:0",
                     "statements": [
                       {
-                        "assignments": [
-                          486
-                        ],
+                        "assignments": [486],
                         "declarations": [
                           {
                             "constant": false,
@@ -7766,9 +7657,7 @@
                   },
                   "id": 531,
                   "initializationExpression": {
-                    "assignments": [
-                      475
-                    ],
+                    "assignments": [475],
                     "declarations": [
                       {
                         "constant": false,
@@ -7855,9 +7744,7 @@
                   "src": "6973:422:0"
                 },
                 {
-                  "assignments": [
-                    533
-                  ],
+                  "assignments": [533],
                   "declarations": [
                     {
                       "constant": false,
@@ -8131,10 +8018,7 @@
                       "id": 548,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "7709:7:0",
                       "typeDescriptions": {
@@ -8335,10 +8219,7 @@
                       "id": 565,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "8071:7:0",
                       "typeDescriptions": {
@@ -8588,9 +8469,7 @@
                 "modifierName": {
                   "id": 562,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "7974:9:0"
-                  ],
+                  "nameLocations": ["7974:9:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1296,
                   "src": "7974:9:0"
@@ -8711,9 +8590,7 @@
               "src": "8427:312:0",
               "statements": [
                 {
-                  "assignments": [
-                    602
-                  ],
+                  "assignments": [602],
                   "declarations": [
                     {
                       "constant": false,
@@ -8737,9 +8614,7 @@
                           "pathNode": {
                             "id": 599,
                             "name": "QuorumRule",
-                            "nameLocations": [
-                              "8437:10:0"
-                            ],
+                            "nameLocations": ["8437:10:0"],
                             "nodeType": "IdentifierPath",
                             "referencedDeclaration": 92,
                             "src": "8437:10:0"
@@ -9109,9 +8984,7 @@
                   },
                   "id": 638,
                   "initializationExpression": {
-                    "assignments": [
-                      608
-                    ],
+                    "assignments": [608],
                     "declarations": [
                       {
                         "constant": false,
@@ -9227,10 +9100,7 @@
                       "id": 639,
                       "name": "revert",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967277,
-                        4294967277
-                      ],
+                      "overloadedDeclarations": [4294967277, 4294967277],
                       "referencedDeclaration": 4294967277,
                       "src": "8693:6:0",
                       "typeDescriptions": {
@@ -9293,9 +9163,7 @@
                     "pathNode": {
                       "id": 588,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "8329:13:0"
-                      ],
+                      "nameLocations": ["8329:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "8329:13:0"
@@ -9364,9 +9232,7 @@
                     "pathNode": {
                       "id": 594,
                       "name": "QuorumRule",
-                      "nameLocations": [
-                        "8408:10:0"
-                      ],
+                      "nameLocations": ["8408:10:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 92,
                       "src": "8408:10:0"
@@ -9396,9 +9262,7 @@
               "src": "9043:416:0",
               "statements": [
                 {
-                  "assignments": [
-                    660
-                  ],
+                  "assignments": [660],
                   "declarations": [
                     {
                       "constant": false,
@@ -10123,10 +9987,7 @@
                       "id": 699,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "9694:7:0",
                       "typeDescriptions": {
@@ -10161,9 +10022,7 @@
                     "src": "9917:621:0",
                     "statements": [
                       {
-                        "assignments": [
-                          719
-                        ],
+                        "assignments": [719],
                         "declarations": [
                           {
                             "constant": false,
@@ -10214,9 +10073,7 @@
                         "src": "9931:31:0"
                       },
                       {
-                        "assignments": [
-                          723
-                        ],
+                        "assignments": [723],
                         "declarations": [
                           {
                             "constant": false,
@@ -10294,9 +10151,7 @@
                           "src": "10070:306:0",
                           "statements": [
                             {
-                              "assignments": [
-                                740
-                              ],
+                              "assignments": [740],
                               "declarations": [
                                 {
                                   "constant": false,
@@ -10611,9 +10466,7 @@
                         },
                         "id": 760,
                         "initializationExpression": {
-                          "assignments": [
-                            729
-                          ],
+                          "assignments": [729],
                           "declarations": [
                             {
                               "constant": false,
@@ -10858,10 +10711,7 @@
                             "id": 761,
                             "name": "require",
                             "nodeType": "Identifier",
-                            "overloadedDeclarations": [
-                              4294967278,
-                              4294967278
-                            ],
+                            "overloadedDeclarations": [4294967278, 4294967278],
                             "referencedDeclaration": 4294967278,
                             "src": "10390:7:0",
                             "typeDescriptions": {
@@ -10950,9 +10800,7 @@
                   },
                   "id": 774,
                   "initializationExpression": {
-                    "assignments": [
-                      708
-                    ],
+                    "assignments": [708],
                     "declarations": [
                       {
                         "constant": false,
@@ -11266,10 +11114,7 @@
                       "id": 785,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "10728:7:0",
                       "typeDescriptions": {
@@ -11298,9 +11143,7 @@
                   "src": "10728:59:0"
                 },
                 {
-                  "assignments": [
-                    794
-                  ],
+                  "assignments": [794],
                   "declarations": [
                     {
                       "constant": false,
@@ -11335,9 +11178,7 @@
                   "src": "10798:9:0"
                 },
                 {
-                  "assignments": [
-                    797
-                  ],
+                  "assignments": [797],
                   "declarations": [
                     {
                       "constant": false,
@@ -11372,9 +11213,7 @@
                   "src": "10817:9:0"
                 },
                 {
-                  "assignments": [
-                    800
-                  ],
+                  "assignments": [800],
                   "declarations": [
                     {
                       "constant": false,
@@ -11876,10 +11715,7 @@
                       "id": 812,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "11109:7:0",
                       "typeDescriptions": {
@@ -12122,9 +11958,7 @@
             "visibility": "internal"
           },
           {
-            "baseFunctions": [
-              1805
-            ],
+            "baseFunctions": [1805],
             "body": {
               "id": 839,
               "nodeType": "Block",
@@ -12141,9 +11975,7 @@
                 "modifierName": {
                   "id": 836,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "11352:9:0"
-                  ],
+                  "nameLocations": ["11352:9:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1296,
                   "src": "11352:9:0"
@@ -12212,31 +12044,10 @@
         "scope": 842,
         "src": "847:10519:0",
         "usedErrors": [
-          1237,
-          1242,
-          1418,
-          1421,
-          1696,
-          1701,
-          2564,
-          2567,
-          2915,
-          2928,
-          3315,
-          3777,
-          4040
+          1237, 1242, 1418, 1421, 1696, 1701, 2564, 2567, 2915, 2928, 3315,
+          3777, 4040
         ],
-        "usedEvents": [
-          121,
-          126,
-          134,
-          1248,
-          1426,
-          2576,
-          2585,
-          2594,
-          2731
-        ]
+        "usedEvents": [121, 126, 134, 1248, 1426, 2576, 2585, 2594, 2731]
       }
     ],
     "src": "32:11335:0"
@@ -12244,60 +12055,24 @@
   "legacyAST": {
     "absolutePath": "/Users/spidey/parallax/idrp/idrp-contracts/contracts/IDRPController.sol",
     "exportedSymbols": {
-      "AccessControlUpgradeable": [
-        1206
-      ],
-      "ContextUpgradeable": [
-        2514
-      ],
-      "ERC165Upgradeable": [
-        2554
-      ],
-      "ERC1967Utils": [
-        3189
-      ],
-      "ERC20Upgradeable": [
-        2468
-      ],
-      "IAccessControl": [
-        2637
-      ],
-      "IDRPController": [
-        841
-      ],
-      "IERC1363": [
-        2719
-      ],
-      "IERC165": [
-        4185
-      ],
-      "IERC1822Proxiable": [
-        2758
-      ],
-      "IERC20": [
-        3277
-      ],
-      "IERC20Errors": [
-        2800
-      ],
-      "IERC20Metadata": [
-        3303
-      ],
-      "IIDRP": [
-        36
-      ],
-      "Initializable": [
-        1669
-      ],
-      "OwnableUpgradeable": [
-        1401
-      ],
-      "SafeERC20": [
-        3767
-      ],
-      "UUPSUpgradeable": [
-        1851
-      ]
+      "AccessControlUpgradeable": [1206],
+      "ContextUpgradeable": [2514],
+      "ERC165Upgradeable": [2554],
+      "ERC1967Utils": [3189],
+      "ERC20Upgradeable": [2468],
+      "IAccessControl": [2637],
+      "IDRPController": [841],
+      "IERC1363": [2719],
+      "IERC165": [4185],
+      "IERC1822Proxiable": [2758],
+      "IERC20": [3277],
+      "IERC20Errors": [2800],
+      "IERC20Metadata": [3303],
+      "IIDRP": [36],
+      "Initializable": [1669],
+      "OwnableUpgradeable": [1401],
+      "SafeERC20": [3767],
+      "UUPSUpgradeable": [1851]
     },
     "id": 842,
     "license": "MIT",
@@ -12305,12 +12080,7 @@
     "nodes": [
       {
         "id": 1,
-        "literals": [
-          "solidity",
-          "^",
-          "0.8",
-          ".22"
-        ],
+        "literals": ["solidity", "^", "0.8", ".22"],
         "nodeType": "PragmaDirective",
         "src": "32:24:0"
       },
@@ -12394,9 +12164,7 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "id": 36,
-        "linearizedBaseContracts": [
-          36
-        ],
+        "linearizedBaseContracts": [36],
         "name": "IIDRP",
         "nameLocation": "569:5:0",
         "nodeType": "ContractDefinition",
@@ -12718,9 +12486,7 @@
             "baseName": {
               "id": 37,
               "name": "Initializable",
-              "nameLocations": [
-                "878:13:0"
-              ],
+              "nameLocations": ["878:13:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 1669,
               "src": "878:13:0"
@@ -12733,9 +12499,7 @@
             "baseName": {
               "id": 39,
               "name": "AccessControlUpgradeable",
-              "nameLocations": [
-                "897:24:0"
-              ],
+              "nameLocations": ["897:24:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 1206,
               "src": "897:24:0"
@@ -12748,9 +12512,7 @@
             "baseName": {
               "id": 41,
               "name": "OwnableUpgradeable",
-              "nameLocations": [
-                "927:18:0"
-              ],
+              "nameLocations": ["927:18:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 1401,
               "src": "927:18:0"
@@ -12763,9 +12525,7 @@
             "baseName": {
               "id": 43,
               "name": "UUPSUpgradeable",
-              "nameLocations": [
-                "951:15:0"
-              ],
+              "nameLocations": ["951:15:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 1851,
               "src": "951:15:0"
@@ -12781,16 +12541,7 @@
         "fullyImplemented": true,
         "id": 841,
         "linearizedBaseContracts": [
-          841,
-          1851,
-          2758,
-          1401,
-          1206,
-          2554,
-          4185,
-          2637,
-          2514,
-          1669
+          841, 1851, 2758, 1401, 1206, 2554, 4185, 2637, 2514, 1669
         ],
         "name": "IDRPController",
         "nameLocation": "856:14:0",
@@ -12802,9 +12553,7 @@
             "libraryName": {
               "id": 45,
               "name": "SafeERC20",
-              "nameLocations": [
-                "979:9:0"
-              ],
+              "nameLocations": ["979:9:0"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 3767,
               "src": "979:9:0"
@@ -12817,9 +12566,7 @@
               "pathNode": {
                 "id": 46,
                 "name": "IERC20",
-                "nameLocations": [
-                  "993:6:0"
-                ],
+                "nameLocations": ["993:6:0"],
                 "nodeType": "IdentifierPath",
                 "referencedDeclaration": 3277,
                 "src": "993:6:0"
@@ -13474,9 +13221,7 @@
                 "pathNode": {
                   "id": 93,
                   "name": "OperationType",
-                  "nameLocations": [
-                    "1805:13:0"
-                  ],
+                  "nameLocations": ["1805:13:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 84,
                   "src": "1805:13:0"
@@ -13503,9 +13248,7 @@
                   "pathNode": {
                     "id": 95,
                     "name": "QuorumRule",
-                    "nameLocations": [
-                      "1822:10:0"
-                    ],
+                    "nameLocations": ["1822:10:0"],
                     "nodeType": "IdentifierPath",
                     "referencedDeclaration": 92,
                     "src": "1822:10:0"
@@ -13719,9 +13462,7 @@
                     "pathNode": {
                       "id": 111,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "2366:13:0"
-                      ],
+                      "nameLocations": ["2366:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "2366:13:0"
@@ -13858,9 +13599,7 @@
                     "pathNode": {
                       "id": 122,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "2534:13:0"
-                      ],
+                      "nameLocations": ["2534:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "2534:13:0"
@@ -14853,9 +14592,7 @@
                 "modifierName": {
                   "id": 148,
                   "name": "initializer",
-                  "nameLocations": [
-                    "2896:11:0"
-                  ],
+                  "nameLocations": ["2896:11:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1509,
                   "src": "2896:11:0"
@@ -15191,9 +14928,7 @@
                   },
                   "id": 244,
                   "initializationExpression": {
-                    "assignments": [
-                      224
-                    ],
+                    "assignments": [224],
                     "declarations": [
                       {
                         "constant": false,
@@ -15360,9 +15095,7 @@
                 "modifierName": {
                   "id": 214,
                   "name": "onlyRole",
-                  "nameLocations": [
-                    "3815:8:0"
-                  ],
+                  "nameLocations": ["3815:8:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 901,
                   "src": "3815:8:0"
@@ -15399,9 +15132,7 @@
                     "pathNode": {
                       "id": 206,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "3735:13:0"
-                      ],
+                      "nameLocations": ["3735:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "3735:13:0"
@@ -15437,9 +15168,7 @@
                       "pathNode": {
                         "id": 209,
                         "name": "QuorumRule",
-                        "nameLocations": [
-                          "3772:10:0"
-                        ],
+                        "nameLocations": ["3772:10:0"],
                         "nodeType": "IdentifierPath",
                         "referencedDeclaration": 92,
                         "src": "3772:10:0"
@@ -15988,10 +15717,7 @@
                       "id": 267,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "4472:7:0",
                       "typeDescriptions": {
@@ -16110,10 +15836,7 @@
                       "id": 300,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "4864:7:0",
                       "typeDescriptions": {
@@ -16142,9 +15865,7 @@
                   "src": "4864:57:0"
                 },
                 {
-                  "assignments": [
-                    310
-                  ],
+                  "assignments": [310],
                   "declarations": [
                     {
                       "constant": false,
@@ -16167,9 +15888,7 @@
                         "pathNode": {
                           "id": 308,
                           "name": "QuorumRule",
-                          "nameLocations": [
-                            "5005:10:0"
-                          ],
+                          "nameLocations": ["5005:10:0"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 92,
                           "src": "5005:10:0"
@@ -16254,9 +15973,7 @@
                   "src": "5005:61:0"
                 },
                 {
-                  "assignments": [
-                    317
-                  ],
+                  "assignments": [317],
                   "declarations": [
                     {
                       "constant": false,
@@ -17980,9 +17697,7 @@
                     "pathNode": {
                       "id": 251,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "4179:13:0"
-                      ],
+                      "nameLocations": ["4179:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "4179:13:0"
@@ -18248,10 +17963,7 @@
                       "id": 450,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "6737:7:0",
                       "typeDescriptions": {
@@ -18280,9 +17992,7 @@
                   "src": "6737:70:0"
                 },
                 {
-                  "assignments": [
-                    459
-                  ],
+                  "assignments": [459],
                   "declarations": [
                     {
                       "constant": false,
@@ -18333,9 +18043,7 @@
                   "src": "6826:23:0"
                 },
                 {
-                  "assignments": [
-                    463
-                  ],
+                  "assignments": [463],
                   "declarations": [
                     {
                       "constant": false,
@@ -18386,9 +18094,7 @@
                   "src": "6859:23:0"
                 },
                 {
-                  "assignments": [
-                    467
-                  ],
+                  "assignments": [467],
                   "declarations": [
                     {
                       "constant": false,
@@ -18439,9 +18145,7 @@
                   "src": "6892:24:0"
                 },
                 {
-                  "assignments": [
-                    471
-                  ],
+                  "assignments": [471],
                   "declarations": [
                     {
                       "constant": false,
@@ -18498,9 +18202,7 @@
                     "src": "7021:374:0",
                     "statements": [
                       {
-                        "assignments": [
-                          486
-                        ],
+                        "assignments": [486],
                         "declarations": [
                           {
                             "constant": false,
@@ -19154,9 +18856,7 @@
                   },
                   "id": 531,
                   "initializationExpression": {
-                    "assignments": [
-                      475
-                    ],
+                    "assignments": [475],
                     "declarations": [
                       {
                         "constant": false,
@@ -19243,9 +18943,7 @@
                   "src": "6973:422:0"
                 },
                 {
-                  "assignments": [
-                    533
-                  ],
+                  "assignments": [533],
                   "declarations": [
                     {
                       "constant": false,
@@ -19519,10 +19217,7 @@
                       "id": 548,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "7709:7:0",
                       "typeDescriptions": {
@@ -19723,10 +19418,7 @@
                       "id": 565,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "8071:7:0",
                       "typeDescriptions": {
@@ -19976,9 +19668,7 @@
                 "modifierName": {
                   "id": 562,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "7974:9:0"
-                  ],
+                  "nameLocations": ["7974:9:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1296,
                   "src": "7974:9:0"
@@ -20099,9 +19789,7 @@
               "src": "8427:312:0",
               "statements": [
                 {
-                  "assignments": [
-                    602
-                  ],
+                  "assignments": [602],
                   "declarations": [
                     {
                       "constant": false,
@@ -20125,9 +19813,7 @@
                           "pathNode": {
                             "id": 599,
                             "name": "QuorumRule",
-                            "nameLocations": [
-                              "8437:10:0"
-                            ],
+                            "nameLocations": ["8437:10:0"],
                             "nodeType": "IdentifierPath",
                             "referencedDeclaration": 92,
                             "src": "8437:10:0"
@@ -20497,9 +20183,7 @@
                   },
                   "id": 638,
                   "initializationExpression": {
-                    "assignments": [
-                      608
-                    ],
+                    "assignments": [608],
                     "declarations": [
                       {
                         "constant": false,
@@ -20615,10 +20299,7 @@
                       "id": 639,
                       "name": "revert",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967277,
-                        4294967277
-                      ],
+                      "overloadedDeclarations": [4294967277, 4294967277],
                       "referencedDeclaration": 4294967277,
                       "src": "8693:6:0",
                       "typeDescriptions": {
@@ -20681,9 +20362,7 @@
                     "pathNode": {
                       "id": 588,
                       "name": "OperationType",
-                      "nameLocations": [
-                        "8329:13:0"
-                      ],
+                      "nameLocations": ["8329:13:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 84,
                       "src": "8329:13:0"
@@ -20752,9 +20431,7 @@
                     "pathNode": {
                       "id": 594,
                       "name": "QuorumRule",
-                      "nameLocations": [
-                        "8408:10:0"
-                      ],
+                      "nameLocations": ["8408:10:0"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 92,
                       "src": "8408:10:0"
@@ -20784,9 +20461,7 @@
               "src": "9043:416:0",
               "statements": [
                 {
-                  "assignments": [
-                    660
-                  ],
+                  "assignments": [660],
                   "declarations": [
                     {
                       "constant": false,
@@ -21511,10 +21186,7 @@
                       "id": 699,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "9694:7:0",
                       "typeDescriptions": {
@@ -21549,9 +21221,7 @@
                     "src": "9917:621:0",
                     "statements": [
                       {
-                        "assignments": [
-                          719
-                        ],
+                        "assignments": [719],
                         "declarations": [
                           {
                             "constant": false,
@@ -21602,9 +21272,7 @@
                         "src": "9931:31:0"
                       },
                       {
-                        "assignments": [
-                          723
-                        ],
+                        "assignments": [723],
                         "declarations": [
                           {
                             "constant": false,
@@ -21682,9 +21350,7 @@
                           "src": "10070:306:0",
                           "statements": [
                             {
-                              "assignments": [
-                                740
-                              ],
+                              "assignments": [740],
                               "declarations": [
                                 {
                                   "constant": false,
@@ -21999,9 +21665,7 @@
                         },
                         "id": 760,
                         "initializationExpression": {
-                          "assignments": [
-                            729
-                          ],
+                          "assignments": [729],
                           "declarations": [
                             {
                               "constant": false,
@@ -22246,10 +21910,7 @@
                             "id": 761,
                             "name": "require",
                             "nodeType": "Identifier",
-                            "overloadedDeclarations": [
-                              4294967278,
-                              4294967278
-                            ],
+                            "overloadedDeclarations": [4294967278, 4294967278],
                             "referencedDeclaration": 4294967278,
                             "src": "10390:7:0",
                             "typeDescriptions": {
@@ -22338,9 +21999,7 @@
                   },
                   "id": 774,
                   "initializationExpression": {
-                    "assignments": [
-                      708
-                    ],
+                    "assignments": [708],
                     "declarations": [
                       {
                         "constant": false,
@@ -22654,10 +22313,7 @@
                       "id": 785,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "10728:7:0",
                       "typeDescriptions": {
@@ -22686,9 +22342,7 @@
                   "src": "10728:59:0"
                 },
                 {
-                  "assignments": [
-                    794
-                  ],
+                  "assignments": [794],
                   "declarations": [
                     {
                       "constant": false,
@@ -22723,9 +22377,7 @@
                   "src": "10798:9:0"
                 },
                 {
-                  "assignments": [
-                    797
-                  ],
+                  "assignments": [797],
                   "declarations": [
                     {
                       "constant": false,
@@ -22760,9 +22412,7 @@
                   "src": "10817:9:0"
                 },
                 {
-                  "assignments": [
-                    800
-                  ],
+                  "assignments": [800],
                   "declarations": [
                     {
                       "constant": false,
@@ -23264,10 +22914,7 @@
                       "id": 812,
                       "name": "require",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        4294967278,
-                        4294967278
-                      ],
+                      "overloadedDeclarations": [4294967278, 4294967278],
                       "referencedDeclaration": 4294967278,
                       "src": "11109:7:0",
                       "typeDescriptions": {
@@ -23510,9 +23157,7 @@
             "visibility": "internal"
           },
           {
-            "baseFunctions": [
-              1805
-            ],
+            "baseFunctions": [1805],
             "body": {
               "id": 839,
               "nodeType": "Block",
@@ -23529,9 +23174,7 @@
                 "modifierName": {
                   "id": 836,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "11352:9:0"
-                  ],
+                  "nameLocations": ["11352:9:0"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1296,
                   "src": "11352:9:0"
@@ -23600,31 +23243,10 @@
         "scope": 842,
         "src": "847:10519:0",
         "usedErrors": [
-          1237,
-          1242,
-          1418,
-          1421,
-          1696,
-          1701,
-          2564,
-          2567,
-          2915,
-          2928,
-          3315,
-          3777,
-          4040
+          1237, 1242, 1418, 1421, 1696, 1701, 2564, 2567, 2915, 2928, 3315,
+          3777, 4040
         ],
-        "usedEvents": [
-          121,
-          126,
-          134,
-          1248,
-          1426,
-          2576,
-          2585,
-          2594,
-          2731
-        ]
+        "usedEvents": [121, 126, 134, 1248, 1426, 2576, 2585, 2594, 2731]
       }
     ],
     "src": "32:11335:0"
@@ -23637,7 +23259,7 @@
     "2": {
       "events": {},
       "links": {},
-      "address": "414ec514350d0e5267b25736c48d3a276fb79c6449",
+      "address": "41D8E2D92C94DEC600A5DD520FE46AF9D65958FA67",
       "transactionHash": "a1cea7ede7c47d8f9a2a43c27b9df8ccbeb4a3b6ac8f85bfc3af5f41a8839c59"
     },
     "*": {

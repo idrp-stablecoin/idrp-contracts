@@ -3,12 +3,16 @@ import { vars } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
-// import "@nomicfoundation/hardhat-verify";
-// import hardhatVerify from "@nomicfoundation/hardhat-verify";
+import "@layerzerolabs/hardhat-deploy";
+import "@layerzerolabs/hardhat-tron";
 
 // const PRIVATE_KEY = vars.get("PRIVATE_KEY")
 const IDRP_DEPLOYER_PRIVATE_KEY = vars.get("IDRP_DEPLOYER_PRIVATE_KEY");
 const IDRP_ADMIN_PRIVATE_KEY = vars.get("IDRP_ADMIN_PRIVATE_KEY");
+const IDRP_DEPLOYER_PRIVATE_KEY_TRON = vars.get(
+  "IDRP_DEPLOYER_PRIVATE_KEY_TRON"
+);
+const IDRP_ADMIN_PRIVATE_KEY_TRON = vars.get("IDRP_ADMIN_PRIVATE_KEY_TRON");
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
@@ -17,13 +21,21 @@ const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.28",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
-      // viaIR: true,
+  version: "0.8.20",       // ← OZ v4 support 0.8.20
+  settings: {
+    optimizer: {
+      enabled: true,
+      runs: 200,
+    },
+    evmVersion: "istanbul", // ← OZ v4 kompatibel dengan istanbul
+  },
+},
+  namedAccounts: {
+    deployer: {
+      default: 0,
+    },
+    admin: {
+      default: 1,
     },
   },
   networks: {
@@ -75,6 +87,19 @@ const config: HardhatUserConfig = {
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       gasMultiplier: 1.1, // Add 10% buffer to estimated gas
     },
+
+    // TVM: @layerzerolabs/hardhat-tron
+    shasta: {
+      url: "https://api.shasta.trongrid.io/jsonrpc",
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
+      tron: true,
+    },
+    tron: {
+      // Tron mainnet JSON-RPC endpoint via TronGrid (free tier: https://www.trongrid.io/)
+      url: "https://api.trongrid.io/jsonrpc",
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
+      tron: true,
+    },
   },
   etherscan: {
     // apiKey: {
@@ -121,9 +146,26 @@ const config: HardhatUserConfig = {
     // etherscan: vars.get("ETHERSCAN_API_KEY")
   },
   sourcify: {
-    // Disabled by default
-    // Doesn't need an API key
     enabled: true,
+  },
+
+  // TVM: @layerzerolabs/hardhat-tron
+  tronSolc: {
+    enable: true,
+    filter: [], // compile all contracts
+    compilers: [
+      {
+        version: "0.8.22",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          evmVersion: "istanbul",
+        } as any,
+      },
+    ],
   },
 };
 

@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts"]
+  "include": ["hardhat.config.ts", "deploy/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"]
 }

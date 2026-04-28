@@ -3,7 +3,10 @@ node_modules
 
 # Hardhat files
 /cache
+/cache-tron
 /artifacts
+/artifacts-tron
+/build
 
 # TypeChain files
 /typechain
@@ -15,6 +18,9 @@ node_modules
 
 # Hardhat Ignition default folder for deployments against a local node
 ignition/deployments/chain-31337
+
+# hardhat-deploy output (auto-generated, network-specific deployment artifacts)
+/deployments
 
 # Local deployment
 /deployment/chain-8545.json

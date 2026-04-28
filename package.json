@@ -3,7 +3,16 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "verify:mainnet": "hardhat run scripts/verify.ts --network mainnet",
+    "verify:polygon": "hardhat run scripts/verify.ts --network polygon",
+    "verify:bsc": "hardhat run scripts/verify.ts --network bsc",
+    "verify:holesky": "hardhat run scripts/verify.ts --network holesky",
+    "verify:sepolia": "hardhat run scripts/verify.ts --network sepolia",
+    "verify:baseSepolia": "hardhat run scripts/verify.ts --network baseSepolia",
+    "verify:kairos": "hardhat run scripts/verify.ts --network kairos",
+    "verify:shasta": "hardhat run scripts/verify-tron.ts --network shasta",
+    "verify:tron": "hardhat run scripts/verify-tron.ts --network tron"
   },
   "keywords": [],
   "author": "",
@@ -16,11 +25,14 @@
     "hardhat": "^2.22.19"
   },
   "dependencies": {
+    "@layerzerolabs/hardhat-deploy": "^0.11.45-lz.4",
+    "@layerzerolabs/hardhat-tron": "^3.0.168",
     "@nomicfoundation/hardhat-verify": "^2.1.1",
-    "@openzeppelin/contracts-upgradeable": "^5.3.0",
-    "@openzeppelin/hardhat-upgrades": "^3.9.0",
+    "@openzeppelin/contracts": "^4.9.6",
+    "@openzeppelin/contracts-upgradeable": "^4.9.6",
+    "@openzeppelin/hardhat-upgrades": "^3.9.1",
     "@safe-global/safe-contracts": "^1.4.1-2",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.4.2",
     "hardhat-dependency-compiler": "^1.2.1"
   },
   "overrides": {

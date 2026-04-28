@@ -1,8 +1,8 @@
-// Sources flattened with hardhat v2.26.3 https://hardhat.org
-
 // SPDX-License-Identifier: MIT
+// Sources flattened with hardhat v2.22.19 https://hardhat.org
 
-// File @openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol@v5.4.0
+
+// File @openzeppelin/contracts/proxy/utils/Initializable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.3.0) (proxy/utils/Initializable.sol)
@@ -244,7 +244,7 @@ abstract contract Initializable {
 }
 
 
-// File @openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.1) (utils/Context.sol)
@@ -281,7 +281,7 @@ abstract contract ContextUpgradeable is Initializable {
 }
 
 
-// File @openzeppelin/contracts/utils/introspection/IERC165.sol@v5.4.0
+// File @openzeppelin/contracts/utils/introspection/IERC165.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.4.0) (utils/introspection/IERC165.sol)
@@ -310,7 +310,7 @@ interface IERC165 {
 }
 
 
-// File @openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.4.0) (utils/introspection/ERC165.sol)
@@ -343,7 +343,7 @@ abstract contract ERC165Upgradeable is Initializable, IERC165 {
 }
 
 
-// File @openzeppelin/contracts/access/IAccessControl.sol@v5.4.0
+// File @openzeppelin/contracts/access/IAccessControl.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.4.0) (access/IAccessControl.sol)
@@ -445,13 +445,12 @@ interface IAccessControl {
 }
 
 
-// File @openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (access/AccessControl.sol)
+// OpenZeppelin Contracts (last updated v5.6.0) (access/AccessControl.sol)
 
 pragma solidity ^0.8.20;
-
 
 
 
@@ -532,7 +531,7 @@ abstract contract AccessControlUpgradeable is Initializable, ContextUpgradeable,
 
     function __AccessControl_init_unchained() internal onlyInitializing {
     }
-    /// @inheritdoc IERC165
+    /// @inheritdoc ERC165Upgradeable
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return interfaceId == type(IAccessControl).interfaceId || super.supportsInterface(interfaceId);
     }
@@ -679,751 +678,18 @@ abstract contract AccessControlUpgradeable is Initializable, ContextUpgradeable,
 }
 
 
-// File @openzeppelin/contracts/interfaces/draft-IERC1822.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (interfaces/draft-IERC1822.sol)
-
-pragma solidity >=0.4.16;
-
-/**
- * @dev ERC-1822: Universal Upgradeable Proxy Standard (UUPS) documents a method for upgradeability through a simplified
- * proxy whose upgrades are fully controlled by the current implementation.
- */
-interface IERC1822Proxiable {
-    /**
-     * @dev Returns the storage slot that the proxiable contract assumes is being used to store the implementation
-     * address.
-     *
-     * IMPORTANT: A proxy pointing at a proxiable contract should not be considered proxiable itself, because this risks
-     * bricking a proxy that upgrades to it, by delegating to itself until out of gas. Thus it is critical that this
-     * function revert if invoked through a proxy.
-     */
-    function proxiableUUID() external view returns (bytes32);
-}
-
-
-// File @openzeppelin/contracts/interfaces/IERC1967.sol@v5.4.0
-
-// Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (interfaces/IERC1967.sol)
-
-pragma solidity >=0.4.11;
-
-/**
- * @dev ERC-1967: Proxy Storage Slots. This interface contains the events defined in the ERC.
- */
-interface IERC1967 {
-    /**
-     * @dev Emitted when the implementation is upgraded.
-     */
-    event Upgraded(address indexed implementation);
-
-    /**
-     * @dev Emitted when the admin account has changed.
-     */
-    event AdminChanged(address previousAdmin, address newAdmin);
-
-    /**
-     * @dev Emitted when the beacon is changed.
-     */
-    event BeaconUpgraded(address indexed beacon);
-}
-
-
-// File @openzeppelin/contracts/proxy/beacon/IBeacon.sol@v5.4.0
-
-// Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (proxy/beacon/IBeacon.sol)
-
-pragma solidity >=0.4.16;
-
-/**
- * @dev This is the interface that {BeaconProxy} expects of its beacon.
- */
-interface IBeacon {
-    /**
-     * @dev Must return an address that can be used as a delegate call target.
-     *
-     * {UpgradeableBeacon} will check that this address is a contract.
-     */
-    function implementation() external view returns (address);
-}
-
-
-// File @openzeppelin/contracts/utils/Errors.sol@v5.4.0
-
-// Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.1.0) (utils/Errors.sol)
 
 pragma solidity ^0.8.20;
 
-/**
- * @dev Collection of common custom errors used in multiple contracts
- *
- * IMPORTANT: Backwards compatibility is not guaranteed in future versions of the library.
- * It is recommended to avoid relying on the error API for critical functionality.
- *
- * _Available since v5.1._
- */
-library Errors {
-    /**
-     * @dev The ETH balance of the account is not enough to perform the operation.
-     */
-    error InsufficientBalance(uint256 balance, uint256 needed);
 
-    /**
-     * @dev A call to an address target failed. The target may have reverted.
-     */
-    error FailedCall();
-
-    /**
-     * @dev The deployment failed.
-     */
-    error FailedDeployment();
-
-    /**
-     * @dev A necessary precompile is missing.
-     */
-    error MissingPrecompile(address);
-}
-
-
-// File @openzeppelin/contracts/utils/Address.sol@v5.4.0
+// File @openzeppelin/contracts/interfaces/draft-IERC6093.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (utils/Address.sol)
+// OpenZeppelin Contracts (last updated v5.5.0) (interfaces/draft-IERC6093.sol)
 
-pragma solidity ^0.8.20;
-
-/**
- * @dev Collection of functions related to the address type
- */
-library Address {
-    /**
-     * @dev There's no code at `target` (it is not a contract).
-     */
-    error AddressEmptyCode(address target);
-
-    /**
-     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to
-     * `recipient`, forwarding all available gas and reverting on errors.
-     *
-     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
-     * of certain opcodes, possibly making contracts go over the 2300 gas limit
-     * imposed by `transfer`, making them unable to receive funds via
-     * `transfer`. {sendValue} removes this limitation.
-     *
-     * https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now/[Learn more].
-     *
-     * IMPORTANT: because control is transferred to `recipient`, care must be
-     * taken to not create reentrancy vulnerabilities. Consider using
-     * {ReentrancyGuard} or the
-     * https://solidity.readthedocs.io/en/v0.8.20/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].
-     */
-    function sendValue(address payable recipient, uint256 amount) internal {
-        if (address(this).balance < amount) {
-            revert Errors.InsufficientBalance(address(this).balance, amount);
-        }
-
-        (bool success, bytes memory returndata) = recipient.call{value: amount}("");
-        if (!success) {
-            _revert(returndata);
-        }
-    }
-
-    /**
-     * @dev Performs a Solidity function call using a low level `call`. A
-     * plain `call` is an unsafe replacement for a function call: use this
-     * function instead.
-     *
-     * If `target` reverts with a revert reason or custom error, it is bubbled
-     * up by this function (like regular Solidity function calls). However, if
-     * the call reverted with no returned reason, this function reverts with a
-     * {Errors.FailedCall} error.
-     *
-     * Returns the raw returned data. To convert to the expected return value,
-     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
-     *
-     * Requirements:
-     *
-     * - `target` must be a contract.
-     * - calling `target` with `data` must not revert.
-     */
-    function functionCall(address target, bytes memory data) internal returns (bytes memory) {
-        return functionCallWithValue(target, data, 0);
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
-     * but also transferring `value` wei to `target`.
-     *
-     * Requirements:
-     *
-     * - the calling contract must have an ETH balance of at least `value`.
-     * - the called Solidity function must be `payable`.
-     */
-    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {
-        if (address(this).balance < value) {
-            revert Errors.InsufficientBalance(address(this).balance, value);
-        }
-        (bool success, bytes memory returndata) = target.call{value: value}(data);
-        return verifyCallResultFromTarget(target, success, returndata);
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
-     * but performing a static call.
-     */
-    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {
-        (bool success, bytes memory returndata) = target.staticcall(data);
-        return verifyCallResultFromTarget(target, success, returndata);
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
-     * but performing a delegate call.
-     */
-    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {
-        (bool success, bytes memory returndata) = target.delegatecall(data);
-        return verifyCallResultFromTarget(target, success, returndata);
-    }
-
-    /**
-     * @dev Tool to verify that a low level call to smart-contract was successful, and reverts if the target
-     * was not a contract or bubbling up the revert reason (falling back to {Errors.FailedCall}) in case
-     * of an unsuccessful call.
-     */
-    function verifyCallResultFromTarget(
-        address target,
-        bool success,
-        bytes memory returndata
-    ) internal view returns (bytes memory) {
-        if (!success) {
-            _revert(returndata);
-        } else {
-            // only check if target is a contract if the call was successful and the return data is empty
-            // otherwise we already know that it was a contract
-            if (returndata.length == 0 && target.code.length == 0) {
-                revert AddressEmptyCode(target);
-            }
-            return returndata;
-        }
-    }
-
-    /**
-     * @dev Tool to verify that a low level call was successful, and reverts if it wasn't, either by bubbling the
-     * revert reason or with a default {Errors.FailedCall} error.
-     */
-    function verifyCallResult(bool success, bytes memory returndata) internal pure returns (bytes memory) {
-        if (!success) {
-            _revert(returndata);
-        } else {
-            return returndata;
-        }
-    }
-
-    /**
-     * @dev Reverts with returndata if present. Otherwise reverts with {Errors.FailedCall}.
-     */
-    function _revert(bytes memory returndata) private pure {
-        // Look for revert reason and bubble it up if present
-        if (returndata.length > 0) {
-            // The easiest way to bubble the revert reason is using memory via assembly
-            assembly ("memory-safe") {
-                revert(add(returndata, 0x20), mload(returndata))
-            }
-        } else {
-            revert Errors.FailedCall();
-        }
-    }
-}
-
-
-// File @openzeppelin/contracts/utils/StorageSlot.sol@v5.4.0
-
-// Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.1.0) (utils/StorageSlot.sol)
-// This file was procedurally generated from scripts/generate/templates/StorageSlot.js.
-
-pragma solidity ^0.8.20;
-
-/**
- * @dev Library for reading and writing primitive types to specific storage slots.
- *
- * Storage slots are often used to avoid storage conflict when dealing with upgradeable contracts.
- * This library helps with reading and writing to such slots without the need for inline assembly.
- *
- * The functions in this library return Slot structs that contain a `value` member that can be used to read or write.
- *
- * Example usage to set ERC-1967 implementation slot:
- * ```solidity
- * contract ERC1967 {
- *     // Define the slot. Alternatively, use the SlotDerivation library to derive the slot.
- *     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
- *
- *     function _getImplementation() internal view returns (address) {
- *         return StorageSlot.getAddressSlot(_IMPLEMENTATION_SLOT).value;
- *     }
- *
- *     function _setImplementation(address newImplementation) internal {
- *         require(newImplementation.code.length > 0);
- *         StorageSlot.getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
- *     }
- * }
- * ```
- *
- * TIP: Consider using this library along with {SlotDerivation}.
- */
-library StorageSlot {
-    struct AddressSlot {
-        address value;
-    }
-
-    struct BooleanSlot {
-        bool value;
-    }
-
-    struct Bytes32Slot {
-        bytes32 value;
-    }
-
-    struct Uint256Slot {
-        uint256 value;
-    }
-
-    struct Int256Slot {
-        int256 value;
-    }
-
-    struct StringSlot {
-        string value;
-    }
-
-    struct BytesSlot {
-        bytes value;
-    }
-
-    /**
-     * @dev Returns an `AddressSlot` with member `value` located at `slot`.
-     */
-    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
-        assembly ("memory-safe") {
-            r.slot := slot
-        }
-    }
-
-    /**
-     * @dev Returns a `BooleanSlot` with member `value` located at `slot`.
-     */
-    function getBooleanSlot(bytes32 slot) internal pure returns (BooleanSlot storage r) {
-        assembly ("memory-safe") {
-            r.slot := slot
-        }
-    }
-
-    /**
-     * @dev Returns a `Bytes32Slot` with member `value` located at `slot`.
-     */
-    function getBytes32Slot(bytes32 slot) internal pure returns (Bytes32Slot storage r) {
-        assembly ("memory-safe") {
-            r.slot := slot
-        }
-    }
-
-    /**
-     * @dev Returns a `Uint256Slot` with member `value` located at `slot`.
-     */
-    function getUint256Slot(bytes32 slot) internal pure returns (Uint256Slot storage r) {
-        assembly ("memory-safe") {
-            r.slot := slot
-        }
-    }
-
-    /**
-     * @dev Returns a `Int256Slot` with member `value` located at `slot`.
-     */
-    function getInt256Slot(bytes32 slot) internal pure returns (Int256Slot storage r) {
-        assembly ("memory-safe") {
-            r.slot := slot
-        }
-    }
-
-    /**
-     * @dev Returns a `StringSlot` with member `value` located at `slot`.
-     */
-    function getStringSlot(bytes32 slot) internal pure returns (StringSlot storage r) {
-        assembly ("memory-safe") {
-            r.slot := slot
-        }
-    }
-
-    /**
-     * @dev Returns an `StringSlot` representation of the string storage pointer `store`.
-     */
-    function getStringSlot(string storage store) internal pure returns (StringSlot storage r) {
-        assembly ("memory-safe") {
-            r.slot := store.slot
-        }
-    }
-
-    /**
-     * @dev Returns a `BytesSlot` with member `value` located at `slot`.
-     */
-    function getBytesSlot(bytes32 slot) internal pure returns (BytesSlot storage r) {
-        assembly ("memory-safe") {
-            r.slot := slot
-        }
-    }
-
-    /**
-     * @dev Returns an `BytesSlot` representation of the bytes storage pointer `store`.
-     */
-    function getBytesSlot(bytes storage store) internal pure returns (BytesSlot storage r) {
-        assembly ("memory-safe") {
-            r.slot := store.slot
-        }
-    }
-}
-
-
-// File @openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol@v5.4.0
-
-// Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (proxy/ERC1967/ERC1967Utils.sol)
-
-pragma solidity ^0.8.21;
-
-
-
-
-/**
- * @dev This library provides getters and event emitting update functions for
- * https://eips.ethereum.org/EIPS/eip-1967[ERC-1967] slots.
- */
-library ERC1967Utils {
-    /**
-     * @dev Storage slot with the address of the current implementation.
-     * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
-     */
-    // solhint-disable-next-line private-vars-leading-underscore
-    bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
-
-    /**
-     * @dev The `implementation` of the proxy is invalid.
-     */
-    error ERC1967InvalidImplementation(address implementation);
-
-    /**
-     * @dev The `admin` of the proxy is invalid.
-     */
-    error ERC1967InvalidAdmin(address admin);
-
-    /**
-     * @dev The `beacon` of the proxy is invalid.
-     */
-    error ERC1967InvalidBeacon(address beacon);
-
-    /**
-     * @dev An upgrade function sees `msg.value > 0` that may be lost.
-     */
-    error ERC1967NonPayable();
-
-    /**
-     * @dev Returns the current implementation address.
-     */
-    function getImplementation() internal view returns (address) {
-        return StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT).value;
-    }
-
-    /**
-     * @dev Stores a new address in the ERC-1967 implementation slot.
-     */
-    function _setImplementation(address newImplementation) private {
-        if (newImplementation.code.length == 0) {
-            revert ERC1967InvalidImplementation(newImplementation);
-        }
-        StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT).value = newImplementation;
-    }
-
-    /**
-     * @dev Performs implementation upgrade with additional setup call if data is nonempty.
-     * This function is payable only if the setup call is performed, otherwise `msg.value` is rejected
-     * to avoid stuck value in the contract.
-     *
-     * Emits an {IERC1967-Upgraded} event.
-     */
-    function upgradeToAndCall(address newImplementation, bytes memory data) internal {
-        _setImplementation(newImplementation);
-        emit IERC1967.Upgraded(newImplementation);
-
-        if (data.length > 0) {
-            Address.functionDelegateCall(newImplementation, data);
-        } else {
-            _checkNonPayable();
-        }
-    }
-
-    /**
-     * @dev Storage slot with the admin of the contract.
-     * This is the keccak-256 hash of "eip1967.proxy.admin" subtracted by 1.
-     */
-    // solhint-disable-next-line private-vars-leading-underscore
-    bytes32 internal constant ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
-
-    /**
-     * @dev Returns the current admin.
-     *
-     * TIP: To get this value clients can read directly from the storage slot shown below (specified by ERC-1967) using
-     * the https://eth.wiki/json-rpc/API#eth_getstorageat[`eth_getStorageAt`] RPC call.
-     * `0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103`
-     */
-    function getAdmin() internal view returns (address) {
-        return StorageSlot.getAddressSlot(ADMIN_SLOT).value;
-    }
-
-    /**
-     * @dev Stores a new address in the ERC-1967 admin slot.
-     */
-    function _setAdmin(address newAdmin) private {
-        if (newAdmin == address(0)) {
-            revert ERC1967InvalidAdmin(address(0));
-        }
-        StorageSlot.getAddressSlot(ADMIN_SLOT).value = newAdmin;
-    }
-
-    /**
-     * @dev Changes the admin of the proxy.
-     *
-     * Emits an {IERC1967-AdminChanged} event.
-     */
-    function changeAdmin(address newAdmin) internal {
-        emit IERC1967.AdminChanged(getAdmin(), newAdmin);
-        _setAdmin(newAdmin);
-    }
-
-    /**
-     * @dev The storage slot of the UpgradeableBeacon contract which defines the implementation for this proxy.
-     * This is the keccak-256 hash of "eip1967.proxy.beacon" subtracted by 1.
-     */
-    // solhint-disable-next-line private-vars-leading-underscore
-    bytes32 internal constant BEACON_SLOT = 0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
-
-    /**
-     * @dev Returns the current beacon.
-     */
-    function getBeacon() internal view returns (address) {
-        return StorageSlot.getAddressSlot(BEACON_SLOT).value;
-    }
-
-    /**
-     * @dev Stores a new beacon in the ERC-1967 beacon slot.
-     */
-    function _setBeacon(address newBeacon) private {
-        if (newBeacon.code.length == 0) {
-            revert ERC1967InvalidBeacon(newBeacon);
-        }
-
-        StorageSlot.getAddressSlot(BEACON_SLOT).value = newBeacon;
-
-        address beaconImplementation = IBeacon(newBeacon).implementation();
-        if (beaconImplementation.code.length == 0) {
-            revert ERC1967InvalidImplementation(beaconImplementation);
-        }
-    }
-
-    /**
-     * @dev Change the beacon and trigger a setup call if data is nonempty.
-     * This function is payable only if the setup call is performed, otherwise `msg.value` is rejected
-     * to avoid stuck value in the contract.
-     *
-     * Emits an {IERC1967-BeaconUpgraded} event.
-     *
-     * CAUTION: Invoking this function has no effect on an instance of {BeaconProxy} since v5, since
-     * it uses an immutable beacon without looking at the value of the ERC-1967 beacon slot for
-     * efficiency.
-     */
-    function upgradeBeaconToAndCall(address newBeacon, bytes memory data) internal {
-        _setBeacon(newBeacon);
-        emit IERC1967.BeaconUpgraded(newBeacon);
-
-        if (data.length > 0) {
-            Address.functionDelegateCall(IBeacon(newBeacon).implementation(), data);
-        } else {
-            _checkNonPayable();
-        }
-    }
-
-    /**
-     * @dev Reverts if `msg.value` is not zero. It can be used to avoid `msg.value` stuck in the contract
-     * if an upgrade doesn't perform an initialization call.
-     */
-    function _checkNonPayable() private {
-        if (msg.value > 0) {
-            revert ERC1967NonPayable();
-        }
-    }
-}
-
-
-// File @openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol@v5.4.0
-
-// Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.3.0) (proxy/utils/UUPSUpgradeable.sol)
-
-pragma solidity ^0.8.22;
-
-
-
-/**
- * @dev An upgradeability mechanism designed for UUPS proxies. The functions included here can perform an upgrade of an
- * {ERC1967Proxy}, when this contract is set as the implementation behind such a proxy.
- *
- * A security mechanism ensures that an upgrade does not turn off upgradeability accidentally, although this risk is
- * reinstated if the upgrade retains upgradeability but removes the security mechanism, e.g. by replacing
- * `UUPSUpgradeable` with a custom implementation of upgrades.
- *
- * The {_authorizeUpgrade} function must be overridden to include access restriction to the upgrade mechanism.
- */
-abstract contract UUPSUpgradeable is Initializable, IERC1822Proxiable {
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address private immutable __self = address(this);
-
-    /**
-     * @dev The version of the upgrade interface of the contract. If this getter is missing, both `upgradeTo(address)`
-     * and `upgradeToAndCall(address,bytes)` are present, and `upgradeTo` must be used if no function should be called,
-     * while `upgradeToAndCall` will invoke the `receive` function if the second argument is the empty byte string.
-     * If the getter returns `"5.0.0"`, only `upgradeToAndCall(address,bytes)` is present, and the second argument must
-     * be the empty byte string if no function should be called, making it impossible to invoke the `receive` function
-     * during an upgrade.
-     */
-    string public constant UPGRADE_INTERFACE_VERSION = "5.0.0";
-
-    /**
-     * @dev The call is from an unauthorized context.
-     */
-    error UUPSUnauthorizedCallContext();
-
-    /**
-     * @dev The storage `slot` is unsupported as a UUID.
-     */
-    error UUPSUnsupportedProxiableUUID(bytes32 slot);
-
-    /**
-     * @dev Check that the execution is being performed through a delegatecall call and that the execution context is
-     * a proxy contract with an implementation (as defined in ERC-1967) pointing to self. This should only be the case
-     * for UUPS and transparent proxies that are using the current contract as their implementation. Execution of a
-     * function through ERC-1167 minimal proxies (clones) would not normally pass this test, but is not guaranteed to
-     * fail.
-     */
-    modifier onlyProxy() {
-        _checkProxy();
-        _;
-    }
-
-    /**
-     * @dev Check that the execution is not being performed through a delegate call. This allows a function to be
-     * callable on the implementing contract but not through proxies.
-     */
-    modifier notDelegated() {
-        _checkNotDelegated();
-        _;
-    }
-
-    function __UUPSUpgradeable_init() internal onlyInitializing {
-    }
-
-    function __UUPSUpgradeable_init_unchained() internal onlyInitializing {
-    }
-    /**
-     * @dev Implementation of the ERC-1822 {proxiableUUID} function. This returns the storage slot used by the
-     * implementation. It is used to validate the implementation's compatibility when performing an upgrade.
-     *
-     * IMPORTANT: A proxy pointing at a proxiable contract should not be considered proxiable itself, because this risks
-     * bricking a proxy that upgrades to it, by delegating to itself until out of gas. Thus it is critical that this
-     * function revert if invoked through a proxy. This is guaranteed by the `notDelegated` modifier.
-     */
-    function proxiableUUID() external view virtual notDelegated returns (bytes32) {
-        return ERC1967Utils.IMPLEMENTATION_SLOT;
-    }
-
-    /**
-     * @dev Upgrade the implementation of the proxy to `newImplementation`, and subsequently execute the function call
-     * encoded in `data`.
-     *
-     * Calls {_authorizeUpgrade}.
-     *
-     * Emits an {Upgraded} event.
-     *
-     * @custom:oz-upgrades-unsafe-allow-reachable delegatecall
-     */
-    function upgradeToAndCall(address newImplementation, bytes memory data) public payable virtual onlyProxy {
-        _authorizeUpgrade(newImplementation);
-        _upgradeToAndCallUUPS(newImplementation, data);
-    }
-
-    /**
-     * @dev Reverts if the execution is not performed via delegatecall or the execution
-     * context is not of a proxy with an ERC-1967 compliant implementation pointing to self.
-     */
-    function _checkProxy() internal view virtual {
-        if (
-            address(this) == __self || // Must be called through delegatecall
-            ERC1967Utils.getImplementation() != __self // Must be called through an active proxy
-        ) {
-            revert UUPSUnauthorizedCallContext();
-        }
-    }
-
-    /**
-     * @dev Reverts if the execution is performed via delegatecall.
-     * See {notDelegated}.
-     */
-    function _checkNotDelegated() internal view virtual {
-        if (address(this) != __self) {
-            // Must not be called through delegatecall
-            revert UUPSUnauthorizedCallContext();
-        }
-    }
-
-    /**
-     * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract. Called by
-     * {upgradeToAndCall}.
-     *
-     * Normally, this function will use an xref:access.adoc[access control] modifier such as {Ownable-onlyOwner}.
-     *
-     * ```solidity
-     * function _authorizeUpgrade(address) internal onlyOwner {}
-     * ```
-     */
-    function _authorizeUpgrade(address newImplementation) internal virtual;
-
-    /**
-     * @dev Performs an implementation upgrade with a security check for UUPS proxies, and additional setup call.
-     *
-     * As a security check, {proxiableUUID} is invoked in the new implementation, and the return value
-     * is expected to be the implementation slot in ERC-1967.
-     *
-     * Emits an {IERC1967-Upgraded} event.
-     */
-    function _upgradeToAndCallUUPS(address newImplementation, bytes memory data) private {
-        try IERC1822Proxiable(newImplementation).proxiableUUID() returns (bytes32 slot) {
-            if (slot != ERC1967Utils.IMPLEMENTATION_SLOT) {
-                revert UUPSUnsupportedProxiableUUID(slot);
-            }
-            ERC1967Utils.upgradeToAndCall(newImplementation, data);
-        } catch {
-            // The implementation is not UUPS
-            revert ERC1967Utils.ERC1967InvalidImplementation(newImplementation);
-        }
-    }
-}
-
-
-// File @openzeppelin/contracts/interfaces/draft-IERC6093.sol@v5.4.0
-
-// Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (interfaces/draft-IERC6093.sol)
 pragma solidity >=0.8.4;
 
 /**
@@ -1452,7 +718,7 @@ interface IERC20Errors {
     error ERC20InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `spender`’s `allowance`. Used in transfers.
+     * @dev Indicates a failure with the `spender`ΓÇÖs `allowance`. Used in transfers.
      * @param spender Address that may be allowed to operate on tokens without being their owner.
      * @param allowance Amount of tokens a `spender` is allowed to operate with.
      * @param needed Minimum amount required to perform a transfer.
@@ -1478,7 +744,7 @@ interface IERC20Errors {
  */
 interface IERC721Errors {
     /**
-     * @dev Indicates that an address can't be an owner. For example, `address(0)` is a forbidden owner in ERC-20.
+     * @dev Indicates that an address can't be an owner. For example, `address(0)` is a forbidden owner in ERC-721.
      * Used in balance queries.
      * @param owner Address of the current owner of a token.
      */
@@ -1511,7 +777,7 @@ interface IERC721Errors {
     error ERC721InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `operator`’s approval. Used in transfers.
+     * @dev Indicates a failure with the `operator`ΓÇÖs approval. Used in transfers.
      * @param operator Address that may be allowed to operate on tokens without being their owner.
      * @param tokenId Identifier number of a token.
      */
@@ -1557,7 +823,7 @@ interface IERC1155Errors {
     error ERC1155InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `operator`’s approval. Used in transfers.
+     * @dev Indicates a failure with the `operator`ΓÇÖs approval. Used in transfers.
      * @param operator Address that may be allowed to operate on tokens without being their owner.
      * @param owner Address of the current owner of a token.
      */
@@ -1585,7 +851,7 @@ interface IERC1155Errors {
 }
 
 
-// File @openzeppelin/contracts/token/ERC20/IERC20.sol@v5.4.0
+// File @openzeppelin/contracts/token/ERC20/IERC20.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.4.0) (token/ERC20/IERC20.sol)
@@ -1668,7 +934,7 @@ interface IERC20 {
 }
 
 
-// File @openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol@v5.4.0
+// File @openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.4.0) (token/ERC20/extensions/IERC20Metadata.sol)
@@ -1696,10 +962,10 @@ interface IERC20Metadata is IERC20 {
 }
 
 
-// File @openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (token/ERC20/ERC20.sol)
+// OpenZeppelin Contracts (last updated v5.5.0) (token/ERC20/ERC20.sol)
 
 pragma solidity ^0.8.20;
 
@@ -1978,10 +1244,10 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
      * @dev Variant of {_approve} with an optional flag to enable or disable the {Approval} event.
      *
      * By default (when calling {_approve}) the flag is set to true. On the other hand, approval changes made by
-     * `_spendAllowance` during the `transferFrom` operation set the flag to false. This saves gas by not emitting any
+     * `_spendAllowance` during the `transferFrom` operation sets the flag to false. This saves gas by not emitting any
      * `Approval` event during `transferFrom` operations.
      *
-     * Anyone who wishes to continue emitting `Approval` events on the`transferFrom` operation can force the flag to
+     * Anyone who wishes to continue emitting `Approval` events on the `transferFrom` operation can force the flag to
      * true using the following override:
      *
      * ```solidity
@@ -2028,7 +1294,7 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
 }
 
 
-// File @openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.3.0) (utils/Pausable.sol)
@@ -2163,7 +1429,7 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
 }
 
 
-// File @openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (token/ERC20/extensions/ERC20Pausable.sol)
@@ -2204,7 +1470,7 @@ abstract contract ERC20PausableUpgradeable is Initializable, ERC20Upgradeable, P
 }
 
 
-// File @openzeppelin/contracts/interfaces/IERC5267.sol@v5.4.0
+// File @openzeppelin/contracts/interfaces/IERC5267.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.4.0) (interfaces/IERC5267.sol)
@@ -2236,10 +1502,10 @@ interface IERC5267 {
 }
 
 
-// File @openzeppelin/contracts/utils/math/SafeCast.sol@v5.4.0
+// File @openzeppelin/contracts/utils/math/SafeCast.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.1.0) (utils/math/SafeCast.sol)
+// OpenZeppelin Contracts (last updated v5.6.0) (utils/math/SafeCast.sol)
 // This file was procedurally generated from scripts/generate/templates/SafeCast.js.
 
 pragma solidity ^0.8.20;
@@ -2258,12 +1524,12 @@ pragma solidity ^0.8.20;
  */
 library SafeCast {
     /**
-     * @dev Value doesn't fit in an uint of `bits` size.
+     * @dev Value doesn't fit in a uint of `bits` size.
      */
     error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value);
 
     /**
-     * @dev An int value doesn't fit in an uint of `bits` size.
+     * @dev An int value doesn't fit in a uint of `bits` size.
      */
     error SafeCastOverflowedIntToUint(int256 value);
 
@@ -2273,7 +1539,7 @@ library SafeCast {
     error SafeCastOverflowedIntDowncast(uint8 bits, int256 value);
 
     /**
-     * @dev An uint value doesn't fit in an int of `bits` size.
+     * @dev A uint value doesn't fit in an int of `bits` size.
      */
     error SafeCastOverflowedUintToInt(uint256 value);
 
@@ -3402,7 +2668,7 @@ library SafeCast {
 }
 
 
-// File @openzeppelin/contracts/utils/Panic.sol@v5.4.0
+// File @openzeppelin/contracts/utils/Panic.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (utils/Panic.sol)
@@ -3463,10 +2729,10 @@ library Panic {
 }
 
 
-// File @openzeppelin/contracts/utils/math/Math.sol@v5.4.0
+// File @openzeppelin/contracts/utils/math/Math.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.3.0) (utils/math/Math.sol)
+// OpenZeppelin Contracts (last updated v5.6.0) (utils/math/Math.sol)
 
 pragma solidity ^0.8.20;
 
@@ -3485,7 +2751,7 @@ library Math {
     /**
      * @dev Return the 512-bit addition of two uint256.
      *
-     * The result is stored in two 256 variables such that sum = high * 2²⁵⁶ + low.
+     * The result is stored in two 256 variables such that sum = high * 2┬▓Γü╡Γü╢ + low.
      */
     function add512(uint256 a, uint256 b) internal pure returns (uint256 high, uint256 low) {
         assembly ("memory-safe") {
@@ -3497,12 +2763,12 @@ library Math {
     /**
      * @dev Return the 512-bit multiplication of two uint256.
      *
-     * The result is stored in two 256 variables such that product = high * 2²⁵⁶ + low.
+     * The result is stored in two 256 variables such that product = high * 2┬▓Γü╡Γü╢ + low.
      */
     function mul512(uint256 a, uint256 b) internal pure returns (uint256 high, uint256 low) {
-        // 512-bit multiply [high low] = x * y. Compute the product mod 2²⁵⁶ and mod 2²⁵⁶ - 1, then use
+        // 512-bit multiply [high low] = x * y. Compute the product mod 2┬▓Γü╡Γü╢ and mod 2┬▓Γü╡Γü╢ - 1, then use
         // the Chinese Remainder Theorem to reconstruct the 512 bit result. The result is stored in two 256
-        // variables such that product = high * 2²⁵⁶ + low.
+        // variables such that product = high * 2┬▓Γü╡Γü╢ + low.
         assembly ("memory-safe") {
             let mm := mulmod(a, b, not(0))
             low := mul(a, b)
@@ -3575,7 +2841,7 @@ library Math {
     }
 
     /**
-     * @dev Unsigned saturating addition, bounds to `2²⁵⁶ - 1` instead of overflowing.
+     * @dev Unsigned saturating addition, bounds to `2┬▓Γü╡Γü╢ - 1` instead of overflowing.
      */
     function saturatingAdd(uint256 a, uint256 b) internal pure returns (uint256) {
         (bool success, uint256 result) = tryAdd(a, b);
@@ -3591,7 +2857,7 @@ library Math {
     }
 
     /**
-     * @dev Unsigned saturating multiplication, bounds to `2²⁵⁶ - 1` instead of overflowing.
+     * @dev Unsigned saturating multiplication, bounds to `2┬▓Γü╡Γü╢ - 1` instead of overflowing.
      */
     function saturatingMul(uint256 a, uint256 b) internal pure returns (uint256) {
         (bool success, uint256 result) = tryMul(a, b);
@@ -3599,10 +2865,10 @@ library Math {
     }
 
     /**
-     * @dev Branchless ternary evaluation for `a ? b : c`. Gas costs are constant.
+     * @dev Branchless ternary evaluation for `condition ? a : b`. Gas costs are constant.
      *
      * IMPORTANT: This function may reduce bytecode size and consume less gas when used standalone.
-     * However, the compiler may optimize Solidity ternary operations (i.e. `a ? b : c`) to only compute
+     * However, the compiler may optimize Solidity ternary operations (i.e. `condition ? a : b`) to only compute
      * one branch when needed, making this function more expensive.
      */
     function ternary(bool condition, uint256 a, uint256 b) internal pure returns (uint256) {
@@ -3633,8 +2899,10 @@ library Math {
      * zero.
      */
     function average(uint256 a, uint256 b) internal pure returns (uint256) {
-        // (a + b) / 2 can overflow.
-        return (a & b) + (a ^ b) / 2;
+        unchecked {
+            // (a + b) / 2 can overflow.
+            return (a & b) + (a ^ b) / 2;
+        }
     }
 
     /**
@@ -3678,7 +2946,7 @@ library Math {
                 return low / denominator;
             }
 
-            // Make sure the result is less than 2²⁵⁶. Also prevents denominator == 0.
+            // Make sure the result is less than 2┬▓Γü╡Γü╢. Also prevents denominator == 0.
             if (denominator <= high) {
                 Panic.panic(ternary(denominator == 0, Panic.DIVISION_BY_ZERO, Panic.UNDER_OVERFLOW));
             }
@@ -3709,30 +2977,30 @@ library Math {
                 // Divide [high low] by twos.
                 low := div(low, twos)
 
-                // Flip twos such that it is 2²⁵⁶ / twos. If twos is zero, then it becomes one.
+                // Flip twos such that it is 2┬▓Γü╡Γü╢ / twos. If twos is zero, then it becomes one.
                 twos := add(div(sub(0, twos), twos), 1)
             }
 
             // Shift in bits from high into low.
             low |= high * twos;
 
-            // Invert denominator mod 2²⁵⁶. Now that denominator is an odd number, it has an inverse modulo 2²⁵⁶ such
-            // that denominator * inv ≡ 1 mod 2²⁵⁶. Compute the inverse by starting with a seed that is correct for
-            // four bits. That is, denominator * inv ≡ 1 mod 2⁴.
+            // Invert denominator mod 2┬▓Γü╡Γü╢. Now that denominator is an odd number, it has an inverse modulo 2┬▓Γü╡Γü╢ such
+            // that denominator * inv Γëí 1 mod 2┬▓Γü╡Γü╢. Compute the inverse by starting with a seed that is correct for
+            // four bits. That is, denominator * inv Γëí 1 mod 2Γü┤.
             uint256 inverse = (3 * denominator) ^ 2;
 
             // Use the Newton-Raphson iteration to improve the precision. Thanks to Hensel's lifting lemma, this also
             // works in modular arithmetic, doubling the correct bits in each step.
-            inverse *= 2 - denominator * inverse; // inverse mod 2⁸
-            inverse *= 2 - denominator * inverse; // inverse mod 2¹⁶
-            inverse *= 2 - denominator * inverse; // inverse mod 2³²
-            inverse *= 2 - denominator * inverse; // inverse mod 2⁶⁴
-            inverse *= 2 - denominator * inverse; // inverse mod 2¹²⁸
-            inverse *= 2 - denominator * inverse; // inverse mod 2²⁵⁶
+            inverse *= 2 - denominator * inverse; // inverse mod 2Γü╕
+            inverse *= 2 - denominator * inverse; // inverse mod 2┬╣Γü╢
+            inverse *= 2 - denominator * inverse; // inverse mod 2┬│┬▓
+            inverse *= 2 - denominator * inverse; // inverse mod 2Γü╢Γü┤
+            inverse *= 2 - denominator * inverse; // inverse mod 2┬╣┬▓Γü╕
+            inverse *= 2 - denominator * inverse; // inverse mod 2┬▓Γü╡Γü╢
 
             // Because the division is now exact we can divide by multiplying with the modular inverse of denominator.
-            // This will give us the correct result modulo 2²⁵⁶. Since the preconditions guarantee that the outcome is
-            // less than 2²⁵⁶, this is the final result. We don't need to compute the high bits of the result and high
+            // This will give us the correct result modulo 2┬▓Γü╡Γü╢. Since the preconditions guarantee that the outcome is
+            // less than 2┬▓Γü╡Γü╢, this is the final result. We don't need to compute the high bits of the result and high
             // is no longer required.
             result = low * inverse;
             return result;
@@ -3786,7 +3054,7 @@ library Math {
             // When the gcd is 1, then the inverse of a modulo n exists and it's x.
             // ax + ny = 1
             // ax = 1 + (-y)n
-            // ax ≡ 1 (mod n) # x is the inverse of a modulo n
+            // ax Γëí 1 (mod n) # x is the inverse of a modulo n
 
             // If the remainder is 0 the gcd is n right away.
             uint256 remainder = a % n;
@@ -3829,7 +3097,7 @@ library Math {
      * @dev Variant of {invMod}. More efficient, but only works if `p` is known to be a prime greater than `2`.
      *
      * From https://en.wikipedia.org/wiki/Fermat%27s_little_theorem[Fermat's little theorem], we know that if p is
-     * prime, then `a**(p-1) ≡ 1 mod p`. As a consequence, we have `a * a**(p-2) ≡ 1 mod p`, which means that
+     * prime, then `a**(p-1) Γëí 1 mod p`. As a consequence, we have `a * a**(p-2) Γëí 1 mod p`, which means that
      * `a**(p-2)` is the modular multiplicative inverse of a in Fp.
      *
      * NOTE: this function does NOT check that `p` is a prime greater than `2`.
@@ -3938,9 +3206,14 @@ library Math {
     /**
      * @dev Returns whether the provided byte array is zero.
      */
-    function _zeroBytes(bytes memory byteArray) private pure returns (bool) {
-        for (uint256 i = 0; i < byteArray.length; ++i) {
-            if (byteArray[i] != 0) {
+    function _zeroBytes(bytes memory buffer) private pure returns (bool) {
+        uint256 chunk;
+        for (uint256 i = 0; i < buffer.length; i += 0x20) {
+            // See _unsafeReadBytesOffset from utils/Bytes.sol
+            assembly ("memory-safe") {
+                chunk := mload(add(add(buffer, 0x20), i))
+            }
+            if (chunk >> (8 * saturatingSub(i + 0x20, buffer.length)) != 0) {
                 return false;
             }
         }
@@ -3961,16 +3234,16 @@ library Math {
                 return a;
             }
 
-            // In this function, we use Newton's method to get a root of `f(x) := x² - a`. It involves building a
+            // In this function, we use Newton's method to get a root of `f(x) := x┬▓ - a`. It involves building a
             // sequence x_n that converges toward sqrt(a). For each iteration x_n, we also define the error between
-            // the current value as `ε_n = | x_n - sqrt(a) |`.
+            // the current value as `╬╡_n = | x_n - sqrt(a) |`.
             //
             // For our first estimation, we consider `e` the smallest power of 2 which is bigger than the square root
-            // of the target. (i.e. `2**(e-1) ≤ sqrt(a) < 2**e`). We know that `e ≤ 128` because `(2¹²⁸)² = 2²⁵⁶` is
+            // of the target. (i.e. `2**(e-1) Γëñ sqrt(a) < 2**e`). We know that `e Γëñ 128` because `(2┬╣┬▓Γü╕)┬▓ = 2┬▓Γü╡Γü╢` is
             // bigger than any uint256.
             //
             // By noticing that
-            // `2**(e-1) ≤ sqrt(a) < 2**e → (2**(e-1))² ≤ a < (2**e)² → 2**(2*e-2) ≤ a < 2**(2*e)`
+            // `2**(e-1) Γëñ sqrt(a) < 2**e ΓåÆ (2**(e-1))┬▓ Γëñ a < (2**e)┬▓ ΓåÆ 2**(2*e-2) Γëñ a < 2**(2*e)`
             // we can deduce that `e - 1` is `log2(a) / 2`. We can thus compute `x_n = 2**(e-1)` using a method similar
             // to the msb function.
             uint256 aa = a;
@@ -4004,57 +3277,57 @@ library Math {
                 xn <<= 1;
             }
 
-            // We now have x_n such that `x_n = 2**(e-1) ≤ sqrt(a) < 2**e = 2 * x_n`. This implies ε_n ≤ 2**(e-1).
+            // We now have x_n such that `x_n = 2**(e-1) Γëñ sqrt(a) < 2**e = 2 * x_n`. This implies ╬╡_n Γëñ 2**(e-1).
             //
             // We can refine our estimation by noticing that the middle of that interval minimizes the error.
-            // If we move x_n to equal 2**(e-1) + 2**(e-2), then we reduce the error to ε_n ≤ 2**(e-2).
-            // This is going to be our x_0 (and ε_0)
-            xn = (3 * xn) >> 1; // ε_0 := | x_0 - sqrt(a) | ≤ 2**(e-2)
+            // If we move x_n to equal 2**(e-1) + 2**(e-2), then we reduce the error to ╬╡_n Γëñ 2**(e-2).
+            // This is going to be our x_0 (and ╬╡_0)
+            xn = (3 * xn) >> 1; // ╬╡_0 := | x_0 - sqrt(a) | Γëñ 2**(e-2)
 
             // From here, Newton's method give us:
             // x_{n+1} = (x_n + a / x_n) / 2
             //
             // One should note that:
-            // x_{n+1}² - a = ((x_n + a / x_n) / 2)² - a
-            //              = ((x_n² + a) / (2 * x_n))² - a
-            //              = (x_n⁴ + 2 * a * x_n² + a²) / (4 * x_n²) - a
-            //              = (x_n⁴ + 2 * a * x_n² + a² - 4 * a * x_n²) / (4 * x_n²)
-            //              = (x_n⁴ - 2 * a * x_n² + a²) / (4 * x_n²)
-            //              = (x_n² - a)² / (2 * x_n)²
-            //              = ((x_n² - a) / (2 * x_n))²
-            //              ≥ 0
-            // Which proves that for all n ≥ 1, sqrt(a) ≤ x_n
+            // x_{n+1}┬▓ - a = ((x_n + a / x_n) / 2)┬▓ - a
+            //              = ((x_n┬▓ + a) / (2 * x_n))┬▓ - a
+            //              = (x_nΓü┤ + 2 * a * x_n┬▓ + a┬▓) / (4 * x_n┬▓) - a
+            //              = (x_nΓü┤ + 2 * a * x_n┬▓ + a┬▓ - 4 * a * x_n┬▓) / (4 * x_n┬▓)
+            //              = (x_nΓü┤ - 2 * a * x_n┬▓ + a┬▓) / (4 * x_n┬▓)
+            //              = (x_n┬▓ - a)┬▓ / (2 * x_n)┬▓
+            //              = ((x_n┬▓ - a) / (2 * x_n))┬▓
+            //              ΓëÑ 0
+            // Which proves that for all n ΓëÑ 1, sqrt(a) Γëñ x_n
             //
             // This gives us the proof of quadratic convergence of the sequence:
-            // ε_{n+1} = | x_{n+1} - sqrt(a) |
+            // ╬╡_{n+1} = | x_{n+1} - sqrt(a) |
             //         = | (x_n + a / x_n) / 2 - sqrt(a) |
-            //         = | (x_n² + a - 2*x_n*sqrt(a)) / (2 * x_n) |
-            //         = | (x_n - sqrt(a))² / (2 * x_n) |
-            //         = | ε_n² / (2 * x_n) |
-            //         = ε_n² / | (2 * x_n) |
+            //         = | (x_n┬▓ + a - 2*x_n*sqrt(a)) / (2 * x_n) |
+            //         = | (x_n - sqrt(a))┬▓ / (2 * x_n) |
+            //         = | ╬╡_n┬▓ / (2 * x_n) |
+            //         = ╬╡_n┬▓ / | (2 * x_n) |
             //
             // For the first iteration, we have a special case where x_0 is known:
-            // ε_1 = ε_0² / | (2 * x_0) |
-            //     ≤ (2**(e-2))² / (2 * (2**(e-1) + 2**(e-2)))
-            //     ≤ 2**(2*e-4) / (3 * 2**(e-1))
-            //     ≤ 2**(e-3) / 3
-            //     ≤ 2**(e-3-log2(3))
-            //     ≤ 2**(e-4.5)
+            // ╬╡_1 = ╬╡_0┬▓ / | (2 * x_0) |
+            //     Γëñ (2**(e-2))┬▓ / (2 * (2**(e-1) + 2**(e-2)))
+            //     Γëñ 2**(2*e-4) / (3 * 2**(e-1))
+            //     Γëñ 2**(e-3) / 3
+            //     Γëñ 2**(e-3-log2(3))
+            //     Γëñ 2**(e-4.5)
             //
-            // For the following iterations, we use the fact that, 2**(e-1) ≤ sqrt(a) ≤ x_n:
-            // ε_{n+1} = ε_n² / | (2 * x_n) |
-            //         ≤ (2**(e-k))² / (2 * 2**(e-1))
-            //         ≤ 2**(2*e-2*k) / 2**e
-            //         ≤ 2**(e-2*k)
-            xn = (xn + a / xn) >> 1; // ε_1 := | x_1 - sqrt(a) | ≤ 2**(e-4.5)  -- special case, see above
-            xn = (xn + a / xn) >> 1; // ε_2 := | x_2 - sqrt(a) | ≤ 2**(e-9)    -- general case with k = 4.5
-            xn = (xn + a / xn) >> 1; // ε_3 := | x_3 - sqrt(a) | ≤ 2**(e-18)   -- general case with k = 9
-            xn = (xn + a / xn) >> 1; // ε_4 := | x_4 - sqrt(a) | ≤ 2**(e-36)   -- general case with k = 18
-            xn = (xn + a / xn) >> 1; // ε_5 := | x_5 - sqrt(a) | ≤ 2**(e-72)   -- general case with k = 36
-            xn = (xn + a / xn) >> 1; // ε_6 := | x_6 - sqrt(a) | ≤ 2**(e-144)  -- general case with k = 72
+            // For the following iterations, we use the fact that, 2**(e-1) Γëñ sqrt(a) Γëñ x_n:
+            // ╬╡_{n+1} = ╬╡_n┬▓ / | (2 * x_n) |
+            //         Γëñ (2**(e-k))┬▓ / (2 * 2**(e-1))
+            //         Γëñ 2**(2*e-2*k) / 2**e
+            //         Γëñ 2**(e-2*k)
+            xn = (xn + a / xn) >> 1; // ╬╡_1 := | x_1 - sqrt(a) | Γëñ 2**(e-4.5)  -- special case, see above
+            xn = (xn + a / xn) >> 1; // ╬╡_2 := | x_2 - sqrt(a) | Γëñ 2**(e-9)    -- general case with k = 4.5
+            xn = (xn + a / xn) >> 1; // ╬╡_3 := | x_3 - sqrt(a) | Γëñ 2**(e-18)   -- general case with k = 9
+            xn = (xn + a / xn) >> 1; // ╬╡_4 := | x_4 - sqrt(a) | Γëñ 2**(e-36)   -- general case with k = 18
+            xn = (xn + a / xn) >> 1; // ╬╡_5 := | x_5 - sqrt(a) | Γëñ 2**(e-72)   -- general case with k = 36
+            xn = (xn + a / xn) >> 1; // ╬╡_6 := | x_6 - sqrt(a) | Γëñ 2**(e-144)  -- general case with k = 72
 
-            // Because e ≤ 128 (as discussed during the first estimation phase), we know have reached a precision
-            // ε_6 ≤ 2**(e-144) < 1. Given we're operating on integers, then we can ensure that xn is now either
+            // Because e Γëñ 128 (as discussed during the first estimation phase), we know have reached a precision
+            // ╬╡_6 Γëñ 2**(e-144) < 1. Given we're operating on integers, then we can ensure that xn is now either
             // sqrt(a) or sqrt(a) + 1.
             return xn - SafeCast.toUint(xn > a / xn);
         }
@@ -4109,7 +3382,7 @@ library Math {
         // |    1110    |   14    |        table[14] = 3        |
         // |    1111    |   15    |        table[15] = 3        |
         //
-        // The lookup table is represented as a 32-byte value with the MSB positions for 0-15 in the last 16 bytes.
+        // The lookup table is represented as a 32-byte value with the MSB positions for 0-15 in the first 16 bytes (most significant half).
         assembly ("memory-safe") {
             r := or(r, byte(shr(r, x), 0x0000010102020202030303030303030300000000000000000000000000000000))
         }
@@ -4211,10 +3484,351 @@ library Math {
     function unsignedRoundsUp(Rounding rounding) internal pure returns (bool) {
         return uint8(rounding) % 2 == 1;
     }
+
+    /**
+     * @dev Counts the number of leading zero bits in a uint256.
+     */
+    function clz(uint256 x) internal pure returns (uint256) {
+        return ternary(x == 0, 256, 255 - log2(x));
+    }
 }
 
 
-// File @openzeppelin/contracts/utils/math/SignedMath.sol@v5.4.0
+// File @openzeppelin/contracts/utils/Bytes.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.6.0) (utils/Bytes.sol)
+
+pragma solidity ^0.8.24;
+
+/**
+ * @dev Bytes operations.
+ */
+library Bytes {
+    /**
+     * @dev Forward search for `s` in `buffer`
+     * * If `s` is present in the buffer, returns the index of the first instance
+     * * If `s` is not present in the buffer, returns type(uint256).max
+     *
+     * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf[Javascript's `Array.indexOf`]
+     */
+    function indexOf(bytes memory buffer, bytes1 s) internal pure returns (uint256) {
+        return indexOf(buffer, s, 0);
+    }
+
+    /**
+     * @dev Forward search for `s` in `buffer` starting at position `pos`
+     * * If `s` is present in the buffer (at or after `pos`), returns the index of the next instance
+     * * If `s` is not present in the buffer (at or after `pos`), returns type(uint256).max
+     *
+     * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf[Javascript's `Array.indexOf`]
+     */
+    function indexOf(bytes memory buffer, bytes1 s, uint256 pos) internal pure returns (uint256) {
+        uint256 length = buffer.length;
+        for (uint256 i = pos; i < length; ++i) {
+            if (bytes1(_unsafeReadBytesOffset(buffer, i)) == s) {
+                return i;
+            }
+        }
+        return type(uint256).max;
+    }
+
+    /**
+     * @dev Backward search for `s` in `buffer`
+     * * If `s` is present in the buffer, returns the index of the last instance
+     * * If `s` is not present in the buffer, returns type(uint256).max
+     *
+     * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/lastIndexOf[Javascript's `Array.lastIndexOf`]
+     */
+    function lastIndexOf(bytes memory buffer, bytes1 s) internal pure returns (uint256) {
+        return lastIndexOf(buffer, s, type(uint256).max);
+    }
+
+    /**
+     * @dev Backward search for `s` in `buffer` starting at position `pos`
+     * * If `s` is present in the buffer (at or before `pos`), returns the index of the previous instance
+     * * If `s` is not present in the buffer (at or before `pos`), returns type(uint256).max
+     *
+     * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/lastIndexOf[Javascript's `Array.lastIndexOf`]
+     */
+    function lastIndexOf(bytes memory buffer, bytes1 s, uint256 pos) internal pure returns (uint256) {
+        unchecked {
+            uint256 length = buffer.length;
+            for (uint256 i = Math.min(Math.saturatingAdd(pos, 1), length); i > 0; --i) {
+                if (bytes1(_unsafeReadBytesOffset(buffer, i - 1)) == s) {
+                    return i - 1;
+                }
+            }
+            return type(uint256).max;
+        }
+    }
+
+    /**
+     * @dev Copies the content of `buffer`, from `start` (included) to the end of `buffer` into a new bytes object in
+     * memory.
+     *
+     * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice[Javascript's `Array.slice`]
+     */
+    function slice(bytes memory buffer, uint256 start) internal pure returns (bytes memory) {
+        return slice(buffer, start, buffer.length);
+    }
+
+    /**
+     * @dev Copies the content of `buffer`, from `start` (included) to `end` (excluded) into a new bytes object in
+     * memory. The `end` argument is truncated to the length of the `buffer`.
+     *
+     * NOTE: replicates the behavior of https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice[Javascript's `Array.slice`]
+     */
+    function slice(bytes memory buffer, uint256 start, uint256 end) internal pure returns (bytes memory) {
+        // sanitize
+        end = Math.min(end, buffer.length);
+        start = Math.min(start, end);
+
+        // allocate and copy
+        bytes memory result = new bytes(end - start);
+        assembly ("memory-safe") {
+            mcopy(add(result, 0x20), add(add(buffer, 0x20), start), sub(end, start))
+        }
+
+        return result;
+    }
+
+    /**
+     * @dev Moves the content of `buffer`, from `start` (included) to the end of `buffer` to the start of that buffer,
+     * and shrinks the buffer length accordingly, effectively overriding the content of buffer with buffer[start:].
+     *
+     * NOTE: This function modifies the provided buffer in place. If you need to preserve the original buffer, use {slice} instead
+     */
+    function splice(bytes memory buffer, uint256 start) internal pure returns (bytes memory) {
+        return splice(buffer, start, buffer.length);
+    }
+
+    /**
+     * @dev Moves the content of `buffer`, from `start` (included) to `end` (excluded) to the start of that buffer,
+     * and shrinks the buffer length accordingly, effectively overriding the content of buffer with buffer[start:end].
+     * The `end` argument is truncated to the length of the `buffer`.
+     *
+     * NOTE: This function modifies the provided buffer in place. If you need to preserve the original buffer, use {slice} instead
+     */
+    function splice(bytes memory buffer, uint256 start, uint256 end) internal pure returns (bytes memory) {
+        // sanitize
+        end = Math.min(end, buffer.length);
+        start = Math.min(start, end);
+
+        // move and resize
+        assembly ("memory-safe") {
+            mcopy(add(buffer, 0x20), add(add(buffer, 0x20), start), sub(end, start))
+            mstore(buffer, sub(end, start))
+        }
+
+        return buffer;
+    }
+
+    /**
+     * @dev Replaces bytes in `buffer` starting at `pos` with all bytes from `replacement`.
+     *
+     * Parameters are clamped to valid ranges (i.e. `pos` is clamped to `[0, buffer.length]`).
+     * If `pos >= buffer.length`, no replacement occurs and the buffer is returned unchanged.
+     *
+     * NOTE: This function modifies the provided buffer in place.
+     */
+    function replace(bytes memory buffer, uint256 pos, bytes memory replacement) internal pure returns (bytes memory) {
+        return replace(buffer, pos, replacement, 0, replacement.length);
+    }
+
+    /**
+     * @dev Replaces bytes in `buffer` starting at `pos` with bytes from `replacement` starting at `offset`.
+     * Copies at most `length` bytes from `replacement` to `buffer`.
+     *
+     * Parameters are clamped to valid ranges (i.e. `pos` is clamped to `[0, buffer.length]`, `offset` is
+     * clamped to `[0, replacement.length]`, and `length` is clamped to `min(length, replacement.length - offset,
+     * buffer.length - pos))`. If `pos >= buffer.length` or `offset >= replacement.length`, no replacement occurs
+     * and the buffer is returned unchanged.
+     *
+     * NOTE: This function modifies the provided buffer in place.
+     */
+    function replace(
+        bytes memory buffer,
+        uint256 pos,
+        bytes memory replacement,
+        uint256 offset,
+        uint256 length
+    ) internal pure returns (bytes memory) {
+        // sanitize
+        pos = Math.min(pos, buffer.length);
+        offset = Math.min(offset, replacement.length);
+        length = Math.min(length, Math.min(replacement.length - offset, buffer.length - pos));
+
+        // replace
+        assembly ("memory-safe") {
+            mcopy(add(add(buffer, 0x20), pos), add(add(replacement, 0x20), offset), length)
+        }
+
+        return buffer;
+    }
+
+    /**
+     * @dev Concatenate an array of bytes into a single bytes object.
+     *
+     * For fixed bytes types, we recommend using the solidity built-in `bytes.concat` or (equivalent)
+     * `abi.encodePacked`.
+     *
+     * NOTE: this could be done in assembly with a single loop that expands starting at the FMP, but that would be
+     * significantly less readable. It might be worth benchmarking the savings of the full-assembly approach.
+     */
+    function concat(bytes[] memory buffers) internal pure returns (bytes memory) {
+        uint256 length = 0;
+        for (uint256 i = 0; i < buffers.length; ++i) {
+            length += buffers[i].length;
+        }
+
+        bytes memory result = new bytes(length);
+
+        uint256 offset = 0x20;
+        for (uint256 i = 0; i < buffers.length; ++i) {
+            bytes memory input = buffers[i];
+            assembly ("memory-safe") {
+                mcopy(add(result, offset), add(input, 0x20), mload(input))
+            }
+            unchecked {
+                offset += input.length;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * @dev Split each byte in `input` into two nibbles (4 bits each)
+     *
+     * Example: hex"01234567" ΓåÆ hex"0001020304050607"
+     */
+    function toNibbles(bytes memory input) internal pure returns (bytes memory output) {
+        assembly ("memory-safe") {
+            let length := mload(input)
+            output := mload(0x40)
+            mstore(0x40, add(add(output, 0x20), mul(length, 2)))
+            mstore(output, mul(length, 2))
+            for {
+                let i := 0
+            } lt(i, length) {
+                i := add(i, 0x10)
+            } {
+                let chunk := shr(128, mload(add(add(input, 0x20), i)))
+                chunk := and(
+                    0x0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff,
+                    or(shl(64, chunk), chunk)
+                )
+                chunk := and(
+                    0x00000000ffffffff00000000ffffffff00000000ffffffff00000000ffffffff,
+                    or(shl(32, chunk), chunk)
+                )
+                chunk := and(
+                    0x0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff,
+                    or(shl(16, chunk), chunk)
+                )
+                chunk := and(
+                    0x00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff,
+                    or(shl(8, chunk), chunk)
+                )
+                chunk := and(
+                    0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f,
+                    or(shl(4, chunk), chunk)
+                )
+                mstore(add(add(output, 0x20), mul(i, 2)), chunk)
+            }
+        }
+    }
+
+    /**
+     * @dev Returns true if the two byte buffers are equal.
+     */
+    function equal(bytes memory a, bytes memory b) internal pure returns (bool) {
+        return a.length == b.length && keccak256(a) == keccak256(b);
+    }
+
+    /**
+     * @dev Reverses the byte order of a bytes32 value, converting between little-endian and big-endian.
+     * Inspired by https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel[Reverse Parallel]
+     */
+    function reverseBytes32(bytes32 value) internal pure returns (bytes32) {
+        value = // swap bytes
+            ((value >> 8) & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) |
+            ((value & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) << 8);
+        value = // swap 2-byte long pairs
+            ((value >> 16) & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) |
+            ((value & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) << 16);
+        value = // swap 4-byte long pairs
+            ((value >> 32) & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) |
+            ((value & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) << 32);
+        value = // swap 8-byte long pairs
+            ((value >> 64) & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) |
+            ((value & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) << 64);
+        return (value >> 128) | (value << 128); // swap 16-byte long pairs
+    }
+
+    /// @dev Same as {reverseBytes32} but optimized for 128-bit values.
+    function reverseBytes16(bytes16 value) internal pure returns (bytes16) {
+        value = // swap bytes
+            ((value & 0xFF00FF00FF00FF00FF00FF00FF00FF00) >> 8) |
+            ((value & 0x00FF00FF00FF00FF00FF00FF00FF00FF) << 8);
+        value = // swap 2-byte long pairs
+            ((value & 0xFFFF0000FFFF0000FFFF0000FFFF0000) >> 16) |
+            ((value & 0x0000FFFF0000FFFF0000FFFF0000FFFF) << 16);
+        value = // swap 4-byte long pairs
+            ((value & 0xFFFFFFFF00000000FFFFFFFF00000000) >> 32) |
+            ((value & 0x00000000FFFFFFFF00000000FFFFFFFF) << 32);
+        return (value >> 64) | (value << 64); // swap 8-byte long pairs
+    }
+
+    /// @dev Same as {reverseBytes32} but optimized for 64-bit values.
+    function reverseBytes8(bytes8 value) internal pure returns (bytes8) {
+        value = ((value & 0xFF00FF00FF00FF00) >> 8) | ((value & 0x00FF00FF00FF00FF) << 8); // swap bytes
+        value = ((value & 0xFFFF0000FFFF0000) >> 16) | ((value & 0x0000FFFF0000FFFF) << 16); // swap 2-byte long pairs
+        return (value >> 32) | (value << 32); // swap 4-byte long pairs
+    }
+
+    /// @dev Same as {reverseBytes32} but optimized for 32-bit values.
+    function reverseBytes4(bytes4 value) internal pure returns (bytes4) {
+        value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8); // swap bytes
+        return (value >> 16) | (value << 16); // swap 2-byte long pairs
+    }
+
+    /// @dev Same as {reverseBytes32} but optimized for 16-bit values.
+    function reverseBytes2(bytes2 value) internal pure returns (bytes2) {
+        return (value >> 8) | (value << 8);
+    }
+
+    /**
+     * @dev Counts the number of leading zero bits a bytes array. Returns `8 * buffer.length`
+     * if the buffer is all zeros.
+     */
+    function clz(bytes memory buffer) internal pure returns (uint256) {
+        for (uint256 i = 0; i < buffer.length; i += 0x20) {
+            bytes32 chunk = _unsafeReadBytesOffset(buffer, i);
+            if (chunk != bytes32(0)) {
+                return Math.min(8 * i + Math.clz(uint256(chunk)), 8 * buffer.length);
+            }
+        }
+        return 8 * buffer.length;
+    }
+
+    /**
+     * @dev Reads a bytes32 from a bytes array without bounds checking.
+     *
+     * NOTE: making this function internal would mean it could be used with memory unsafe offset, and marking the
+     * assembly block as such would prevent some optimizations.
+     */
+    function _unsafeReadBytesOffset(bytes memory buffer, uint256 offset) private pure returns (bytes32 value) {
+        // This is not memory safe in the general case, but all calls to this private function are within bounds.
+        assembly ("memory-safe") {
+            value := mload(add(add(buffer, 0x20), offset))
+        }
+    }
+}
+
+
+// File @openzeppelin/contracts/utils/math/SignedMath.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (utils/math/SignedMath.sol)
@@ -4284,12 +3898,13 @@ library SignedMath {
 }
 
 
-// File @openzeppelin/contracts/utils/Strings.sol@v5.4.0
+// File @openzeppelin/contracts/utils/Strings.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (utils/Strings.sol)
+// OpenZeppelin Contracts (last updated v5.6.0) (utils/Strings.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
+
 
 
 
@@ -4302,11 +3917,7 @@ library Strings {
     bytes16 private constant HEX_DIGITS = "0123456789abcdef";
     uint8 private constant ADDRESS_LENGTH = 20;
     uint256 private constant SPECIAL_CHARS_LOOKUP =
-        (1 << 0x08) | // backspace
-            (1 << 0x09) | // tab
-            (1 << 0x0a) | // newline
-            (1 << 0x0c) | // form feed
-            (1 << 0x0d) | // carriage return
+        0xffffffff | // first 32 bits corresponding to the control characters (U+0000 to U+001F)
             (1 << 0x22) | // double quote
             (1 << 0x5c); // backslash
 
@@ -4415,10 +4026,27 @@ library Strings {
     }
 
     /**
+     * @dev Converts a `bytes` buffer to its ASCII `string` hexadecimal representation.
+     */
+    function toHexString(bytes memory input) internal pure returns (string memory) {
+        unchecked {
+            bytes memory buffer = new bytes(2 * input.length + 2);
+            buffer[0] = "0";
+            buffer[1] = "x";
+            for (uint256 i = 0; i < input.length; ++i) {
+                uint8 v = uint8(input[i]);
+                buffer[2 * i + 2] = HEX_DIGITS[v >> 4];
+                buffer[2 * i + 3] = HEX_DIGITS[v & 0xf];
+            }
+            return string(buffer);
+        }
+    }
+
+    /**
      * @dev Returns true if the two strings are equal.
      */
     function equal(string memory a, string memory b) internal pure returns (bool) {
-        return bytes(a).length == bytes(b).length && keccak256(bytes(a)) == keccak256(bytes(b));
+        return Bytes.equal(bytes(a), bytes(b));
     }
 
     /**
@@ -4725,37 +4353,52 @@ library Strings {
      *
      * WARNING: This function should only be used in double quoted JSON strings. Single quotes are not escaped.
      *
-     * NOTE: This function escapes all unicode characters, and not just the ones in ranges defined in section 2.5 of
-     * RFC-4627 (U+0000 to U+001F, U+0022 and U+005C). ECMAScript's `JSON.parse` does recover escaped unicode
-     * characters that are not in this range, but other tooling may provide different results.
+     * NOTE: This function escapes backslashes (including those in \uXXXX sequences) and the characters in ranges
+     * defined in section 2.5 of RFC-4627 (U+0000 to U+001F, U+0022 and U+005C). All control characters in U+0000
+     * to U+001F are escaped (\b, \t, \n, \f, \r use short form; others use \u00XX). ECMAScript's `JSON.parse` does
+     * recover escaped unicode characters that are not in this range, but other tooling may provide different results.
      */
     function escapeJSON(string memory input) internal pure returns (string memory) {
         bytes memory buffer = bytes(input);
-        bytes memory output = new bytes(2 * buffer.length); // worst case scenario
+
+        // Put output at the FMP. Memory will be reserved later when we figure out the actual length of the escaped
+        // string. All write are done using _unsafeWriteBytesOffset, which avoid the (expensive) length checks for
+        // each character written.
+        bytes memory output;
+        assembly ("memory-safe") {
+            output := mload(0x40)
+        }
         uint256 outputLength = 0;
 
-        for (uint256 i; i < buffer.length; ++i) {
-            bytes1 char = bytes1(_unsafeReadBytesOffset(buffer, i));
-            if (((SPECIAL_CHARS_LOOKUP & (1 << uint8(char))) != 0)) {
-                output[outputLength++] = "\\";
-                if (char == 0x08) output[outputLength++] = "b";
-                else if (char == 0x09) output[outputLength++] = "t";
-                else if (char == 0x0a) output[outputLength++] = "n";
-                else if (char == 0x0c) output[outputLength++] = "f";
-                else if (char == 0x0d) output[outputLength++] = "r";
-                else if (char == 0x5c) output[outputLength++] = "\\";
+        for (uint256 i = 0; i < buffer.length; ++i) {
+            uint8 char = uint8(bytes1(_unsafeReadBytesOffset(buffer, i)));
+            if (((SPECIAL_CHARS_LOOKUP & (1 << char)) != 0)) {
+                _unsafeWriteBytesOffset(output, outputLength++, "\\");
+                if (char == 0x08) _unsafeWriteBytesOffset(output, outputLength++, "b");
+                else if (char == 0x09) _unsafeWriteBytesOffset(output, outputLength++, "t");
+                else if (char == 0x0a) _unsafeWriteBytesOffset(output, outputLength++, "n");
+                else if (char == 0x0c) _unsafeWriteBytesOffset(output, outputLength++, "f");
+                else if (char == 0x0d) _unsafeWriteBytesOffset(output, outputLength++, "r");
+                else if (char == 0x5c) _unsafeWriteBytesOffset(output, outputLength++, "\\");
                 else if (char == 0x22) {
                     // solhint-disable-next-line quotes
-                    output[outputLength++] = '"';
+                    _unsafeWriteBytesOffset(output, outputLength++, '"');
+                } else {
+                    // U+0000 to U+001F without short form: output \u00XX
+                    _unsafeWriteBytesOffset(output, outputLength++, "u");
+                    _unsafeWriteBytesOffset(output, outputLength++, "0");
+                    _unsafeWriteBytesOffset(output, outputLength++, "0");
+                    _unsafeWriteBytesOffset(output, outputLength++, HEX_DIGITS[char >> 4]);
+                    _unsafeWriteBytesOffset(output, outputLength++, HEX_DIGITS[char & 0x0f]);
                 }
             } else {
-                output[outputLength++] = char;
+                _unsafeWriteBytesOffset(output, outputLength++, bytes1(char));
             }
         }
-        // write the actual length and deallocate unused memory
+        // write the actual length and reserve memory
         assembly ("memory-safe") {
             mstore(output, outputLength)
-            mstore(0x40, add(output, shl(5, shr(5, add(outputLength, 63)))))
+            mstore(0x40, add(output, add(outputLength, 0x20)))
         }
 
         return string(output);
@@ -4773,15 +4416,28 @@ library Strings {
             value := mload(add(add(buffer, 0x20), offset))
         }
     }
+
+    /**
+     * @dev Write a bytes1 to a bytes array without bounds checking.
+     *
+     * NOTE: making this function internal would mean it could be used with memory unsafe offset, and marking the
+     * assembly block as such would prevent some optimizations.
+     */
+    function _unsafeWriteBytesOffset(bytes memory buffer, uint256 offset, bytes1 value) private pure {
+        // This is not memory safe in the general case, but all calls to this private function are within bounds.
+        assembly ("memory-safe") {
+            mstore8(add(add(buffer, 0x20), offset), shr(248, value))
+        }
+    }
 }
 
 
-// File @openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol@v5.4.0
+// File @openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.3.0) (utils/cryptography/MessageHashUtils.sol)
+// OpenZeppelin Contracts (last updated v5.6.0) (utils/cryptography/MessageHashUtils.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 /**
  * @dev Signature message hash utilities for producing digests to be consumed by {ECDSA} recovery or signing.
@@ -4791,6 +4447,8 @@ pragma solidity ^0.8.20;
  * specifications.
  */
 library MessageHashUtils {
+    error ERC5267ExtensionsNotSupported();
+
     /**
      * @dev Returns the keccak256 digest of an ERC-191 signed data with version
      * `0x45` (`personal_sign` messages).
@@ -4874,15 +4532,142 @@ library MessageHashUtils {
             digest := keccak256(ptr, 0x42)
         }
     }
+
+    /**
+     * @dev Returns the EIP-712 domain separator constructed from an `eip712Domain`. See {IERC5267-eip712Domain}
+     *
+     * This function dynamically constructs the domain separator based on which fields are present in the
+     * `fields` parameter. It contains flags that indicate which domain fields are present:
+     *
+     * * Bit 0 (0x01): name
+     * * Bit 1 (0x02): version
+     * * Bit 2 (0x04): chainId
+     * * Bit 3 (0x08): verifyingContract
+     * * Bit 4 (0x10): salt
+     *
+     * Arguments that correspond to fields which are not present in `fields` are ignored. For example, if `fields` is
+     * `0x0f` (`0b01111`), then the `salt` parameter is ignored.
+     */
+    function toDomainSeparator(
+        bytes1 fields,
+        string memory name,
+        string memory version,
+        uint256 chainId,
+        address verifyingContract,
+        bytes32 salt
+    ) internal pure returns (bytes32 hash) {
+        return
+            toDomainSeparator(
+                fields,
+                keccak256(bytes(name)),
+                keccak256(bytes(version)),
+                chainId,
+                verifyingContract,
+                salt
+            );
+    }
+
+    /// @dev Variant of {toDomainSeparator-bytes1-string-string-uint256-address-bytes32} that uses hashed name and version.
+    function toDomainSeparator(
+        bytes1 fields,
+        bytes32 nameHash,
+        bytes32 versionHash,
+        uint256 chainId,
+        address verifyingContract,
+        bytes32 salt
+    ) internal pure returns (bytes32 hash) {
+        bytes32 domainTypeHash = toDomainTypeHash(fields);
+
+        assembly ("memory-safe") {
+            // align fields to the right for easy processing
+            fields := shr(248, fields)
+
+            // FMP used as scratch space
+            let fmp := mload(0x40)
+            mstore(fmp, domainTypeHash)
+
+            let ptr := add(fmp, 0x20)
+            if and(fields, 0x01) {
+                mstore(ptr, nameHash)
+                ptr := add(ptr, 0x20)
+            }
+            if and(fields, 0x02) {
+                mstore(ptr, versionHash)
+                ptr := add(ptr, 0x20)
+            }
+            if and(fields, 0x04) {
+                mstore(ptr, chainId)
+                ptr := add(ptr, 0x20)
+            }
+            if and(fields, 0x08) {
+                mstore(ptr, verifyingContract)
+                ptr := add(ptr, 0x20)
+            }
+            if and(fields, 0x10) {
+                mstore(ptr, salt)
+                ptr := add(ptr, 0x20)
+            }
+
+            hash := keccak256(fmp, sub(ptr, fmp))
+        }
+    }
+
+    /// @dev Builds an EIP-712 domain type hash depending on the `fields` provided, following https://eips.ethereum.org/EIPS/eip-5267[ERC-5267]
+    function toDomainTypeHash(bytes1 fields) internal pure returns (bytes32 hash) {
+        if (fields & 0x20 == 0x20) revert ERC5267ExtensionsNotSupported();
+
+        assembly ("memory-safe") {
+            // align fields to the right for easy processing
+            fields := shr(248, fields)
+
+            // FMP used as scratch space
+            let fmp := mload(0x40)
+            mstore(fmp, "EIP712Domain(")
+
+            let ptr := add(fmp, 0x0d)
+            // name field
+            if and(fields, 0x01) {
+                mstore(ptr, "string name,")
+                ptr := add(ptr, 0x0c)
+            }
+            // version field
+            if and(fields, 0x02) {
+                mstore(ptr, "string version,")
+                ptr := add(ptr, 0x0f)
+            }
+            // chainId field
+            if and(fields, 0x04) {
+                mstore(ptr, "uint256 chainId,")
+                ptr := add(ptr, 0x10)
+            }
+            // verifyingContract field
+            if and(fields, 0x08) {
+                mstore(ptr, "address verifyingContract,")
+                ptr := add(ptr, 0x1a)
+            }
+            // salt field
+            if and(fields, 0x10) {
+                mstore(ptr, "bytes32 salt,")
+                ptr := add(ptr, 0x0d)
+            }
+            // if any field is enabled, remove the trailing comma
+            ptr := sub(ptr, iszero(iszero(and(fields, 0x1f))))
+            // add the closing brace
+            mstore8(ptr, 0x29) // add closing brace
+            ptr := add(ptr, 1)
+
+            hash := keccak256(fmp, sub(ptr, fmp))
+        }
+    }
 }
 
 
-// File @openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (utils/cryptography/EIP712.sol)
+// OpenZeppelin Contracts (last updated v5.5.0) (utils/cryptography/EIP712.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 
 
@@ -4905,7 +4690,7 @@ pragma solidity ^0.8.20;
  * https://docs.metamask.io/guide/signing-data.html[`eth_signTypedDataV4` in MetaMask].
  *
  * NOTE: The upgradeable version of this contract does not use an immutable cache and recomputes the domain separator
- * each time {_domainSeparatorV4} is called. That is cheaper than accessing a cached version in cold storage.
+ * each time {_domainSeparatorV4} is called. This is cheaper than accessing a cached version in cold storage.
  */
 abstract contract EIP712Upgradeable is Initializable, IERC5267 {
     bytes32 private constant TYPE_HASH =
@@ -4913,9 +4698,7 @@ abstract contract EIP712Upgradeable is Initializable, IERC5267 {
 
     /// @custom:storage-location erc7201:openzeppelin.storage.EIP712
     struct EIP712Storage {
-        /// @custom:oz-renamed-from _HASHED_NAME
         bytes32 _hashedName;
-        /// @custom:oz-renamed-from _HASHED_VERSION
         bytes32 _hashedVersion;
 
         string _name;
@@ -4951,10 +4734,6 @@ abstract contract EIP712Upgradeable is Initializable, IERC5267 {
         EIP712Storage storage $ = _getEIP712Storage();
         $._name = name;
         $._version = version;
-
-        // Reset prior values in storage if upgrading
-        $._hashedName = 0;
-        $._hashedVersion = 0;
     }
 
     /**
@@ -5002,11 +4781,6 @@ abstract contract EIP712Upgradeable is Initializable, IERC5267 {
             uint256[] memory extensions
         )
     {
-        EIP712Storage storage $ = _getEIP712Storage();
-        // If the hashed name and version in storage are non-zero, the contract hasn't been properly initialized
-        // and the EIP712 domain is not reliable, as it will be missing name and version.
-        require($._hashedName == 0 && $._hashedVersion == 0, "EIP712: Uninitialized");
-
         return (
             hex"0f", // 01111
             _EIP712Name(),
@@ -5046,20 +4820,7 @@ abstract contract EIP712Upgradeable is Initializable, IERC5267 {
      * NOTE: In previous versions this function was virtual. In this version you should override `_EIP712Name` instead.
      */
     function _EIP712NameHash() internal view returns (bytes32) {
-        EIP712Storage storage $ = _getEIP712Storage();
-        string memory name = _EIP712Name();
-        if (bytes(name).length > 0) {
-            return keccak256(bytes(name));
-        } else {
-            // If the name is empty, the contract may have been upgraded without initializing the new storage.
-            // We return the name hash in storage if non-zero, otherwise we assume the name is empty by design.
-            bytes32 hashedName = $._hashedName;
-            if (hashedName != 0) {
-                return hashedName;
-            } else {
-                return keccak256("");
-            }
-        }
+        return keccak256(bytes(_EIP712Name()));
     }
 
     /**
@@ -5068,25 +4829,12 @@ abstract contract EIP712Upgradeable is Initializable, IERC5267 {
      * NOTE: In previous versions this function was virtual. In this version you should override `_EIP712Version` instead.
      */
     function _EIP712VersionHash() internal view returns (bytes32) {
-        EIP712Storage storage $ = _getEIP712Storage();
-        string memory version = _EIP712Version();
-        if (bytes(version).length > 0) {
-            return keccak256(bytes(version));
-        } else {
-            // If the version is empty, the contract may have been upgraded without initializing the new storage.
-            // We return the version hash in storage if non-zero, otherwise we assume the version is empty by design.
-            bytes32 hashedVersion = $._hashedVersion;
-            if (hashedVersion != 0) {
-                return hashedVersion;
-            } else {
-                return keccak256("");
-            }
-        }
+        return keccak256(bytes(_EIP712Version()));
     }
 }
 
 
-// File @openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/Nonces.sol)
@@ -5155,10 +4903,10 @@ abstract contract NoncesUpgradeable is Initializable {
 }
 
 
-// File @openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol@v5.4.0
+// File @openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (token/ERC20/extensions/IERC20Permit.sol)
+// OpenZeppelin Contracts (last updated v5.5.0) (token/ERC20/extensions/IERC20Permit.sol)
 
 pragma solidity >=0.4.16;
 
@@ -5204,7 +4952,7 @@ interface IERC20Permit {
      * given ``owner``'s signed approval.
      *
      * IMPORTANT: The same issues {IERC20-approve} has related to transaction
-     * ordering also apply here.
+     * ordering also applies here.
      *
      * Emits an {Approval} event.
      *
@@ -5249,10 +4997,10 @@ interface IERC20Permit {
 }
 
 
-// File @openzeppelin/contracts/utils/cryptography/ECDSA.sol@v5.4.0
+// File @openzeppelin/contracts/utils/cryptography/ECDSA.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.1.0) (utils/cryptography/ECDSA.sol)
+// OpenZeppelin Contracts (last updated v5.6.0) (utils/cryptography/ECDSA.sol)
 
 pragma solidity ^0.8.20;
 
@@ -5271,7 +5019,7 @@ library ECDSA {
     }
 
     /**
-     * @dev The signature derives the `address(0)`.
+     * @dev The signature is invalid.
      */
     error ECDSAInvalidSignature();
 
@@ -5296,6 +5044,10 @@ library ECDSA {
      * this function rejects them by requiring the `s` value to be in the lower
      * half order, and the `v` value to be either 27 or 28.
      *
+     * NOTE: This function only supports 65-byte signatures. ERC-2098 short signatures are rejected. This restriction
+     * is DEPRECATED and will be removed in v6.0. Developers SHOULD NOT use signatures as unique identifiers; use hash
+     * invalidation or nonces for replay protection.
+     *
      * IMPORTANT: `hash` _must_ be the result of a hash operation for the
      * verification to be secure: it is possible to craft signatures that
      * recover to arbitrary addresses for non-hashed data. A safe way to ensure
@@ -5303,6 +5055,7 @@ library ECDSA {
      * be too long), and then calling {MessageHashUtils-toEthSignedMessageHash} on it.
      *
      * Documentation for signature generation:
+     *
      * - with https://web3js.readthedocs.io/en/v1.3.4/web3-eth-accounts.html#sign[Web3.js]
      * - with https://docs.ethers.io/v5/api/signer/#Signer-signMessage[ethers]
      */
@@ -5328,12 +5081,40 @@ library ECDSA {
     }
 
     /**
+     * @dev Variant of {tryRecover} that takes a signature in calldata
+     */
+    function tryRecoverCalldata(
+        bytes32 hash,
+        bytes calldata signature
+    ) internal pure returns (address recovered, RecoverError err, bytes32 errArg) {
+        if (signature.length == 65) {
+            bytes32 r;
+            bytes32 s;
+            uint8 v;
+            // ecrecover takes the signature parameters, calldata slices would work here, but are
+            // significantly more expensive (length check) than using calldataload in assembly.
+            assembly ("memory-safe") {
+                r := calldataload(signature.offset)
+                s := calldataload(add(signature.offset, 0x20))
+                v := byte(0, calldataload(add(signature.offset, 0x40)))
+            }
+            return tryRecover(hash, v, r, s);
+        } else {
+            return (address(0), RecoverError.InvalidSignatureLength, bytes32(signature.length));
+        }
+    }
+
+    /**
      * @dev Returns the address that signed a hashed message (`hash`) with
      * `signature`. This address can then be used for verification purposes.
      *
      * The `ecrecover` EVM precompile allows for malleable (non-unique) signatures:
      * this function rejects them by requiring the `s` value to be in the lower
      * half order, and the `v` value to be either 27 or 28.
+     *
+     * NOTE: This function only supports 65-byte signatures. ERC-2098 short signatures are rejected. This restriction
+     * is DEPRECATED and will be removed in v6.0. Developers SHOULD NOT use signatures as unique identifiers; use hash
+     * invalidation or nonces for replay protection.
      *
      * IMPORTANT: `hash` _must_ be the result of a hash operation for the
      * verification to be secure: it is possible to craft signatures that
@@ -5343,6 +5124,15 @@ library ECDSA {
      */
     function recover(bytes32 hash, bytes memory signature) internal pure returns (address) {
         (address recovered, RecoverError error, bytes32 errorArg) = tryRecover(hash, signature);
+        _throwError(error, errorArg);
+        return recovered;
+    }
+
+    /**
+     * @dev Variant of {recover} that takes a signature in calldata
+     */
+    function recoverCalldata(bytes32 hash, bytes calldata signature) internal pure returns (address) {
+        (address recovered, RecoverError error, bytes32 errorArg) = tryRecoverCalldata(hash, signature);
         _throwError(error, errorArg);
         return recovered;
     }
@@ -5366,7 +5156,7 @@ library ECDSA {
     }
 
     /**
-     * @dev Overload of {ECDSA-recover} that receives the `r and `vs` short-signature fields separately.
+     * @dev Overload of {ECDSA-recover} that receives the `r` and `vs` short-signature fields separately.
      */
     function recover(bytes32 hash, bytes32 r, bytes32 vs) internal pure returns (address) {
         (address recovered, RecoverError error, bytes32 errorArg) = tryRecover(hash, r, vs);
@@ -5386,7 +5176,7 @@ library ECDSA {
     ) internal pure returns (address recovered, RecoverError err, bytes32 errArg) {
         // EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
         // unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines
-        // the valid range for s in (301): 0 < s < secp256k1n ÷ 2 + 1, and for v in (302): v ∈ {27, 28}. Most
+        // the valid range for s in (301): 0 < s < secp256k1n ├╖ 2 + 1, and for v in (302): v Γêê {27, 28}. Most
         // signatures from current libraries generate a unique signature with an s-value in the lower half order.
         //
         // If your library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
@@ -5417,6 +5207,68 @@ library ECDSA {
     }
 
     /**
+     * @dev Parse a signature into its `v`, `r` and `s` components. Supports 65-byte and 64-byte (ERC-2098)
+     * formats. Returns (0,0,0) for invalid signatures.
+     *
+     * For 64-byte signatures, `v` is automatically normalized to 27 or 28.
+     * For 65-byte signatures, `v` is returned as-is and MUST already be 27 or 28 for use with ecrecover.
+     *
+     * Consider validating the result before use, or use {tryRecover}/{recover} which perform full validation.
+     */
+    function parse(bytes memory signature) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
+        assembly ("memory-safe") {
+            // Check the signature length
+            switch mload(signature)
+            // - case 65: r,s,v signature (standard)
+            case 65 {
+                r := mload(add(signature, 0x20))
+                s := mload(add(signature, 0x40))
+                v := byte(0, mload(add(signature, 0x60)))
+            }
+            // - case 64: r,vs signature (cf https://eips.ethereum.org/EIPS/eip-2098)
+            case 64 {
+                let vs := mload(add(signature, 0x40))
+                r := mload(add(signature, 0x20))
+                s := and(vs, shr(1, not(0)))
+                v := add(shr(255, vs), 27)
+            }
+            default {
+                r := 0
+                s := 0
+                v := 0
+            }
+        }
+    }
+
+    /**
+     * @dev Variant of {parse} that takes a signature in calldata
+     */
+    function parseCalldata(bytes calldata signature) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
+        assembly ("memory-safe") {
+            // Check the signature length
+            switch signature.length
+            // - case 65: r,s,v signature (standard)
+            case 65 {
+                r := calldataload(signature.offset)
+                s := calldataload(add(signature.offset, 0x20))
+                v := byte(0, calldataload(add(signature.offset, 0x40)))
+            }
+            // - case 64: r,vs signature (cf https://eips.ethereum.org/EIPS/eip-2098)
+            case 64 {
+                let vs := calldataload(add(signature.offset, 0x20))
+                r := calldataload(signature.offset)
+                s := and(vs, shr(1, not(0)))
+                v := add(shr(255, vs), 27)
+            }
+            default {
+                r := 0
+                s := 0
+                v := 0
+            }
+        }
+    }
+
+    /**
      * @dev Optionally reverts with the corresponding custom error according to the `error` argument provided.
      */
     function _throwError(RecoverError error, bytes32 errorArg) private pure {
@@ -5433,12 +5285,12 @@ library ECDSA {
 }
 
 
-// File @openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol@v5.4.0
+// File @openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol@v5.6.1
 
 // Original license: SPDX_License_Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.4.0) (token/ERC20/extensions/ERC20Permit.sol)
+// OpenZeppelin Contracts (last updated v5.5.0) (token/ERC20/extensions/ERC20Permit.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 
 
@@ -5511,8 +5363,1226 @@ abstract contract ERC20PermitUpgradeable is Initializable, ERC20Upgradeable, IER
 
     /// @inheritdoc IERC20Permit
     // solhint-disable-next-line func-name-mixedcase
-    function DOMAIN_SEPARATOR() external view virtual returns (bytes32) {
+    function DOMAIN_SEPARATOR() external view returns (bytes32) {
         return _domainSeparatorV4();
+    }
+}
+
+
+// File @openzeppelin/contracts/interfaces/IERC165.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.4.0) (interfaces/IERC165.sol)
+
+pragma solidity >=0.4.16;
+
+
+// File @openzeppelin/contracts/interfaces/IERC20.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.4.0) (interfaces/IERC20.sol)
+
+pragma solidity >=0.4.16;
+
+
+// File @openzeppelin/contracts/interfaces/IERC1363.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.4.0) (interfaces/IERC1363.sol)
+
+pragma solidity >=0.6.2;
+
+
+/**
+ * @title IERC1363
+ * @dev Interface of the ERC-1363 standard as defined in the https://eips.ethereum.org/EIPS/eip-1363[ERC-1363].
+ *
+ * Defines an extension interface for ERC-20 tokens that supports executing code on a recipient contract
+ * after `transfer` or `transferFrom`, or code on a spender contract after `approve`, in a single transaction.
+ */
+interface IERC1363 is IERC20, IERC165 {
+    /*
+     * Note: the ERC-165 identifier for this interface is 0xb0202a11.
+     * 0xb0202a11 ===
+     *   bytes4(keccak256('transferAndCall(address,uint256)')) ^
+     *   bytes4(keccak256('transferAndCall(address,uint256,bytes)')) ^
+     *   bytes4(keccak256('transferFromAndCall(address,address,uint256)')) ^
+     *   bytes4(keccak256('transferFromAndCall(address,address,uint256,bytes)')) ^
+     *   bytes4(keccak256('approveAndCall(address,uint256)')) ^
+     *   bytes4(keccak256('approveAndCall(address,uint256,bytes)'))
+     */
+
+    /**
+     * @dev Moves a `value` amount of tokens from the caller's account to `to`
+     * and then calls {IERC1363Receiver-onTransferReceived} on `to`.
+     * @param to The address which you want to transfer to.
+     * @param value The amount of tokens to be transferred.
+     * @return A boolean value indicating whether the operation succeeded unless throwing.
+     */
+    function transferAndCall(address to, uint256 value) external returns (bool);
+
+    /**
+     * @dev Moves a `value` amount of tokens from the caller's account to `to`
+     * and then calls {IERC1363Receiver-onTransferReceived} on `to`.
+     * @param to The address which you want to transfer to.
+     * @param value The amount of tokens to be transferred.
+     * @param data Additional data with no specified format, sent in call to `to`.
+     * @return A boolean value indicating whether the operation succeeded unless throwing.
+     */
+    function transferAndCall(address to, uint256 value, bytes calldata data) external returns (bool);
+
+    /**
+     * @dev Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism
+     * and then calls {IERC1363Receiver-onTransferReceived} on `to`.
+     * @param from The address which you want to send tokens from.
+     * @param to The address which you want to transfer to.
+     * @param value The amount of tokens to be transferred.
+     * @return A boolean value indicating whether the operation succeeded unless throwing.
+     */
+    function transferFromAndCall(address from, address to, uint256 value) external returns (bool);
+
+    /**
+     * @dev Moves a `value` amount of tokens from `from` to `to` using the allowance mechanism
+     * and then calls {IERC1363Receiver-onTransferReceived} on `to`.
+     * @param from The address which you want to send tokens from.
+     * @param to The address which you want to transfer to.
+     * @param value The amount of tokens to be transferred.
+     * @param data Additional data with no specified format, sent in call to `to`.
+     * @return A boolean value indicating whether the operation succeeded unless throwing.
+     */
+    function transferFromAndCall(address from, address to, uint256 value, bytes calldata data) external returns (bool);
+
+    /**
+     * @dev Sets a `value` amount of tokens as the allowance of `spender` over the
+     * caller's tokens and then calls {IERC1363Spender-onApprovalReceived} on `spender`.
+     * @param spender The address which will spend the funds.
+     * @param value The amount of tokens to be spent.
+     * @return A boolean value indicating whether the operation succeeded unless throwing.
+     */
+    function approveAndCall(address spender, uint256 value) external returns (bool);
+
+    /**
+     * @dev Sets a `value` amount of tokens as the allowance of `spender` over the
+     * caller's tokens and then calls {IERC1363Spender-onApprovalReceived} on `spender`.
+     * @param spender The address which will spend the funds.
+     * @param value The amount of tokens to be spent.
+     * @param data Additional data with no specified format, sent in call to `spender`.
+     * @return A boolean value indicating whether the operation succeeded unless throwing.
+     */
+    function approveAndCall(address spender, uint256 value, bytes calldata data) external returns (bool);
+}
+
+
+// File @openzeppelin/contracts/interfaces/IERC1967.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.4.0) (interfaces/IERC1967.sol)
+
+pragma solidity >=0.4.11;
+
+/**
+ * @dev ERC-1967: Proxy Storage Slots. This interface contains the events defined in the ERC.
+ */
+interface IERC1967 {
+    /**
+     * @dev Emitted when the implementation is upgraded.
+     */
+    event Upgraded(address indexed implementation);
+
+    /**
+     * @dev Emitted when the admin account has changed.
+     */
+    event AdminChanged(address previousAdmin, address newAdmin);
+
+    /**
+     * @dev Emitted when the beacon is changed.
+     */
+    event BeaconUpgraded(address indexed beacon);
+}
+
+
+// File @openzeppelin/contracts/proxy/beacon/IBeacon.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.4.0) (proxy/beacon/IBeacon.sol)
+
+pragma solidity >=0.4.16;
+
+/**
+ * @dev This is the interface that {BeaconProxy} expects of its beacon.
+ */
+interface IBeacon {
+    /**
+     * @dev Must return an address that can be used as a delegate call target.
+     *
+     * {UpgradeableBeacon} will check that this address is a contract.
+     */
+    function implementation() external view returns (address);
+}
+
+
+// File @openzeppelin/contracts/utils/Errors.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.1.0) (utils/Errors.sol)
+
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Collection of common custom errors used in multiple contracts
+ *
+ * IMPORTANT: Backwards compatibility is not guaranteed in future versions of the library.
+ * It is recommended to avoid relying on the error API for critical functionality.
+ *
+ * _Available since v5.1._
+ */
+library Errors {
+    /**
+     * @dev The ETH balance of the account is not enough to perform the operation.
+     */
+    error InsufficientBalance(uint256 balance, uint256 needed);
+
+    /**
+     * @dev A call to an address target failed. The target may have reverted.
+     */
+    error FailedCall();
+
+    /**
+     * @dev The deployment failed.
+     */
+    error FailedDeployment();
+
+    /**
+     * @dev A necessary precompile is missing.
+     */
+    error MissingPrecompile(address);
+}
+
+
+// File @openzeppelin/contracts/utils/LowLevelCall.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.6.0) (utils/LowLevelCall.sol)
+
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Library of low level call functions that implement different calling strategies to deal with the return data.
+ *
+ * WARNING: Using this library requires an advanced understanding of Solidity and how the EVM works. It is recommended
+ * to use the {Address} library instead.
+ */
+library LowLevelCall {
+    /// @dev Performs a Solidity function call using a low level `call` and ignoring the return data.
+    function callNoReturn(address target, bytes memory data) internal returns (bool success) {
+        return callNoReturn(target, 0, data);
+    }
+
+    /// @dev Same as {callNoReturn-address-bytes}, but allows specifying the value to be sent in the call.
+    function callNoReturn(address target, uint256 value, bytes memory data) internal returns (bool success) {
+        assembly ("memory-safe") {
+            success := call(gas(), target, value, add(data, 0x20), mload(data), 0x00, 0x00)
+        }
+    }
+
+    /// @dev Performs a Solidity function call using a low level `call` and returns the first 64 bytes of the result
+    /// in the scratch space of memory. Useful for functions that return a tuple with two single-word values.
+    ///
+    /// WARNING: Do not assume that the results are zero if `success` is false. Memory can be already allocated
+    /// and this function doesn't zero it out.
+    function callReturn64Bytes(
+        address target,
+        bytes memory data
+    ) internal returns (bool success, bytes32 result1, bytes32 result2) {
+        return callReturn64Bytes(target, 0, data);
+    }
+
+    /// @dev Same as {callReturn64Bytes-address-bytes}, but allows specifying the value to be sent in the call.
+    function callReturn64Bytes(
+        address target,
+        uint256 value,
+        bytes memory data
+    ) internal returns (bool success, bytes32 result1, bytes32 result2) {
+        assembly ("memory-safe") {
+            success := call(gas(), target, value, add(data, 0x20), mload(data), 0x00, 0x40)
+            result1 := mload(0x00)
+            result2 := mload(0x20)
+        }
+    }
+
+    /// @dev Performs a Solidity function call using a low level `staticcall` and ignoring the return data.
+    function staticcallNoReturn(address target, bytes memory data) internal view returns (bool success) {
+        assembly ("memory-safe") {
+            success := staticcall(gas(), target, add(data, 0x20), mload(data), 0x00, 0x00)
+        }
+    }
+
+    /// @dev Performs a Solidity function call using a low level `staticcall` and returns the first 64 bytes of the result
+    /// in the scratch space of memory. Useful for functions that return a tuple with two single-word values.
+    ///
+    /// WARNING: Do not assume that the results are zero if `success` is false. Memory can be already allocated
+    /// and this function doesn't zero it out.
+    function staticcallReturn64Bytes(
+        address target,
+        bytes memory data
+    ) internal view returns (bool success, bytes32 result1, bytes32 result2) {
+        assembly ("memory-safe") {
+            success := staticcall(gas(), target, add(data, 0x20), mload(data), 0x00, 0x40)
+            result1 := mload(0x00)
+            result2 := mload(0x20)
+        }
+    }
+
+    /// @dev Performs a Solidity function call using a low level `delegatecall` and ignoring the return data.
+    function delegatecallNoReturn(address target, bytes memory data) internal returns (bool success) {
+        assembly ("memory-safe") {
+            success := delegatecall(gas(), target, add(data, 0x20), mload(data), 0x00, 0x00)
+        }
+    }
+
+    /// @dev Performs a Solidity function call using a low level `delegatecall` and returns the first 64 bytes of the result
+    /// in the scratch space of memory. Useful for functions that return a tuple with two single-word values.
+    ///
+    /// WARNING: Do not assume that the results are zero if `success` is false. Memory can be already allocated
+    /// and this function doesn't zero it out.
+    function delegatecallReturn64Bytes(
+        address target,
+        bytes memory data
+    ) internal returns (bool success, bytes32 result1, bytes32 result2) {
+        assembly ("memory-safe") {
+            success := delegatecall(gas(), target, add(data, 0x20), mload(data), 0x00, 0x40)
+            result1 := mload(0x00)
+            result2 := mload(0x20)
+        }
+    }
+
+    /// @dev Returns the size of the return data buffer.
+    function returnDataSize() internal pure returns (uint256 size) {
+        assembly ("memory-safe") {
+            size := returndatasize()
+        }
+    }
+
+    /// @dev Returns a buffer containing the return data from the last call.
+    function returnData() internal pure returns (bytes memory result) {
+        assembly ("memory-safe") {
+            result := mload(0x40)
+            mstore(result, returndatasize())
+            returndatacopy(add(result, 0x20), 0x00, returndatasize())
+            mstore(0x40, add(result, add(0x20, returndatasize())))
+        }
+    }
+
+    /// @dev Revert with the return data from the last call.
+    function bubbleRevert() internal pure {
+        assembly ("memory-safe") {
+            let fmp := mload(0x40)
+            returndatacopy(fmp, 0x00, returndatasize())
+            revert(fmp, returndatasize())
+        }
+    }
+
+    function bubbleRevert(bytes memory returndata) internal pure {
+        assembly ("memory-safe") {
+            revert(add(returndata, 0x20), mload(returndata))
+        }
+    }
+}
+
+
+// File @openzeppelin/contracts/utils/Address.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.5.0) (utils/Address.sol)
+
+pragma solidity ^0.8.20;
+
+
+/**
+ * @dev Collection of functions related to the address type
+ */
+library Address {
+    /**
+     * @dev There's no code at `target` (it is not a contract).
+     */
+    error AddressEmptyCode(address target);
+
+    /**
+     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to
+     * `recipient`, forwarding all available gas and reverting on errors.
+     *
+     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
+     * of certain opcodes, possibly making contracts go over the 2300 gas limit
+     * imposed by `transfer`, making them unable to receive funds via
+     * `transfer`. {sendValue} removes this limitation.
+     *
+     * https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now/[Learn more].
+     *
+     * IMPORTANT: because control is transferred to `recipient`, care must be
+     * taken to not create reentrancy vulnerabilities. Consider using
+     * {ReentrancyGuard} or the
+     * https://solidity.readthedocs.io/en/v0.8.20/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].
+     */
+    function sendValue(address payable recipient, uint256 amount) internal {
+        if (address(this).balance < amount) {
+            revert Errors.InsufficientBalance(address(this).balance, amount);
+        }
+        if (LowLevelCall.callNoReturn(recipient, amount, "")) {
+            // call successful, nothing to do
+            return;
+        } else if (LowLevelCall.returnDataSize() > 0) {
+            LowLevelCall.bubbleRevert();
+        } else {
+            revert Errors.FailedCall();
+        }
+    }
+
+    /**
+     * @dev Performs a Solidity function call using a low level `call`. A
+     * plain `call` is an unsafe replacement for a function call: use this
+     * function instead.
+     *
+     * If `target` reverts with a revert reason or custom error, it is bubbled
+     * up by this function (like regular Solidity function calls). However, if
+     * the call reverted with no returned reason, this function reverts with a
+     * {Errors.FailedCall} error.
+     *
+     * Returns the raw returned data. To convert to the expected return value,
+     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
+     *
+     * Requirements:
+     *
+     * - `target` must be a contract.
+     * - calling `target` with `data` must not revert.
+     */
+    function functionCall(address target, bytes memory data) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, 0);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but also transferring `value` wei to `target`.
+     *
+     * Requirements:
+     *
+     * - the calling contract must have an ETH balance of at least `value`.
+     * - the called Solidity function must be `payable`.
+     */
+    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {
+        if (address(this).balance < value) {
+            revert Errors.InsufficientBalance(address(this).balance, value);
+        }
+        bool success = LowLevelCall.callNoReturn(target, value, data);
+        if (success && (LowLevelCall.returnDataSize() > 0 || target.code.length > 0)) {
+            return LowLevelCall.returnData();
+        } else if (success) {
+            revert AddressEmptyCode(target);
+        } else if (LowLevelCall.returnDataSize() > 0) {
+            LowLevelCall.bubbleRevert();
+        } else {
+            revert Errors.FailedCall();
+        }
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but performing a static call.
+     */
+    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {
+        bool success = LowLevelCall.staticcallNoReturn(target, data);
+        if (success && (LowLevelCall.returnDataSize() > 0 || target.code.length > 0)) {
+            return LowLevelCall.returnData();
+        } else if (success) {
+            revert AddressEmptyCode(target);
+        } else if (LowLevelCall.returnDataSize() > 0) {
+            LowLevelCall.bubbleRevert();
+        } else {
+            revert Errors.FailedCall();
+        }
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+     * but performing a delegate call.
+     */
+    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {
+        bool success = LowLevelCall.delegatecallNoReturn(target, data);
+        if (success && (LowLevelCall.returnDataSize() > 0 || target.code.length > 0)) {
+            return LowLevelCall.returnData();
+        } else if (success) {
+            revert AddressEmptyCode(target);
+        } else if (LowLevelCall.returnDataSize() > 0) {
+            LowLevelCall.bubbleRevert();
+        } else {
+            revert Errors.FailedCall();
+        }
+    }
+
+    /**
+     * @dev Tool to verify that a low level call to smart-contract was successful, and reverts if the target
+     * was not a contract or bubbling up the revert reason (falling back to {Errors.FailedCall}) in case
+     * of an unsuccessful call.
+     *
+     * NOTE: This function is DEPRECATED and may be removed in the next major release.
+     */
+    function verifyCallResultFromTarget(
+        address target,
+        bool success,
+        bytes memory returndata
+    ) internal view returns (bytes memory) {
+        // only check if target is a contract if the call was successful and the return data is empty
+        // otherwise we already know that it was a contract
+        if (success && (returndata.length > 0 || target.code.length > 0)) {
+            return returndata;
+        } else if (success) {
+            revert AddressEmptyCode(target);
+        } else if (returndata.length > 0) {
+            LowLevelCall.bubbleRevert(returndata);
+        } else {
+            revert Errors.FailedCall();
+        }
+    }
+
+    /**
+     * @dev Tool to verify that a low level call was successful, and reverts if it wasn't, either by bubbling the
+     * revert reason or with a default {Errors.FailedCall} error.
+     */
+    function verifyCallResult(bool success, bytes memory returndata) internal pure returns (bytes memory) {
+        if (success) {
+            return returndata;
+        } else if (returndata.length > 0) {
+            LowLevelCall.bubbleRevert(returndata);
+        } else {
+            revert Errors.FailedCall();
+        }
+    }
+}
+
+
+// File @openzeppelin/contracts/utils/StorageSlot.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.1.0) (utils/StorageSlot.sol)
+// This file was procedurally generated from scripts/generate/templates/StorageSlot.js.
+
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Library for reading and writing primitive types to specific storage slots.
+ *
+ * Storage slots are often used to avoid storage conflict when dealing with upgradeable contracts.
+ * This library helps with reading and writing to such slots without the need for inline assembly.
+ *
+ * The functions in this library return Slot structs that contain a `value` member that can be used to read or write.
+ *
+ * Example usage to set ERC-1967 implementation slot:
+ * ```solidity
+ * contract ERC1967 {
+ *     // Define the slot. Alternatively, use the SlotDerivation library to derive the slot.
+ *     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+ *
+ *     function _getImplementation() internal view returns (address) {
+ *         return StorageSlot.getAddressSlot(_IMPLEMENTATION_SLOT).value;
+ *     }
+ *
+ *     function _setImplementation(address newImplementation) internal {
+ *         require(newImplementation.code.length > 0);
+ *         StorageSlot.getAddressSlot(_IMPLEMENTATION_SLOT).value = newImplementation;
+ *     }
+ * }
+ * ```
+ *
+ * TIP: Consider using this library along with {SlotDerivation}.
+ */
+library StorageSlot {
+    struct AddressSlot {
+        address value;
+    }
+
+    struct BooleanSlot {
+        bool value;
+    }
+
+    struct Bytes32Slot {
+        bytes32 value;
+    }
+
+    struct Uint256Slot {
+        uint256 value;
+    }
+
+    struct Int256Slot {
+        int256 value;
+    }
+
+    struct StringSlot {
+        string value;
+    }
+
+    struct BytesSlot {
+        bytes value;
+    }
+
+    /**
+     * @dev Returns an `AddressSlot` with member `value` located at `slot`.
+     */
+    function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
+        assembly ("memory-safe") {
+            r.slot := slot
+        }
+    }
+
+    /**
+     * @dev Returns a `BooleanSlot` with member `value` located at `slot`.
+     */
+    function getBooleanSlot(bytes32 slot) internal pure returns (BooleanSlot storage r) {
+        assembly ("memory-safe") {
+            r.slot := slot
+        }
+    }
+
+    /**
+     * @dev Returns a `Bytes32Slot` with member `value` located at `slot`.
+     */
+    function getBytes32Slot(bytes32 slot) internal pure returns (Bytes32Slot storage r) {
+        assembly ("memory-safe") {
+            r.slot := slot
+        }
+    }
+
+    /**
+     * @dev Returns a `Uint256Slot` with member `value` located at `slot`.
+     */
+    function getUint256Slot(bytes32 slot) internal pure returns (Uint256Slot storage r) {
+        assembly ("memory-safe") {
+            r.slot := slot
+        }
+    }
+
+    /**
+     * @dev Returns a `Int256Slot` with member `value` located at `slot`.
+     */
+    function getInt256Slot(bytes32 slot) internal pure returns (Int256Slot storage r) {
+        assembly ("memory-safe") {
+            r.slot := slot
+        }
+    }
+
+    /**
+     * @dev Returns a `StringSlot` with member `value` located at `slot`.
+     */
+    function getStringSlot(bytes32 slot) internal pure returns (StringSlot storage r) {
+        assembly ("memory-safe") {
+            r.slot := slot
+        }
+    }
+
+    /**
+     * @dev Returns an `StringSlot` representation of the string storage pointer `store`.
+     */
+    function getStringSlot(string storage store) internal pure returns (StringSlot storage r) {
+        assembly ("memory-safe") {
+            r.slot := store.slot
+        }
+    }
+
+    /**
+     * @dev Returns a `BytesSlot` with member `value` located at `slot`.
+     */
+    function getBytesSlot(bytes32 slot) internal pure returns (BytesSlot storage r) {
+        assembly ("memory-safe") {
+            r.slot := slot
+        }
+    }
+
+    /**
+     * @dev Returns an `BytesSlot` representation of the bytes storage pointer `store`.
+     */
+    function getBytesSlot(bytes storage store) internal pure returns (BytesSlot storage r) {
+        assembly ("memory-safe") {
+            r.slot := store.slot
+        }
+    }
+}
+
+
+// File @openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.6.0) (proxy/ERC1967/ERC1967Utils.sol)
+
+pragma solidity ^0.8.21;
+
+
+
+
+/**
+ * @dev This library provides getters and event emitting update functions for
+ * https://eips.ethereum.org/EIPS/eip-1967[ERC-1967] slots.
+ */
+library ERC1967Utils {
+    /**
+     * @dev Storage slot with the address of the current implementation.
+     * This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
+     */
+    // solhint-disable-next-line private-vars-leading-underscore
+    bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+
+    /**
+     * @dev The `implementation` of the proxy is invalid.
+     */
+    error ERC1967InvalidImplementation(address implementation);
+
+    /**
+     * @dev The `admin` of the proxy is invalid.
+     */
+    error ERC1967InvalidAdmin(address admin);
+
+    /**
+     * @dev The `beacon` of the proxy is invalid.
+     */
+    error ERC1967InvalidBeacon(address beacon);
+
+    /**
+     * @dev An upgrade function sees `msg.value > 0` that may be lost.
+     */
+    error ERC1967NonPayable();
+
+    /**
+     * @dev Returns the current implementation address.
+     */
+    function getImplementation() internal view returns (address) {
+        return StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT).value;
+    }
+
+    /**
+     * @dev Stores a new address in the ERC-1967 implementation slot.
+     */
+    function _setImplementation(address newImplementation) private {
+        if (newImplementation.code.length == 0) {
+            revert ERC1967InvalidImplementation(newImplementation);
+        }
+        StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT).value = newImplementation;
+    }
+
+    /**
+     * @dev Performs implementation upgrade with additional setup call if data is nonempty.
+     * This function is payable only if the setup call is performed, otherwise `msg.value` is rejected
+     * to avoid stuck value in the contract.
+     *
+     * Emits an {IERC1967-Upgraded} event.
+     */
+    function upgradeToAndCall(address newImplementation, bytes memory data) internal {
+        _setImplementation(newImplementation);
+        emit IERC1967.Upgraded(newImplementation);
+
+        if (data.length > 0) {
+            Address.functionDelegateCall(newImplementation, data);
+        } else {
+            _checkNonPayable();
+        }
+    }
+
+    /**
+     * @dev Storage slot with the admin of the contract.
+     * This is the keccak-256 hash of "eip1967.proxy.admin" subtracted by 1.
+     */
+    // solhint-disable-next-line private-vars-leading-underscore
+    bytes32 internal constant ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+
+    /**
+     * @dev Returns the current admin.
+     *
+     * TIP: To get this value clients can read directly from the storage slot shown below (specified by ERC-1967) using
+     * the https://ethereum.org/developers/docs/apis/json-rpc/#eth_getstorageat[`eth_getStorageAt`] RPC call.
+     * `0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103`
+     */
+    function getAdmin() internal view returns (address) {
+        return StorageSlot.getAddressSlot(ADMIN_SLOT).value;
+    }
+
+    /**
+     * @dev Stores a new address in the ERC-1967 admin slot.
+     */
+    function _setAdmin(address newAdmin) private {
+        if (newAdmin == address(0)) {
+            revert ERC1967InvalidAdmin(address(0));
+        }
+        StorageSlot.getAddressSlot(ADMIN_SLOT).value = newAdmin;
+    }
+
+    /**
+     * @dev Changes the admin of the proxy.
+     *
+     * Emits an {IERC1967-AdminChanged} event.
+     */
+    function changeAdmin(address newAdmin) internal {
+        emit IERC1967.AdminChanged(getAdmin(), newAdmin);
+        _setAdmin(newAdmin);
+    }
+
+    /**
+     * @dev The storage slot of the UpgradeableBeacon contract which defines the implementation for this proxy.
+     * This is the keccak-256 hash of "eip1967.proxy.beacon" subtracted by 1.
+     */
+    // solhint-disable-next-line private-vars-leading-underscore
+    bytes32 internal constant BEACON_SLOT = 0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
+
+    /**
+     * @dev Returns the current beacon.
+     */
+    function getBeacon() internal view returns (address) {
+        return StorageSlot.getAddressSlot(BEACON_SLOT).value;
+    }
+
+    /**
+     * @dev Stores a new beacon in the ERC-1967 beacon slot.
+     */
+    function _setBeacon(address newBeacon) private {
+        if (newBeacon.code.length == 0) {
+            revert ERC1967InvalidBeacon(newBeacon);
+        }
+
+        StorageSlot.getAddressSlot(BEACON_SLOT).value = newBeacon;
+
+        address beaconImplementation = IBeacon(newBeacon).implementation();
+        if (beaconImplementation.code.length == 0) {
+            revert ERC1967InvalidImplementation(beaconImplementation);
+        }
+    }
+
+    /**
+     * @dev Change the beacon and trigger a setup call if data is nonempty.
+     * This function is payable only if the setup call is performed, otherwise `msg.value` is rejected
+     * to avoid stuck value in the contract.
+     *
+     * Emits an {IERC1967-BeaconUpgraded} event.
+     *
+     * CAUTION: Invoking this function has no effect on an instance of {BeaconProxy} since v5, since
+     * it uses an immutable beacon without looking at the value of the ERC-1967 beacon slot for
+     * efficiency.
+     */
+    function upgradeBeaconToAndCall(address newBeacon, bytes memory data) internal {
+        _setBeacon(newBeacon);
+        emit IERC1967.BeaconUpgraded(newBeacon);
+
+        if (data.length > 0) {
+            Address.functionDelegateCall(IBeacon(newBeacon).implementation(), data);
+        } else {
+            _checkNonPayable();
+        }
+    }
+
+    /**
+     * @dev Reverts if `msg.value` is not zero. It can be used to avoid `msg.value` stuck in the contract
+     * if an upgrade doesn't perform an initialization call.
+     */
+    function _checkNonPayable() private {
+        if (msg.value > 0) {
+            revert ERC1967NonPayable();
+        }
+    }
+}
+
+
+// File @openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol@v5.6.1
+
+// Original license: SPDX_License_Identifier: MIT
+// OpenZeppelin Contracts (last updated v5.5.0) (token/ERC20/utils/SafeERC20.sol)
+
+pragma solidity ^0.8.20;
+
+
+/**
+ * @title SafeERC20
+ * @dev Wrappers around ERC-20 operations that throw on failure (when the token
+ * contract returns false). Tokens that return no value (and instead revert or
+ * throw on failure) are also supported, non-reverting calls are assumed to be
+ * successful.
+ * To use this library you can add a `using SafeERC20 for IERC20;` statement to your contract,
+ * which allows you to call the safe operations as `token.safeTransfer(...)`, etc.
+ */
+library SafeERC20 {
+    /**
+     * @dev An operation with an ERC-20 token failed.
+     */
+    error SafeERC20FailedOperation(address token);
+
+    /**
+     * @dev Indicates a failed `decreaseAllowance` request.
+     */
+    error SafeERC20FailedDecreaseAllowance(address spender, uint256 currentAllowance, uint256 requestedDecrease);
+
+    /**
+     * @dev Transfer `value` amount of `token` from the calling contract to `to`. If `token` returns no value,
+     * non-reverting calls are assumed to be successful.
+     */
+    function safeTransfer(IERC20 token, address to, uint256 value) internal {
+        if (!_safeTransfer(token, to, value, true)) {
+            revert SafeERC20FailedOperation(address(token));
+        }
+    }
+
+    /**
+     * @dev Transfer `value` amount of `token` from `from` to `to`, spending the approval given by `from` to the
+     * calling contract. If `token` returns no value, non-reverting calls are assumed to be successful.
+     */
+    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
+        if (!_safeTransferFrom(token, from, to, value, true)) {
+            revert SafeERC20FailedOperation(address(token));
+        }
+    }
+
+    /**
+     * @dev Variant of {safeTransfer} that returns a bool instead of reverting if the operation is not successful.
+     */
+    function trySafeTransfer(IERC20 token, address to, uint256 value) internal returns (bool) {
+        return _safeTransfer(token, to, value, false);
+    }
+
+    /**
+     * @dev Variant of {safeTransferFrom} that returns a bool instead of reverting if the operation is not successful.
+     */
+    function trySafeTransferFrom(IERC20 token, address from, address to, uint256 value) internal returns (bool) {
+        return _safeTransferFrom(token, from, to, value, false);
+    }
+
+    /**
+     * @dev Increase the calling contract's allowance toward `spender` by `value`. If `token` returns no value,
+     * non-reverting calls are assumed to be successful.
+     *
+     * IMPORTANT: If the token implements ERC-7674 (ERC-20 with temporary allowance), and if the "client"
+     * smart contract uses ERC-7674 to set temporary allowances, then the "client" smart contract should avoid using
+     * this function. Performing a {safeIncreaseAllowance} or {safeDecreaseAllowance} operation on a token contract
+     * that has a non-zero temporary allowance (for that particular owner-spender) will result in unexpected behavior.
+     */
+    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
+        uint256 oldAllowance = token.allowance(address(this), spender);
+        forceApprove(token, spender, oldAllowance + value);
+    }
+
+    /**
+     * @dev Decrease the calling contract's allowance toward `spender` by `requestedDecrease`. If `token` returns no
+     * value, non-reverting calls are assumed to be successful.
+     *
+     * IMPORTANT: If the token implements ERC-7674 (ERC-20 with temporary allowance), and if the "client"
+     * smart contract uses ERC-7674 to set temporary allowances, then the "client" smart contract should avoid using
+     * this function. Performing a {safeIncreaseAllowance} or {safeDecreaseAllowance} operation on a token contract
+     * that has a non-zero temporary allowance (for that particular owner-spender) will result in unexpected behavior.
+     */
+    function safeDecreaseAllowance(IERC20 token, address spender, uint256 requestedDecrease) internal {
+        unchecked {
+            uint256 currentAllowance = token.allowance(address(this), spender);
+            if (currentAllowance < requestedDecrease) {
+                revert SafeERC20FailedDecreaseAllowance(spender, currentAllowance, requestedDecrease);
+            }
+            forceApprove(token, spender, currentAllowance - requestedDecrease);
+        }
+    }
+
+    /**
+     * @dev Set the calling contract's allowance toward `spender` to `value`. If `token` returns no value,
+     * non-reverting calls are assumed to be successful. Meant to be used with tokens that require the approval
+     * to be set to zero before setting it to a non-zero value, such as USDT.
+     *
+     * NOTE: If the token implements ERC-7674, this function will not modify any temporary allowance. This function
+     * only sets the "standard" allowance. Any temporary allowance will remain active, in addition to the value being
+     * set here.
+     */
+    function forceApprove(IERC20 token, address spender, uint256 value) internal {
+        if (!_safeApprove(token, spender, value, false)) {
+            if (!_safeApprove(token, spender, 0, true)) revert SafeERC20FailedOperation(address(token));
+            if (!_safeApprove(token, spender, value, true)) revert SafeERC20FailedOperation(address(token));
+        }
+    }
+
+    /**
+     * @dev Performs an {ERC1363} transferAndCall, with a fallback to the simple {ERC20} transfer if the target has no
+     * code. This can be used to implement an {ERC721}-like safe transfer that relies on {ERC1363} checks when
+     * targeting contracts.
+     *
+     * Reverts if the returned value is other than `true`.
+     */
+    function transferAndCallRelaxed(IERC1363 token, address to, uint256 value, bytes memory data) internal {
+        if (to.code.length == 0) {
+            safeTransfer(token, to, value);
+        } else if (!token.transferAndCall(to, value, data)) {
+            revert SafeERC20FailedOperation(address(token));
+        }
+    }
+
+    /**
+     * @dev Performs an {ERC1363} transferFromAndCall, with a fallback to the simple {ERC20} transferFrom if the target
+     * has no code. This can be used to implement an {ERC721}-like safe transfer that relies on {ERC1363} checks when
+     * targeting contracts.
+     *
+     * Reverts if the returned value is other than `true`.
+     */
+    function transferFromAndCallRelaxed(
+        IERC1363 token,
+        address from,
+        address to,
+        uint256 value,
+        bytes memory data
+    ) internal {
+        if (to.code.length == 0) {
+            safeTransferFrom(token, from, to, value);
+        } else if (!token.transferFromAndCall(from, to, value, data)) {
+            revert SafeERC20FailedOperation(address(token));
+        }
+    }
+
+    /**
+     * @dev Performs an {ERC1363} approveAndCall, with a fallback to the simple {ERC20} approve if the target has no
+     * code. This can be used to implement an {ERC721}-like safe transfer that rely on {ERC1363} checks when
+     * targeting contracts.
+     *
+     * NOTE: When the recipient address (`to`) has no code (i.e. is an EOA), this function behaves as {forceApprove}.
+     * Oppositely, when the recipient address (`to`) has code, this function only attempts to call {ERC1363-approveAndCall}
+     * once without retrying, and relies on the returned value to be true.
+     *
+     * Reverts if the returned value is other than `true`.
+     */
+    function approveAndCallRelaxed(IERC1363 token, address to, uint256 value, bytes memory data) internal {
+        if (to.code.length == 0) {
+            forceApprove(token, to, value);
+        } else if (!token.approveAndCall(to, value, data)) {
+            revert SafeERC20FailedOperation(address(token));
+        }
+    }
+
+    /**
+     * @dev Imitates a Solidity `token.transfer(to, value)` call, relaxing the requirement on the return value: the
+     * return value is optional (but if data is returned, it must not be false).
+     *
+     * @param token The token targeted by the call.
+     * @param to The recipient of the tokens
+     * @param value The amount of token to transfer
+     * @param bubble Behavior switch if the transfer call reverts: bubble the revert reason or return a false boolean.
+     */
+    function _safeTransfer(IERC20 token, address to, uint256 value, bool bubble) private returns (bool success) {
+        bytes4 selector = IERC20.transfer.selector;
+
+        assembly ("memory-safe") {
+            let fmp := mload(0x40)
+            mstore(0x00, selector)
+            mstore(0x04, and(to, shr(96, not(0))))
+            mstore(0x24, value)
+            success := call(gas(), token, 0, 0x00, 0x44, 0x00, 0x20)
+            // if call success and return is true, all is good.
+            // otherwise (not success or return is not true), we need to perform further checks
+            if iszero(and(success, eq(mload(0x00), 1))) {
+                // if the call was a failure and bubble is enabled, bubble the error
+                if and(iszero(success), bubble) {
+                    returndatacopy(fmp, 0x00, returndatasize())
+                    revert(fmp, returndatasize())
+                }
+                // if the return value is not true, then the call is only successful if:
+                // - the token address has code
+                // - the returndata is empty
+                success := and(success, and(iszero(returndatasize()), gt(extcodesize(token), 0)))
+            }
+            mstore(0x40, fmp)
+        }
+    }
+
+    /**
+     * @dev Imitates a Solidity `token.transferFrom(from, to, value)` call, relaxing the requirement on the return
+     * value: the return value is optional (but if data is returned, it must not be false).
+     *
+     * @param token The token targeted by the call.
+     * @param from The sender of the tokens
+     * @param to The recipient of the tokens
+     * @param value The amount of token to transfer
+     * @param bubble Behavior switch if the transfer call reverts: bubble the revert reason or return a false boolean.
+     */
+    function _safeTransferFrom(
+        IERC20 token,
+        address from,
+        address to,
+        uint256 value,
+        bool bubble
+    ) private returns (bool success) {
+        bytes4 selector = IERC20.transferFrom.selector;
+
+        assembly ("memory-safe") {
+            let fmp := mload(0x40)
+            mstore(0x00, selector)
+            mstore(0x04, and(from, shr(96, not(0))))
+            mstore(0x24, and(to, shr(96, not(0))))
+            mstore(0x44, value)
+            success := call(gas(), token, 0, 0x00, 0x64, 0x00, 0x20)
+            // if call success and return is true, all is good.
+            // otherwise (not success or return is not true), we need to perform further checks
+            if iszero(and(success, eq(mload(0x00), 1))) {
+                // if the call was a failure and bubble is enabled, bubble the error
+                if and(iszero(success), bubble) {
+                    returndatacopy(fmp, 0x00, returndatasize())
+                    revert(fmp, returndatasize())
+                }
+                // if the return value is not true, then the call is only successful if:
+                // - the token address has code
+                // - the returndata is empty
+                success := and(success, and(iszero(returndatasize()), gt(extcodesize(token), 0)))
+            }
+            mstore(0x40, fmp)
+            mstore(0x60, 0)
+        }
+    }
+
+    /**
+     * @dev Imitates a Solidity `token.approve(spender, value)` call, relaxing the requirement on the return value:
+     * the return value is optional (but if data is returned, it must not be false).
+     *
+     * @param token The token targeted by the call.
+     * @param spender The spender of the tokens
+     * @param value The amount of token to transfer
+     * @param bubble Behavior switch if the transfer call reverts: bubble the revert reason or return a false boolean.
+     */
+    function _safeApprove(IERC20 token, address spender, uint256 value, bool bubble) private returns (bool success) {
+        bytes4 selector = IERC20.approve.selector;
+
+        assembly ("memory-safe") {
+            let fmp := mload(0x40)
+            mstore(0x00, selector)
+            mstore(0x04, and(spender, shr(96, not(0))))
+            mstore(0x24, value)
+            success := call(gas(), token, 0, 0x00, 0x44, 0x00, 0x20)
+            // if call success and return is true, all is good.
+            // otherwise (not success or return is not true), we need to perform further checks
+            if iszero(and(success, eq(mload(0x00), 1))) {
+                // if the call was a failure and bubble is enabled, bubble the error
+                if and(iszero(success), bubble) {
+                    returndatacopy(fmp, 0x00, returndatasize())
+                    revert(fmp, returndatasize())
+                }
+                // if the return value is not true, then the call is only successful if:
+                // - the token address has code
+                // - the returndata is empty
+                success := and(success, and(iszero(returndatasize()), gt(extcodesize(token), 0)))
+            }
+            mstore(0x40, fmp)
+        }
+    }
+}
+
+
+// File contracts/utils/TronUUPSUpgradeable.sol
+
+// contracts/utils/TronUUPSUpgradeable.sol
+// Original license: SPDX_License_Identifier: MIT
+pragma solidity ^0.8.22;
+/**
+ * @title  TronUUPSUpgradeable
+ * @notice Drop-in replacement for OpenZeppelin's UUPSUpgradeable that is compatible with
+ *         TVM (TRON Virtual Machine).
+ *
+ * @dev    Problem:
+ *         OZ 5.x UUPSUpgradeable uses `address private immutable __self = address(this)`.
+ *         The Solidity compiler stores immutable values directly in contract bytecode via the
+ *         IMMUTABLE opcode family (PUSH_IMMUTABLE / ASSIGN_IMMUTABLE). TVM does not support
+ *         these opcodes, causing compilation or deployment failures on Tron networks.
+ *
+ *         Solution:
+ *         Store `__self` in a dedicated storage slot (keccak256 hash-derived, separate from
+ *         the main contract layout) instead of bytecode. The value is written once during
+ *         `__TronUUPSUpgradeable_init()` and is functionally equivalent to the immutable.
+ *         This contract is safe to use on EVM chains too ΓÇö the only difference is a single
+ *         SLOAD per proxy-check instead of an inline bytecode read.
+ *
+ *         Usage:
+ *         1. Inherit TronUUPSUpgradeable instead of UUPSUpgradeable.
+ *         2. Call __TronUUPSUpgradeable_init() inside the contract's initializer.
+ *         3. Override _authorizeUpgrade() with your access-control guard.
+ */
+abstract contract TronUUPSUpgradeable is Initializable {
+    // Dedicated storage slot for the implementation self-address.
+    // Derived as keccak256("idrp.tron.uups.__self") to avoid collisions with
+    // sequentially-allocated Solidity storage slots (which start at slot 0).
+    bytes32 private constant _SELF_SLOT =
+        keccak256("idrp.tron.uups.__self");
+
+    error TronUUPSUnauthorizedCallContext();
+
+    // ΓöÇΓöÇΓöÇ Modifiers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    /// @dev Reverts when called on the bare implementation (i.e., NOT through a proxy).
+    modifier onlyProxy() {
+        _checkProxy();
+        _;
+    }
+
+    /// @dev Reverts when called through a proxy (i.e., via delegatecall).
+    modifier notDelegated() {
+        _checkNotDelegated();
+        _;
+    }
+
+    // ΓöÇΓöÇΓöÇ Initializer ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    /// @dev Write the implementation address into storage once, at initializer time.
+    ///      Must be called in the inheriting contract's initializer.
+    // solhint-disable-next-line func-name-mixedcase
+    function __TronUUPSUpgradeable_init() internal onlyInitializing {
+        _storeSelf(address(this));
+    }
+
+    // ΓöÇΓöÇΓöÇ Public API ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    /// @notice Returns the ERC-1967 implementation slot UUID (standard UUPS interface).
+    function proxiableUUID() external view virtual notDelegated returns (bytes32) {
+        return ERC1967Utils.IMPLEMENTATION_SLOT;
+    }
+
+    /// @notice Upgrade the proxy to a new implementation and optionally call an initializer.
+    /// @dev    Can only be called through the proxy (enforced by onlyProxy).
+    function upgradeToAndCall(
+        address newImplementation,
+        bytes memory data
+    ) public payable virtual onlyProxy {
+        _authorizeUpgrade(newImplementation);
+        ERC1967Utils.upgradeToAndCall(newImplementation, data);
+    }
+
+    // ΓöÇΓöÇΓöÇ Internal API ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    /// @dev Override this with your authorization guard (e.g., onlyRole(UPGRADER_ROLE)).
+    function _authorizeUpgrade(address newImplementation) internal virtual;
+
+    function _checkProxy() internal view virtual {
+        address self = _loadSelf();
+        // Revert if we are NOT being called via delegatecall through a proxy:
+        //   address(this) == self  ΓåÆ  called on implementation directly
+        //   getImplementation() != self  ΓåÆ  proxy points to a different implementation
+        if (address(this) == self || ERC1967Utils.getImplementation() != self) {
+            revert TronUUPSUnauthorizedCallContext();
+        }
+    }
+
+    function _checkNotDelegated() internal view virtual {
+        // Revert if we ARE being called via delegatecall (address(this) is proxy address,
+        // not the implementation address we stored in __self).
+        if (address(this) != _loadSelf()) {
+            revert TronUUPSUnauthorizedCallContext();
+        }
+    }
+
+    // ΓöÇΓöÇΓöÇ Storage helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    function _loadSelf() private view returns (address self_) {
+        bytes32 slot = _SELF_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            self_ := sload(slot)
+        }
+    }
+
+    function _storeSelf(address self_) private {
+        bytes32 slot = _SELF_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            sstore(slot, self_)
+        }
     }
 }
 
@@ -5522,20 +6592,16 @@ abstract contract ERC20PermitUpgradeable is Initializable, ERC20Upgradeable, IER
 // Original license: SPDX_License_Identifier: MIT
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.22;
-
-
-
-
-
-
 contract IDRP is
     Initializable,
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
     AccessControlUpgradeable,
     ERC20PermitUpgradeable,
-    UUPSUpgradeable
+    TronUUPSUpgradeable
 {
+    using SafeERC20 for IERC20;
+
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant FREEZER_ROLE = keccak256("FREEZER_ROLE");
@@ -5546,12 +6612,20 @@ contract IDRP is
 
     address public depositoryWallet;
 
+    /// @notice Maximum token supply enforcing the 1:1 Rupiah reserve peg.
+    /// @dev    0 means uncapped (only valid before admin calls setMaxSupply for the first time).
+    ///         Once set it can only be raised or lowered by DEFAULT_ADMIN_ROLE.
+    uint256 public maxSupply;
+
     /// @dev Events
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
+    event DepositoryWalletSet(address indexed previousWallet, address indexed newWallet);
+    event MaxSupplyUpdated(uint256 indexed previousMaxSupply, uint256 indexed newMaxSupply);
 
     /// @dev Errors
     error FrozenAccount();
+    error ExceedsMaxSupply(uint256 requested, uint256 available);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -5563,7 +6637,7 @@ contract IDRP is
         __ERC20Pausable_init();
         __AccessControl_init();
         __ERC20Permit_init("IDRP");
-        __UUPSUpgradeable_init();
+        __TronUUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, superAdmin);
         _grantRole(PAUSER_ROLE, superAdmin);
@@ -5587,31 +6661,38 @@ contract IDRP is
     /// @notice Mint stablecoins to a specific address
     /// @param amount The amount of stablecoins to mint
     function mint(uint256 amount) public onlyRole(MINTER_ROLE) whenNotPaused {
-        if (frozen[depositoryWallet]) revert FrozenAccount();
-        _mint(depositoryWallet, amount);
+        // Cache storage reads ΓÇö each SLOAD costs 100 energy on Tron (warm) / 2100 (cold)
+        address wallet = depositoryWallet;
+        require(wallet != address(0), "Depository wallet not set");
+        if (frozen[wallet]) revert FrozenAccount();
+        if (maxSupply != 0) {
+            uint256 available = maxSupply - totalSupply();
+            if (amount > available) revert ExceedsMaxSupply(amount, available);
+        }
+        _mint(wallet, amount);
     }
 
     /// @notice Burn stablecoins from a specific address
     /// @param from The address from which the stablecoins will be burned
     /// @param amount The amount of stablecoins to burn
+    /// @dev If `from` is the IDRPController (caller), no allowance check is needed
+    /// since the user has already transferred tokens to the controller.
+    /// If `from` is another address, allowance check is required.
     function burn(
         address from,
         uint256 amount
     ) public onlyRole(MINTER_ROLE) whenNotPaused {
         if (frozen[from]) revert FrozenAccount();
 
-        // If `from` is not depositoryWallet, ensure the caller has allowance
-        // depositoryWallet is a cold wallet and can't approve
-        // the contract to burn tokens on its behalf
-        if (from != depositoryWallet) {
-            // Ensure the MINTER_ROLE has an allowance from 'from'
-            uint256 currentAllowance = allowance(from, _msgSender());
+        // Cache _msgSender() ΓÇö avoids a repeated virtual call
+        address caller = _msgSender();
+        if (from != caller && from != depositoryWallet) {
+            uint256 currentAllowance = allowance(from, caller);
             require(
                 currentAllowance >= amount,
                 "Burn amount exceeds allowance"
             );
-            // Deduct the burned amount from the allowance
-            _approve(from, _msgSender(), currentAllowance - amount);
+            _approve(from, caller, currentAllowance - amount);
         }
 
         _burn(from, amount);
@@ -5620,33 +6701,6 @@ contract IDRP is
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyRole(UPGRADER_ROLE) {}
-
-    /// @dev Override _beforeTokenTransfer to include pause and frozen account checks
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal view whenNotPaused {
-        if (frozen[from] || frozen[to]) revert FrozenAccount();
-        require(amount > 0, "Transfer amount must be greater than zero");
-    }
-
-    function transfer(
-        address to,
-        uint256 amount
-    ) public override returns (bool) {
-        _beforeTokenTransfer(_msgSender(), to, amount); // Invoke the custom hook
-        return super.transfer(to, amount);
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public override returns (bool) {
-        _beforeTokenTransfer(from, to, amount); // Invoke the custom hook
-        return super.transferFrom(from, to, amount);
-    }
 
     /// @notice Freeze an account, preventing transfers
     /// @param account The address to freeze
@@ -5668,14 +6722,36 @@ contract IDRP is
         address wallet
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(wallet != address(0), "Invalid wallet address");
+        address previous = depositoryWallet;
         depositoryWallet = wallet;
+        emit DepositoryWalletSet(previous, wallet);
     }
 
+    /// @notice Set the maximum token supply cap (on-chain 1:1 peg safety net).
+    /// @dev    newMax must be >= current totalSupply() to avoid making existing
+    ///         circulating supply invalid. Set to 0 to remove the cap (not recommended
+    ///         in production ΓÇö only during initial bootstrap before reserves are set).
+    /// @param newMax New maximum supply in token base units (6 decimals).
+    function setMaxSupply(uint256 newMax) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(
+            newMax == 0 || newMax >= totalSupply(),
+            "Max supply below current total supply"
+        );
+        uint256 previous = maxSupply;
+        maxSupply = newMax;
+        emit MaxSupplyUpdated(previous, newMax);
+    }
+
+    /// @dev Central hook for all token movements (mint, burn, transfer).
+    /// ERC20PausableUpgradeable._update enforces whenNotPaused.
+    /// Freeze checks are enforced here for every transfer path.
     function _update(
         address from,
         address to,
         uint256 value
     ) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
+        if (from != address(0) && frozen[from]) revert FrozenAccount();
+        if (to != address(0) && frozen[to]) revert FrozenAccount();
         super._update(from, to, value);
     }
 
@@ -5686,6 +6762,7 @@ contract IDRP is
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(token != address(this), "Cannot withdraw IDRP token");
-        ERC20Upgradeable(token).transfer(to, amount);
+        require(to != address(0), "Invalid recipient address");
+        IERC20(token).safeTransfer(to, amount);
     }
 }

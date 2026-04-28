@@ -30,7 +30,10 @@ module.exports = {
           enabled: true,
           runs: 200,
         },
-        evmVersion: "istanbul",
+        // "cancun" required by OZ 5.6.x (uses mcopy / EIP-5656).
+        // Tron Nile virtual machine supports Cancun opcodes as of the Nile upgrade.
+        // If targeting an older TVM node, downgrade @openzeppelin/contracts-upgradeable to <5.6.0.
+        evmVersion: "cancun",
         viaIR: true,
       },
     },
