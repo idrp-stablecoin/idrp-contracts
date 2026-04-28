@@ -62,6 +62,10 @@ contract IDRP is
 
     // OZ v4: Ownable tidak pakai argument di constructor
     // _authorizeUpgrade hanya perlu onlyRole
+    function decimals() public pure override returns (uint8) {
+        return 6;
+    }
+
     function _authorizeUpgrade(address newImplementation)
         internal
         override
@@ -69,13 +73,39 @@ contract IDRP is
     {}
 
     function mint(uint256 amount) public onlyRole(MINTER_ROLE) whenNotPaused {
+        address wallet = depositoryWallet; // cache: avoid 2 SLOADs
+        if (frozen[wallet]) revert FrozenAccount();
         if (maxSupply > 0 && totalSupply() + amount > maxSupply) {
             revert ExceedsMaxSupply(amount, maxSupply - totalSupply());
         }
-        _mint(depositoryWallet, amount);
+        _mint(wallet, amount);
     }
 
-    function burn(address from, uint256 amount) public onlyRole(MINTER_ROLE) whenNotPaused {
+    /// @notice Burn stablecoins from a specific address
+    /// @param from The address from which the stablecoins will be burned
+    /// @param amount The amount of stablecoins to burn
+    /// @dev If `from` is the IDRPController (caller), no allowance check is needed
+    /// since the user has already transferred tokens to the controller.
+    /// If `from` is another address, allowance check is required.
+    function burn(
+        address from,
+        uint256 amount
+    ) public onlyRole(MINTER_ROLE) whenNotPaused {
+        if (frozen[from]) revert FrozenAccount();
+
+        // If `from` is not the caller (MINTER_ROLE/IDRPController) and not depositoryWallet,
+        // ensure the caller has allowance from 'from'
+        // - depositoryWallet is a cold wallet and can't approve
+        // - controller transfers tokens to itself before burning, so no allowance needed
+        if (from != _msgSender() && from != depositoryWallet) {
+            uint256 currentAllowance = allowance(from, _msgSender());
+            require(
+                currentAllowance >= amount,
+                "Burn amount exceeds allowance"
+            );
+            _approve(from, _msgSender(), currentAllowance - amount);
+        }
+
         _burn(from, amount);
     }
 
@@ -115,7 +145,8 @@ contract IDRP is
         address token,
         address to,
         uint256 amount
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(token != address(this), "Cannot withdraw IDRP token");
         IERC20(token).safeTransfer(to, amount);
     }
 
