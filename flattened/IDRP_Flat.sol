@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: MIT
 // Sources flattened with hardhat v2.22.19 https://hardhat.org
 
+// SPDX-License-Identifier: MIT
 
 // File @openzeppelin/contracts/proxy/utils/Initializable.sol@v5.6.1
 

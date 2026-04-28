@@ -21,16 +21,15 @@ const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.28",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
-      evmVersion: "cancun", // Required for OZ 5.6.x (uses mcopy / EIP-5656)
-      // viaIR: true,
+  version: "0.8.20",       // ← OZ v4 support 0.8.20
+  settings: {
+    optimizer: {
+      enabled: true,
+      runs: 200,
     },
+    evmVersion: "istanbul", // ← OZ v4 kompatibel dengan istanbul
   },
+},
   namedAccounts: {
     deployer: {
       default: 0,
@@ -156,16 +155,14 @@ const config: HardhatUserConfig = {
     filter: [], // compile all contracts
     compilers: [
       {
-        version: "0.8.28", // Align with main compiler; 0.8.28 supports Cancun
+        version: "0.8.22",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         settings: {
           optimizer: {
             enabled: true,
             runs: 200,
           },
-          // "cancun" required by OZ 5.6.x (mcopy). TVM Nile+ supports this.
-          // If deploying to older TVM nodes (pre-Nile), downgrade OZ to <5.6.0.
-          evmVersion: "cancun",
+          evmVersion: "istanbul",
         } as any,
       },
     ],

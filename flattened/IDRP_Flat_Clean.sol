@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: MIT
-// Sources flattened with hardhat v2.22.19 https://hardhat.org
+﻿// Sources flattened with hardhat v2.22.19 https://hardhat.org
 
+// SPDX-License-Identifier: MIT
 
 // File @openzeppelin/contracts/proxy/utils/Initializable.sol@v5.6.1
 
@@ -718,7 +718,7 @@ interface IERC20Errors {
     error ERC20InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `spender`ΓÇÖs `allowance`. Used in transfers.
+     * @dev Indicates a failure with the `spender`Î“Ã‡Ã–s `allowance`. Used in transfers.
      * @param spender Address that may be allowed to operate on tokens without being their owner.
      * @param allowance Amount of tokens a `spender` is allowed to operate with.
      * @param needed Minimum amount required to perform a transfer.
@@ -777,7 +777,7 @@ interface IERC721Errors {
     error ERC721InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `operator`ΓÇÖs approval. Used in transfers.
+     * @dev Indicates a failure with the `operator`Î“Ã‡Ã–s approval. Used in transfers.
      * @param operator Address that may be allowed to operate on tokens without being their owner.
      * @param tokenId Identifier number of a token.
      */
@@ -823,7 +823,7 @@ interface IERC1155Errors {
     error ERC1155InvalidReceiver(address receiver);
 
     /**
-     * @dev Indicates a failure with the `operator`ΓÇÖs approval. Used in transfers.
+     * @dev Indicates a failure with the `operator`Î“Ã‡Ã–s approval. Used in transfers.
      * @param operator Address that may be allowed to operate on tokens without being their owner.
      * @param owner Address of the current owner of a token.
      */
@@ -2751,7 +2751,7 @@ library Math {
     /**
      * @dev Return the 512-bit addition of two uint256.
      *
-     * The result is stored in two 256 variables such that sum = high * 2┬▓Γü╡Γü╢ + low.
+     * The result is stored in two 256 variables such that sum = high * 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢ + low.
      */
     function add512(uint256 a, uint256 b) internal pure returns (uint256 high, uint256 low) {
         assembly ("memory-safe") {
@@ -2763,12 +2763,12 @@ library Math {
     /**
      * @dev Return the 512-bit multiplication of two uint256.
      *
-     * The result is stored in two 256 variables such that product = high * 2┬▓Γü╡Γü╢ + low.
+     * The result is stored in two 256 variables such that product = high * 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢ + low.
      */
     function mul512(uint256 a, uint256 b) internal pure returns (uint256 high, uint256 low) {
-        // 512-bit multiply [high low] = x * y. Compute the product mod 2┬▓Γü╡Γü╢ and mod 2┬▓Γü╡Γü╢ - 1, then use
+        // 512-bit multiply [high low] = x * y. Compute the product mod 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢ and mod 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢ - 1, then use
         // the Chinese Remainder Theorem to reconstruct the 512 bit result. The result is stored in two 256
-        // variables such that product = high * 2┬▓Γü╡Γü╢ + low.
+        // variables such that product = high * 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢ + low.
         assembly ("memory-safe") {
             let mm := mulmod(a, b, not(0))
             low := mul(a, b)
@@ -2841,7 +2841,7 @@ library Math {
     }
 
     /**
-     * @dev Unsigned saturating addition, bounds to `2┬▓Γü╡Γü╢ - 1` instead of overflowing.
+     * @dev Unsigned saturating addition, bounds to `2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢ - 1` instead of overflowing.
      */
     function saturatingAdd(uint256 a, uint256 b) internal pure returns (uint256) {
         (bool success, uint256 result) = tryAdd(a, b);
@@ -2857,7 +2857,7 @@ library Math {
     }
 
     /**
-     * @dev Unsigned saturating multiplication, bounds to `2┬▓Γü╡Γü╢ - 1` instead of overflowing.
+     * @dev Unsigned saturating multiplication, bounds to `2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢ - 1` instead of overflowing.
      */
     function saturatingMul(uint256 a, uint256 b) internal pure returns (uint256) {
         (bool success, uint256 result) = tryMul(a, b);
@@ -2946,7 +2946,7 @@ library Math {
                 return low / denominator;
             }
 
-            // Make sure the result is less than 2┬▓Γü╡Γü╢. Also prevents denominator == 0.
+            // Make sure the result is less than 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢. Also prevents denominator == 0.
             if (denominator <= high) {
                 Panic.panic(ternary(denominator == 0, Panic.DIVISION_BY_ZERO, Panic.UNDER_OVERFLOW));
             }
@@ -2977,30 +2977,30 @@ library Math {
                 // Divide [high low] by twos.
                 low := div(low, twos)
 
-                // Flip twos such that it is 2┬▓Γü╡Γü╢ / twos. If twos is zero, then it becomes one.
+                // Flip twos such that it is 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢ / twos. If twos is zero, then it becomes one.
                 twos := add(div(sub(0, twos), twos), 1)
             }
 
             // Shift in bits from high into low.
             low |= high * twos;
 
-            // Invert denominator mod 2┬▓Γü╡Γü╢. Now that denominator is an odd number, it has an inverse modulo 2┬▓Γü╡Γü╢ such
-            // that denominator * inv Γëí 1 mod 2┬▓Γü╡Γü╢. Compute the inverse by starting with a seed that is correct for
-            // four bits. That is, denominator * inv Γëí 1 mod 2Γü┤.
+            // Invert denominator mod 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢. Now that denominator is an odd number, it has an inverse modulo 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢ such
+            // that denominator * inv Î“Ã«Ã­ 1 mod 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢. Compute the inverse by starting with a seed that is correct for
+            // four bits. That is, denominator * inv Î“Ã«Ã­ 1 mod 2Î“Ã¼â”¤.
             uint256 inverse = (3 * denominator) ^ 2;
 
             // Use the Newton-Raphson iteration to improve the precision. Thanks to Hensel's lifting lemma, this also
             // works in modular arithmetic, doubling the correct bits in each step.
-            inverse *= 2 - denominator * inverse; // inverse mod 2Γü╕
-            inverse *= 2 - denominator * inverse; // inverse mod 2┬╣Γü╢
-            inverse *= 2 - denominator * inverse; // inverse mod 2┬│┬▓
-            inverse *= 2 - denominator * inverse; // inverse mod 2Γü╢Γü┤
-            inverse *= 2 - denominator * inverse; // inverse mod 2┬╣┬▓Γü╕
-            inverse *= 2 - denominator * inverse; // inverse mod 2┬▓Γü╡Γü╢
+            inverse *= 2 - denominator * inverse; // inverse mod 2Î“Ã¼â••
+            inverse *= 2 - denominator * inverse; // inverse mod 2â”¬â•£Î“Ã¼â•¢
+            inverse *= 2 - denominator * inverse; // inverse mod 2â”¬â”‚â”¬â–“
+            inverse *= 2 - denominator * inverse; // inverse mod 2Î“Ã¼â•¢Î“Ã¼â”¤
+            inverse *= 2 - denominator * inverse; // inverse mod 2â”¬â•£â”¬â–“Î“Ã¼â••
+            inverse *= 2 - denominator * inverse; // inverse mod 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢
 
             // Because the division is now exact we can divide by multiplying with the modular inverse of denominator.
-            // This will give us the correct result modulo 2┬▓Γü╡Γü╢. Since the preconditions guarantee that the outcome is
-            // less than 2┬▓Γü╡Γü╢, this is the final result. We don't need to compute the high bits of the result and high
+            // This will give us the correct result modulo 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢. Since the preconditions guarantee that the outcome is
+            // less than 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢, this is the final result. We don't need to compute the high bits of the result and high
             // is no longer required.
             result = low * inverse;
             return result;
@@ -3054,7 +3054,7 @@ library Math {
             // When the gcd is 1, then the inverse of a modulo n exists and it's x.
             // ax + ny = 1
             // ax = 1 + (-y)n
-            // ax Γëí 1 (mod n) # x is the inverse of a modulo n
+            // ax Î“Ã«Ã­ 1 (mod n) # x is the inverse of a modulo n
 
             // If the remainder is 0 the gcd is n right away.
             uint256 remainder = a % n;
@@ -3097,7 +3097,7 @@ library Math {
      * @dev Variant of {invMod}. More efficient, but only works if `p` is known to be a prime greater than `2`.
      *
      * From https://en.wikipedia.org/wiki/Fermat%27s_little_theorem[Fermat's little theorem], we know that if p is
-     * prime, then `a**(p-1) Γëí 1 mod p`. As a consequence, we have `a * a**(p-2) Γëí 1 mod p`, which means that
+     * prime, then `a**(p-1) Î“Ã«Ã­ 1 mod p`. As a consequence, we have `a * a**(p-2) Î“Ã«Ã­ 1 mod p`, which means that
      * `a**(p-2)` is the modular multiplicative inverse of a in Fp.
      *
      * NOTE: this function does NOT check that `p` is a prime greater than `2`.
@@ -3234,16 +3234,16 @@ library Math {
                 return a;
             }
 
-            // In this function, we use Newton's method to get a root of `f(x) := x┬▓ - a`. It involves building a
+            // In this function, we use Newton's method to get a root of `f(x) := xâ”¬â–“ - a`. It involves building a
             // sequence x_n that converges toward sqrt(a). For each iteration x_n, we also define the error between
-            // the current value as `╬╡_n = | x_n - sqrt(a) |`.
+            // the current value as `â•¬â•¡_n = | x_n - sqrt(a) |`.
             //
             // For our first estimation, we consider `e` the smallest power of 2 which is bigger than the square root
-            // of the target. (i.e. `2**(e-1) Γëñ sqrt(a) < 2**e`). We know that `e Γëñ 128` because `(2┬╣┬▓Γü╕)┬▓ = 2┬▓Γü╡Γü╢` is
+            // of the target. (i.e. `2**(e-1) Î“Ã«Ã± sqrt(a) < 2**e`). We know that `e Î“Ã«Ã± 128` because `(2â”¬â•£â”¬â–“Î“Ã¼â••)â”¬â–“ = 2â”¬â–“Î“Ã¼â•¡Î“Ã¼â•¢` is
             // bigger than any uint256.
             //
             // By noticing that
-            // `2**(e-1) Γëñ sqrt(a) < 2**e ΓåÆ (2**(e-1))┬▓ Γëñ a < (2**e)┬▓ ΓåÆ 2**(2*e-2) Γëñ a < 2**(2*e)`
+            // `2**(e-1) Î“Ã«Ã± sqrt(a) < 2**e Î“Ã¥Ã† (2**(e-1))â”¬â–“ Î“Ã«Ã± a < (2**e)â”¬â–“ Î“Ã¥Ã† 2**(2*e-2) Î“Ã«Ã± a < 2**(2*e)`
             // we can deduce that `e - 1` is `log2(a) / 2`. We can thus compute `x_n = 2**(e-1)` using a method similar
             // to the msb function.
             uint256 aa = a;
@@ -3277,57 +3277,57 @@ library Math {
                 xn <<= 1;
             }
 
-            // We now have x_n such that `x_n = 2**(e-1) Γëñ sqrt(a) < 2**e = 2 * x_n`. This implies ╬╡_n Γëñ 2**(e-1).
+            // We now have x_n such that `x_n = 2**(e-1) Î“Ã«Ã± sqrt(a) < 2**e = 2 * x_n`. This implies â•¬â•¡_n Î“Ã«Ã± 2**(e-1).
             //
             // We can refine our estimation by noticing that the middle of that interval minimizes the error.
-            // If we move x_n to equal 2**(e-1) + 2**(e-2), then we reduce the error to ╬╡_n Γëñ 2**(e-2).
-            // This is going to be our x_0 (and ╬╡_0)
-            xn = (3 * xn) >> 1; // ╬╡_0 := | x_0 - sqrt(a) | Γëñ 2**(e-2)
+            // If we move x_n to equal 2**(e-1) + 2**(e-2), then we reduce the error to â•¬â•¡_n Î“Ã«Ã± 2**(e-2).
+            // This is going to be our x_0 (and â•¬â•¡_0)
+            xn = (3 * xn) >> 1; // â•¬â•¡_0 := | x_0 - sqrt(a) | Î“Ã«Ã± 2**(e-2)
 
             // From here, Newton's method give us:
             // x_{n+1} = (x_n + a / x_n) / 2
             //
             // One should note that:
-            // x_{n+1}┬▓ - a = ((x_n + a / x_n) / 2)┬▓ - a
-            //              = ((x_n┬▓ + a) / (2 * x_n))┬▓ - a
-            //              = (x_nΓü┤ + 2 * a * x_n┬▓ + a┬▓) / (4 * x_n┬▓) - a
-            //              = (x_nΓü┤ + 2 * a * x_n┬▓ + a┬▓ - 4 * a * x_n┬▓) / (4 * x_n┬▓)
-            //              = (x_nΓü┤ - 2 * a * x_n┬▓ + a┬▓) / (4 * x_n┬▓)
-            //              = (x_n┬▓ - a)┬▓ / (2 * x_n)┬▓
-            //              = ((x_n┬▓ - a) / (2 * x_n))┬▓
-            //              ΓëÑ 0
-            // Which proves that for all n ΓëÑ 1, sqrt(a) Γëñ x_n
+            // x_{n+1}â”¬â–“ - a = ((x_n + a / x_n) / 2)â”¬â–“ - a
+            //              = ((x_nâ”¬â–“ + a) / (2 * x_n))â”¬â–“ - a
+            //              = (x_nÎ“Ã¼â”¤ + 2 * a * x_nâ”¬â–“ + aâ”¬â–“) / (4 * x_nâ”¬â–“) - a
+            //              = (x_nÎ“Ã¼â”¤ + 2 * a * x_nâ”¬â–“ + aâ”¬â–“ - 4 * a * x_nâ”¬â–“) / (4 * x_nâ”¬â–“)
+            //              = (x_nÎ“Ã¼â”¤ - 2 * a * x_nâ”¬â–“ + aâ”¬â–“) / (4 * x_nâ”¬â–“)
+            //              = (x_nâ”¬â–“ - a)â”¬â–“ / (2 * x_n)â”¬â–“
+            //              = ((x_nâ”¬â–“ - a) / (2 * x_n))â”¬â–“
+            //              Î“Ã«Ã‘ 0
+            // Which proves that for all n Î“Ã«Ã‘ 1, sqrt(a) Î“Ã«Ã± x_n
             //
             // This gives us the proof of quadratic convergence of the sequence:
-            // ╬╡_{n+1} = | x_{n+1} - sqrt(a) |
+            // â•¬â•¡_{n+1} = | x_{n+1} - sqrt(a) |
             //         = | (x_n + a / x_n) / 2 - sqrt(a) |
-            //         = | (x_n┬▓ + a - 2*x_n*sqrt(a)) / (2 * x_n) |
-            //         = | (x_n - sqrt(a))┬▓ / (2 * x_n) |
-            //         = | ╬╡_n┬▓ / (2 * x_n) |
-            //         = ╬╡_n┬▓ / | (2 * x_n) |
+            //         = | (x_nâ”¬â–“ + a - 2*x_n*sqrt(a)) / (2 * x_n) |
+            //         = | (x_n - sqrt(a))â”¬â–“ / (2 * x_n) |
+            //         = | â•¬â•¡_nâ”¬â–“ / (2 * x_n) |
+            //         = â•¬â•¡_nâ”¬â–“ / | (2 * x_n) |
             //
             // For the first iteration, we have a special case where x_0 is known:
-            // ╬╡_1 = ╬╡_0┬▓ / | (2 * x_0) |
-            //     Γëñ (2**(e-2))┬▓ / (2 * (2**(e-1) + 2**(e-2)))
-            //     Γëñ 2**(2*e-4) / (3 * 2**(e-1))
-            //     Γëñ 2**(e-3) / 3
-            //     Γëñ 2**(e-3-log2(3))
-            //     Γëñ 2**(e-4.5)
+            // â•¬â•¡_1 = â•¬â•¡_0â”¬â–“ / | (2 * x_0) |
+            //     Î“Ã«Ã± (2**(e-2))â”¬â–“ / (2 * (2**(e-1) + 2**(e-2)))
+            //     Î“Ã«Ã± 2**(2*e-4) / (3 * 2**(e-1))
+            //     Î“Ã«Ã± 2**(e-3) / 3
+            //     Î“Ã«Ã± 2**(e-3-log2(3))
+            //     Î“Ã«Ã± 2**(e-4.5)
             //
-            // For the following iterations, we use the fact that, 2**(e-1) Γëñ sqrt(a) Γëñ x_n:
-            // ╬╡_{n+1} = ╬╡_n┬▓ / | (2 * x_n) |
-            //         Γëñ (2**(e-k))┬▓ / (2 * 2**(e-1))
-            //         Γëñ 2**(2*e-2*k) / 2**e
-            //         Γëñ 2**(e-2*k)
-            xn = (xn + a / xn) >> 1; // ╬╡_1 := | x_1 - sqrt(a) | Γëñ 2**(e-4.5)  -- special case, see above
-            xn = (xn + a / xn) >> 1; // ╬╡_2 := | x_2 - sqrt(a) | Γëñ 2**(e-9)    -- general case with k = 4.5
-            xn = (xn + a / xn) >> 1; // ╬╡_3 := | x_3 - sqrt(a) | Γëñ 2**(e-18)   -- general case with k = 9
-            xn = (xn + a / xn) >> 1; // ╬╡_4 := | x_4 - sqrt(a) | Γëñ 2**(e-36)   -- general case with k = 18
-            xn = (xn + a / xn) >> 1; // ╬╡_5 := | x_5 - sqrt(a) | Γëñ 2**(e-72)   -- general case with k = 36
-            xn = (xn + a / xn) >> 1; // ╬╡_6 := | x_6 - sqrt(a) | Γëñ 2**(e-144)  -- general case with k = 72
+            // For the following iterations, we use the fact that, 2**(e-1) Î“Ã«Ã± sqrt(a) Î“Ã«Ã± x_n:
+            // â•¬â•¡_{n+1} = â•¬â•¡_nâ”¬â–“ / | (2 * x_n) |
+            //         Î“Ã«Ã± (2**(e-k))â”¬â–“ / (2 * 2**(e-1))
+            //         Î“Ã«Ã± 2**(2*e-2*k) / 2**e
+            //         Î“Ã«Ã± 2**(e-2*k)
+            xn = (xn + a / xn) >> 1; // â•¬â•¡_1 := | x_1 - sqrt(a) | Î“Ã«Ã± 2**(e-4.5)  -- special case, see above
+            xn = (xn + a / xn) >> 1; // â•¬â•¡_2 := | x_2 - sqrt(a) | Î“Ã«Ã± 2**(e-9)    -- general case with k = 4.5
+            xn = (xn + a / xn) >> 1; // â•¬â•¡_3 := | x_3 - sqrt(a) | Î“Ã«Ã± 2**(e-18)   -- general case with k = 9
+            xn = (xn + a / xn) >> 1; // â•¬â•¡_4 := | x_4 - sqrt(a) | Î“Ã«Ã± 2**(e-36)   -- general case with k = 18
+            xn = (xn + a / xn) >> 1; // â•¬â•¡_5 := | x_5 - sqrt(a) | Î“Ã«Ã± 2**(e-72)   -- general case with k = 36
+            xn = (xn + a / xn) >> 1; // â•¬â•¡_6 := | x_6 - sqrt(a) | Î“Ã«Ã± 2**(e-144)  -- general case with k = 72
 
-            // Because e Γëñ 128 (as discussed during the first estimation phase), we know have reached a precision
-            // ╬╡_6 Γëñ 2**(e-144) < 1. Given we're operating on integers, then we can ensure that xn is now either
+            // Because e Î“Ã«Ã± 128 (as discussed during the first estimation phase), we know have reached a precision
+            // â•¬â•¡_6 Î“Ã«Ã± 2**(e-144) < 1. Given we're operating on integers, then we can ensure that xn is now either
             // sqrt(a) or sqrt(a) + 1.
             return xn - SafeCast.toUint(xn > a / xn);
         }
@@ -3701,7 +3701,7 @@ library Bytes {
     /**
      * @dev Split each byte in `input` into two nibbles (4 bits each)
      *
-     * Example: hex"01234567" ΓåÆ hex"0001020304050607"
+     * Example: hex"01234567" Î“Ã¥Ã† hex"0001020304050607"
      */
     function toNibbles(bytes memory input) internal pure returns (bytes memory output) {
         assembly ("memory-safe") {
@@ -5176,7 +5176,7 @@ library ECDSA {
     ) internal pure returns (address recovered, RecoverError err, bytes32 errArg) {
         // EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
         // unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines
-        // the valid range for s in (301): 0 < s < secp256k1n ├╖ 2 + 1, and for v in (302): v Γêê {27, 28}. Most
+        // the valid range for s in (301): 0 < s < secp256k1n â”œâ•– 2 + 1, and for v in (302): v Î“ÃªÃª {27, 28}. Most
         // signatures from current libraries generate a unique signature with an s-value in the lower half order.
         //
         // If your library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
@@ -6487,7 +6487,7 @@ pragma solidity ^0.8.22;
  *         Store `__self` in a dedicated storage slot (keccak256 hash-derived, separate from
  *         the main contract layout) instead of bytecode. The value is written once during
  *         `__TronUUPSUpgradeable_init()` and is functionally equivalent to the immutable.
- *         This contract is safe to use on EVM chains too ΓÇö the only difference is a single
+ *         This contract is safe to use on EVM chains too Î“Ã‡Ã¶ the only difference is a single
  *         SLOAD per proxy-check instead of an inline bytecode read.
  *
  *         Usage:
@@ -6504,7 +6504,7 @@ abstract contract TronUUPSUpgradeable is Initializable {
 
     error TronUUPSUnauthorizedCallContext();
 
-    // ΓöÇΓöÇΓöÇ Modifiers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡ Modifiers Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
 
     /// @dev Reverts when called on the bare implementation (i.e., NOT through a proxy).
     modifier onlyProxy() {
@@ -6518,7 +6518,7 @@ abstract contract TronUUPSUpgradeable is Initializable {
         _;
     }
 
-    // ΓöÇΓöÇΓöÇ Initializer ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡ Initializer Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
 
     /// @dev Write the implementation address into storage once, at initializer time.
     ///      Must be called in the inheriting contract's initializer.
@@ -6527,7 +6527,7 @@ abstract contract TronUUPSUpgradeable is Initializable {
         _storeSelf(address(this));
     }
 
-    // ΓöÇΓöÇΓöÇ Public API ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡ Public API Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
 
     /// @notice Returns the ERC-1967 implementation slot UUID (standard UUPS interface).
     function proxiableUUID() external view virtual notDelegated returns (bytes32) {
@@ -6544,7 +6544,7 @@ abstract contract TronUUPSUpgradeable is Initializable {
         ERC1967Utils.upgradeToAndCall(newImplementation, data);
     }
 
-    // ΓöÇΓöÇΓöÇ Internal API ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡ Internal API Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
 
     /// @dev Override this with your authorization guard (e.g., onlyRole(UPGRADER_ROLE)).
     function _authorizeUpgrade(address newImplementation) internal virtual;
@@ -6552,8 +6552,8 @@ abstract contract TronUUPSUpgradeable is Initializable {
     function _checkProxy() internal view virtual {
         address self = _loadSelf();
         // Revert if we are NOT being called via delegatecall through a proxy:
-        //   address(this) == self  ΓåÆ  called on implementation directly
-        //   getImplementation() != self  ΓåÆ  proxy points to a different implementation
+        //   address(this) == self  Î“Ã¥Ã†  called on implementation directly
+        //   getImplementation() != self  Î“Ã¥Ã†  proxy points to a different implementation
         if (address(this) == self || ERC1967Utils.getImplementation() != self) {
             revert TronUUPSUnauthorizedCallContext();
         }
@@ -6567,7 +6567,7 @@ abstract contract TronUUPSUpgradeable is Initializable {
         }
     }
 
-    // ΓöÇΓöÇΓöÇ Storage helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    // Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡ Storage helpers Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡Î“Ã¶Ã‡
 
     function _loadSelf() private view returns (address self_) {
         bytes32 slot = _SELF_SLOT;
@@ -6661,7 +6661,7 @@ contract IDRP is
     /// @notice Mint stablecoins to a specific address
     /// @param amount The amount of stablecoins to mint
     function mint(uint256 amount) public onlyRole(MINTER_ROLE) whenNotPaused {
-        // Cache storage reads ΓÇö each SLOAD costs 100 energy on Tron (warm) / 2100 (cold)
+        // Cache storage reads Î“Ã‡Ã¶ each SLOAD costs 100 energy on Tron (warm) / 2100 (cold)
         address wallet = depositoryWallet;
         require(wallet != address(0), "Depository wallet not set");
         if (frozen[wallet]) revert FrozenAccount();
@@ -6684,7 +6684,7 @@ contract IDRP is
     ) public onlyRole(MINTER_ROLE) whenNotPaused {
         if (frozen[from]) revert FrozenAccount();
 
-        // Cache _msgSender() ΓÇö avoids a repeated virtual call
+        // Cache _msgSender() Î“Ã‡Ã¶ avoids a repeated virtual call
         address caller = _msgSender();
         if (from != caller && from != depositoryWallet) {
             uint256 currentAllowance = allowance(from, caller);
@@ -6730,7 +6730,7 @@ contract IDRP is
     /// @notice Set the maximum token supply cap (on-chain 1:1 peg safety net).
     /// @dev    newMax must be >= current totalSupply() to avoid making existing
     ///         circulating supply invalid. Set to 0 to remove the cap (not recommended
-    ///         in production ΓÇö only during initial bootstrap before reserves are set).
+    ///         in production Î“Ã‡Ã¶ only during initial bootstrap before reserves are set).
     /// @param newMax New maximum supply in token base units (6 decimals).
     function setMaxSupply(uint256 newMax) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(

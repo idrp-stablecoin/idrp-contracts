@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -165,8 +165,9 @@ contract IDRPController is
         address _safeAddress
     ) public initializer {
         __AccessControl_init();
-        __Ownable_init(_safeAddress);
-        __TronUUPSUpgradeable_init();
+        __Ownable_init();
+        _transferOwnership(_safeAddress);
+        __UUPSUpgradeable_init();
 
         idrpToken = _idrpToken;
 

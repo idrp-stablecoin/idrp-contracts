@@ -186,6 +186,31 @@ npx hardhat flatten contracts/IDRPController.sol > flattened/IDRPController_Flat
 npx hardhat flatten node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol > flattened/ERC1967Proxy_Flattened_hh.sol
 ```
 
+### Fix File Encoding
+
+`hardhat flatten` on Windows may produce a UTF-16 file that TronScan rejects. Convert every flattened file to UTF-8:
+
+**PowerShell (Windows):**
+```powershell
+foreach ($file in Get-ChildItem flattened\*.sol) {
+    $content = Get-Content $file.FullName -Raw -Encoding Unicode
+    [System.IO.File]::WriteAllText($file.FullName, $content, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "Re-encoded: $($file.Name)"
+}
+```
+
+**Bash (Linux / macOS):**
+```bash
+for f in flattened/*.sol; do
+    iconv -f UTF-16 -t UTF-8 "$f" -o "${f}.tmp" 2>/dev/null && mv "${f}.tmp" "$f" || true
+    # If the file is already UTF-8, iconv fails silently and the original is kept
+done
+```
+
+> **Note:** If `iconv` reports an error the file was already UTF-8 — that is fine, no action needed.
+
+---
+
 ### Remove Duplicate SPDX Headers
 
 Hardhat flatten concatenates all source files. Remove all duplicate license lines
@@ -193,18 +218,43 @@ or TronScan will reject the upload:
 
 **PowerShell (Windows):**
 ```powershell
-# Example for IDRP — repeat for each flattened file
-(Get-Content flattened\IDRP_Flattened_hh.sol -Raw) `
+# Run for each flattened file — replace IDRP with IDRPController / ERC1967Proxy as needed
+$file = "flattened\IDRP_Flattened_hh.sol"
+(Get-Content $file -Raw) `
   -replace '(?m)^// SPDX-License-Identifier:.*\r?\n', '' | `
-  Set-Content flattened\IDRP_Flattened_hh.sol
+  Set-Content $file
 
 # Add a single license header back at the top
-"// SPDX-License-Identifier: MIT`n" + `
-  (Get-Content flattened\IDRP_Flattened_hh.sol -Raw) | `
-  Set-Content flattened\IDRP_Flattened_hh.sol
+"// SPDX-License-Identifier: MIT`n" + (Get-Content $file -Raw) | Set-Content $file
 ```
 
-**Or use `hardhat-flatten` with the `--force` flag** (automatically dedups if supported by your version).
+**To process all three files at once (PowerShell):**
+```powershell
+$files = @(
+    "flattened\IDRP_Flattened_hh.sol",
+    "flattened\IDRPController_Flattened_hh.sol",
+    "flattened\ERC1967Proxy_Flattened_hh.sol"
+)
+foreach ($file in $files) {
+    $content = (Get-Content $file -Raw) -replace '(?m)^// SPDX-License-Identifier:.*\r?\n', ''
+    "// SPDX-License-Identifier: MIT`n" + $content | Set-Content $file
+    Write-Host "Processed: $file"
+}
+```
+
+**Bash (Linux / macOS):**
+```bash
+for file in \
+    flattened/IDRP_Flattened_hh.sol \
+    flattened/IDRPController_Flattened_hh.sol \
+    flattened/ERC1967Proxy_Flattened_hh.sol
+do
+    # Remove all SPDX lines, then prepend a single one
+    sed -i '/^\/\/ SPDX-License-Identifier:/d' "$file"
+    sed -i '1s/^/\/\/ SPDX-License-Identifier: MIT\n/' "$file"
+    echo "Processed: $file"
+done
+```
 
 ---
 
@@ -231,11 +281,11 @@ The proxy address is in `deployments/shasta/IDRP.json` → `"address"` field.
    | Field | Value |
    |---|---|
    | Contract Address | Implementation address from `deployments/…/IDRP_Implementation.json` |
-   | Compiler Version | `v0.8.28` |
+   | Compiler Version | `v0.8.20+commit.a1b79de6` |
    | License | MIT License (MIT) |
    | Optimization | **Yes** |
    | Optimization Runs | `200` |
-   | EVM Version | `cancun` |
+   | EVM Version | `istanbul` |
    | Source Code | Paste contents of `flattened/IDRP_Flattened_hh.sol` |
    | ABI-encoded Constructor Arguments | *(leave blank — UUPS implementation has no constructor args)* |
 
@@ -252,10 +302,10 @@ The proxy address is in `deployments/shasta/IDRP.json` → `"address"` field.
    | Field | Value |
    |---|---|
    | Contract Address | Proxy address from `deployments/…/IDRP.json` |
-   | Compiler Version | `v0.8.28` (or the OZ version that provided ERC1967Proxy) |
+   | Compiler Version | `v0.8.20+commit.a1b79de6` |
    | License | MIT |
    | Optimization | **Yes** / 200 runs |
-   | EVM Version | `cancun` |
+   | EVM Version | `istanbul` |
    | Source Code | `flattened/ERC1967Proxy_Flattened_hh.sol` |
    | ABI-encoded Constructor Arguments | See below |
 
@@ -326,6 +376,7 @@ npx hardhat vars set IDRP_DEPLOYER_PRIVATE_KEY_TRON
 npx hardhat vars set IDRP_ADMIN_PRIVATE_KEY_TRON
 
 # 2. Compile
+npx hardhat clean
 npx hardhat compile
 
 # 3. Deploy (testnet)

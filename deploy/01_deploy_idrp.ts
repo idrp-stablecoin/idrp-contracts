@@ -27,6 +27,10 @@ const deployFunction: DeployFunction = async function (
     from: deployer,
     proxy: {
       proxyContract: "UUPS",
+      upgradeFunction: {
+        methodName: "upgradeToAndCall",
+        upgradeArgs: ["{implementation}", "{data}"],
+      },
       execute: {
         init: {
           methodName: "initialize",
