@@ -40,6 +40,7 @@ contract IDRP is
     event AccountUnfrozen(address indexed account);
     event MaxSupplyUpdated(uint256 indexed previousMaxSupply, uint256 indexed newMaxSupply);
     event DepositoryWalletSet(address indexed previousWallet, address indexed newWallet);
+    event TokenWithdrawn(address indexed token, address indexed to, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -74,6 +75,7 @@ contract IDRP is
 
     function mint(uint256 amount) public onlyRole(MINTER_ROLE) whenNotPaused {
         address wallet = depositoryWallet; // cache: avoid 2 SLOADs
+        require(wallet != address(0), "Depository wallet not set");
         if (frozen[wallet]) revert FrozenAccount();
         if (maxSupply > 0 && totalSupply() + amount > maxSupply) {
             revert ExceedsMaxSupply(amount, maxSupply - totalSupply());
@@ -124,6 +126,7 @@ contract IDRP is
     }
 
     function unfreeze(address account) public onlyRole(FREEZER_ROLE) {
+        if (account == address(0)) revert InvalidAddress();
         frozen[account] = false;
         emit AccountUnfrozen(account);
     }
@@ -136,6 +139,9 @@ contract IDRP is
     }
 
     function setMaxSupply(uint256 newMax) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        // 0 means unlimited; any non-zero cap must be >= current supply to avoid
+        // underflow in mint()'s ExceedsMaxSupply error calculation.
+        require(newMax == 0 || newMax >= totalSupply(), "Cannot reduce below current supply");
         uint256 prev = maxSupply;
         maxSupply = newMax;
         emit MaxSupplyUpdated(prev, newMax);
@@ -147,7 +153,9 @@ contract IDRP is
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(token != address(this), "Cannot withdraw IDRP token");
+        require(to != address(0), "Invalid recipient address");
         IERC20(token).safeTransfer(to, amount);
+        emit TokenWithdrawn(token, to, amount);
     }
 
     // OZ v4: _beforeTokenTransfer bukan _update

@@ -11,41 +11,53 @@ import "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradea
  *         TVM (TRON Virtual Machine). Compatible with OpenZeppelin v4.x.
  *
  * @dev    Problem:
- *         OZ 5.x UUPSUpgradeable uses `address private immutable __self = address(this)`.
+ *         OZ UUPSUpgradeable uses `address private immutable __self = address(this)`.
  *         The Solidity compiler stores immutable values directly in contract bytecode via the
  *         IMMUTABLE opcode family (PUSH_IMMUTABLE / ASSIGN_IMMUTABLE). TVM does not support
  *         these opcodes, causing compilation or deployment failures on Tron networks.
  *
- *         OZ 4.x UUPSUpgradeable also uses `address private immutable __self` — same issue.
- *
  *         Solution:
- *         Store `__self` in a dedicated storage slot (keccak256 hash-derived, separate from
- *         the main contract layout) instead of bytecode. The value is written once during
- *         `__TronUUPSUpgradeable_init()` and is functionally equivalent to the immutable.
+ *         OZ's immutable stores the IMPLEMENTATION address in bytecode so that in a
+ *         delegatecall context the bytecode-embedded value can be compared against
+ *         `address(this)` (the proxy) to detect proxy vs. direct-call context.
  *
- *         Differences from OZ v5 version:
+ *         Since TVM cannot embed immutables in bytecode, we instead store the PROXY
+ *         address in a dedicated storage slot during `initialize()`. Because `initialize()`
+ *         is called through the proxy via delegatecall, `address(this)` at that point IS
+ *         the proxy address — so the stored value is the proxy address.
+ *
+ *         The checks are therefore inverted relative to OZ's immutable-based approach:
+ *
+ *           _checkProxy()        — passes when address(this) == stored proxy (we ARE the proxy)
+ *           _checkNotDelegated() — passes when address(this) != stored proxy (we are NOT the proxy)
+ *
+ *         On a fresh implementation whose `_PROXY_SLOT` has never been written (= 0),
+ *         `_checkProxy()` reverts (correct: uninitialized impl is not a proxy) and
+ *         `_checkNotDelegated()` passes (correct: direct call on implementation).
+ *
+ *         Differences from OZ v4/v5 version:
  *         - Uses ERC1967UpgradeUpgradeable (OZ v4) instead of ERC1967Utils (OZ v5)
  *         - Uses _upgradeTo/_upgradeToAndCall instead of ERC1967Utils.upgradeToAndCall
  *         - IMPLEMENTATION_SLOT accessed via _getImplementation()
  *
  *         Usage:
  *         1. Inherit TronUUPSUpgradeable instead of UUPSUpgradeable.
- *         2. Call __TronUUPSUpgradeable_init() inside the contract's initializer.
+ *         2. Call __UUPSUpgradeable_init() inside the contract's initializer.
  *         3. Override _authorizeUpgrade() with your access-control guard.
  */
 abstract contract TronUUPSUpgradeable is Initializable, ERC1967UpgradeUpgradeable {
 
-    // Dedicated storage slot for the implementation self-address.
-    // Derived as keccak256("idrp.tron.uups.__self") to avoid collisions with
-    // sequentially-allocated Solidity storage slots (which start at slot 0).
-    bytes32 private constant _SELF_SLOT =
-        keccak256("idrp.tron.uups.__self");
+    // Dedicated storage slot for the proxy address.
+    // Written once during initialize() (which runs via delegatecall, so address(this) = proxy).
+    // Derived via keccak256 to avoid collisions with sequentially-allocated Solidity slots.
+    bytes32 private constant _PROXY_SLOT =
+        keccak256("idrp.tron.uups.__proxy");
 
     error TronUUPSUnauthorizedCallContext();
 
     // ─── Modifiers ───────────────────────────────────────────────────────────
 
-    /// @dev Reverts when called on the bare implementation (i.e., NOT through a proxy).
+    /// @dev Reverts when NOT called through a proxy (i.e., called directly on implementation).
     modifier onlyProxy() {
         _checkProxy();
         _;
@@ -62,12 +74,14 @@ abstract contract TronUUPSUpgradeable is Initializable, ERC1967UpgradeUpgradeabl
     // solhint-disable-next-line func-name-mixedcase
     function __UUPSUpgradeable_init() internal onlyInitializing {
         __ERC1967Upgrade_init_unchained();
-        _storeSelf(address(this));
+        // address(this) here equals the proxy address because initialize() is called
+        // via the proxy's delegatecall — this is the value we want to store.
+        _storeProxy(address(this));
     }
 
     // solhint-disable-next-line func-name-mixedcase
     function __UUPSUpgradeable_init_unchained() internal onlyInitializing {
-        _storeSelf(address(this));
+        _storeProxy(address(this));
     }
 
     // ─── Public API ──────────────────────────────────────────────────────────
@@ -99,37 +113,36 @@ abstract contract TronUUPSUpgradeable is Initializable, ERC1967UpgradeUpgradeabl
     function _authorizeUpgrade(address newImplementation) internal virtual;
 
     function _checkProxy() internal view virtual {
-        address self = _loadSelf();
-        // Revert if NOT called via delegatecall through a proxy:
-        //   address(this) == self  → called on implementation directly
-        //   _getImplementation() != self → proxy points to different implementation
-        if (address(this) == self || _getImplementation() != self) {
+        // In proxy context (delegatecall): address(this) == proxy == _loadProxy() → pass.
+        // Direct call on implementation:   address(this) == impl  != _loadProxy() → revert.
+        if (address(this) != _loadProxy()) {
             revert TronUUPSUnauthorizedCallContext();
         }
     }
 
     function _checkNotDelegated() internal view virtual {
-        // Revert if called via delegatecall (address(this) is proxy, not implementation)
-        if (address(this) != _loadSelf()) {
+        // Direct call on implementation: address(this) == impl != _loadProxy() → pass.
+        // In proxy context (delegatecall): address(this) == proxy == _loadProxy() → revert.
+        if (address(this) == _loadProxy()) {
             revert TronUUPSUnauthorizedCallContext();
         }
     }
 
     // ─── Storage helpers ─────────────────────────────────────────────────────
 
-    function _loadSelf() private view returns (address self_) {
-        bytes32 slot = _SELF_SLOT;
+    function _loadProxy() private view returns (address proxy_) {
+        bytes32 slot = _PROXY_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {
-            self_ := sload(slot)
+            proxy_ := sload(slot)
         }
     }
 
-    function _storeSelf(address self_) private {
-        bytes32 slot = _SELF_SLOT;
+    function _storeProxy(address proxy_) private {
+        bytes32 slot = _PROXY_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {
-            sstore(slot, self_)
+            sstore(slot, proxy_)
         }
     }
 }

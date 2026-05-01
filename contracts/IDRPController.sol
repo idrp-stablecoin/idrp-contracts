@@ -142,8 +142,10 @@ contract IDRPController is
     error QuorumRulesInvalid(string reason);
     error InvalidSignatureLength();
     error InvalidSignatureV();
+    error InvalidSignature();
     error DuplicateSigner();
     error UnauthorizedCaller();
+    error MissingRoleSignature(bytes32 role);
 
     /// @dev Returns true if `account` holds at least one operational role.
     function _hasAnyCallerRole(address account) internal view returns (bool) {
@@ -164,6 +166,7 @@ contract IDRPController is
         address _idrpToken,
         address _safeAddress
     ) public initializer {
+        require(_idrpToken != address(0) && _safeAddress != address(0), "Invalid address");
         __AccessControl_init();
         __Ownable_init();
         _transferOwnership(_safeAddress);
@@ -356,6 +359,7 @@ contract IDRPController is
         uint256 amount
     ) external onlyOwner {
         require(to != address(0), "Invalid recipient address");
+        require(token != idrpToken, "Cannot withdraw IDRP token");
         IERC20(token).safeTransfer(to, amount);
         emit TokensWithdrawn(token, to, amount);
     }
@@ -425,7 +429,7 @@ contract IDRPController is
                 }
                 unchecked { ++j; }
             }
-            require(found, string(abi.encodePacked("Missing signature for role: ", requiredRoles[i])));
+            if (!found) revert MissingRoleSignature(requiredRoles[i]);
             unchecked { ++i; }
         }
     }
@@ -450,7 +454,9 @@ contract IDRPController is
         if (v < 27) v += 27;
         if (v != 27 && v != 28) revert InvalidSignatureV();
 
-        return ecrecover(hash, v, r, s);
+        address signer = ecrecover(hash, v, r, s);
+        if (signer == address(0)) revert InvalidSignature();
+        return signer;
     }
 
     /// @dev Recover all signers and revert on duplicates.
