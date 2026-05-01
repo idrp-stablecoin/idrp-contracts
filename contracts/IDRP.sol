@@ -97,12 +97,14 @@ contract IDRP is
     ///      Plain AccessControlUpgradeable cannot enumerate holders on-chain, so the
     ///      caller must pass the per-chain list obtained by replaying RoleGranted /
     ///      RoleRevoked events (see scripts/list-upgrader-holders.ts).
+    ///      Gated by DEFAULT_ADMIN_ROLE so an attacker cannot frontrun the post-upgrade
+    ///      migration tx and seize `upgrader`.
     /// @param _upgrader New single-address upgrader (e.g. Safe).
     /// @param _legacyUpgraderHolders Addresses that ever held UPGRADER_ROLE on this chain.
     function initializeV2(
         address _upgrader,
         address[] calldata _legacyUpgraderHolders
-    ) external reinitializer(2) {
+    ) external reinitializer(2) onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_upgrader != address(0), "Invalid upgrader");
 
         address oldUpgrader = upgrader;
