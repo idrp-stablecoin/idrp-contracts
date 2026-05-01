@@ -15,11 +15,11 @@ Complete step-by-step guide: wallet configuration → deploy → flatten → ver
 
 | Path | Description |
 |---|---|
-| `hardhat.config.ts` | Network config (`shasta`, `tron`) |
+| `hardhat.config.ts` | Network config (`nile`, `tron`) |
 | `deploy/` | Ordered deployment scripts |
 | `artifacts-tron/` | TVM-compiled artifacts |
 | `cache-tron/` | TVM compilation cache |
-| `deployments/shasta/` | On-chain deployment records (auto-created) |
+| `deployments/nile/` | On-chain deployment records (auto-created) |
 | `flattened/` | Single-file sources for TronScan |
 
 ---
@@ -28,7 +28,7 @@ Complete step-by-step guide: wallet configuration → deploy → flatten → ver
 
 - **Node.js** ≥ 18 (`node -v`)
 - **TRX balance** on the deployer wallet
-  - Shasta faucet: https://shasta.tronex.io/
+  - Nile faucet: https://nileex.io/join/getJoinPage
   - Mainnet: purchase TRX and activate the account with at least 1 TRX
 - All addresses in `scripts/utils/constants.ts` updated to real wallets before mainnet deployment
 
@@ -115,19 +115,19 @@ npx hardhat compile
 
 Expected output:
 ```
-Compiled 46 Solidity files successfully (evm target: cancun).
+Compiled 46 Solidity files successfully (evm target: istanbul).
 ```
 
 The `tronSolc` section in `hardhat.config.ts` compiles a TVM-specific artifact set in `artifacts-tron/`.
 
 ---
 
-## Step 4 — Deploy to Shasta (Testnet)
+## Step 4 — Deploy to Nile (Testnet)
 
-Always deploy and verify on Shasta before mainnet.
+Always deploy and verify on Nile before mainnet.
 
 ```bash
-npx hardhat deploy --network shasta
+npx hardhat deploy --network nile
 ```
 
 The deploy scripts run in order:
@@ -136,24 +136,24 @@ The deploy scripts run in order:
 
 **Example output:**
 ```
-🚀 Deploying IDRP to shasta | Admin: 0x...
+🚀 Deploying IDRP to nile | Admin: 0x...
 
 deploying "IDRP_Implementation" ...  tx: 0x...
 deploying "IDRP" (proxy) ... tx: 0x...
 ✓ IDRP: T<base58proxy>
 
-🚀 Deploying IDRPController to shasta | Admin: 0x...
+🚀 Deploying IDRPController to nile | Admin: 0x...
 
 deploying "IDRPController_Implementation" ... tx: 0x...
 deploying "IDRPController" (proxy) ... tx: 0x...
 ✓ IDRPController: T<base58proxy>
 ```
 
-Deployment records are saved to `deployments/shasta/`:
+Deployment records are saved to `deployments/nile/`:
 - `IDRP.json` — proxy address + ABI
 - `IDRPController.json` — proxy address + ABI
 
-Verify the proxy addresses on **Shasta TronScan**: https://shasta.tronscan.org
+Verify the proxy addresses on **Nile TronScan**: https://nile.tronscan.org
 
 ---
 
@@ -183,7 +183,7 @@ npx hardhat flatten contracts/IDRP.sol > flattened/IDRP_Flattened_hh.sol
 npx hardhat flatten contracts/IDRPController.sol > flattened/IDRPController_Flattened_hh.sol
 
 # ERC1967Proxy (the UUPS proxy shell — needed to verify the proxy address)
-npx hardhat flatten node_modules/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol > flattened/ERC1967Proxy_Flattened_hh.sol
+npx hardhat flatten contracts/utils/ERC1967ProxyCompat.sol > flattened/ERC1967Proxy_Flattened_hh.sol
 ```
 
 ### Fix File Encoding
@@ -203,7 +203,7 @@ foreach ($file in Get-ChildItem flattened\*.sol) {
 ```bash
 for f in flattened/*.sol; do
     iconv -f UTF-16 -t UTF-8 "$f" -o "${f}.tmp" 2>/dev/null && mv "${f}.tmp" "$f" || true
-    # If the file is already UTF-8, iconv fails silently and the original is kept
+    kept
 done
 ```
 
@@ -223,8 +223,6 @@ $file = "flattened\IDRP_Flattened_hh.sol"
 (Get-Content $file -Raw) `
   -replace '(?m)^// SPDX-License-Identifier:.*\r?\n', '' | `
   Set-Content $file
-
-# Add a single license header back at the top
 "// SPDX-License-Identifier: MIT`n" + (Get-Content $file -Raw) | Set-Content $file
 ```
 
@@ -267,20 +265,20 @@ There are **two addresses** to verify per deployment:
 | Implementation address (`IDRP_Implementation`) | `IDRP.sol` flattened source |
 | Proxy address (`IDRP`) | `ERC1967Proxy.sol` flattened source |
 
-The implementation address is in `deployments/shasta/IDRP_Implementation.json` → `"address"` field.  
-The proxy address is in `deployments/shasta/IDRP.json` → `"address"` field.
+The implementation address is in `deployments/nile/IDRP_Implementation.json` → `"address"` field.  
+The proxy address is in `deployments/nile/IDRP.json` → `"address"` field.
 
 ### 7a — Verify the Implementation Contract
 
 1. Open TronScan:
-   - **Shasta**: https://shasta.tronscan.org/#/contracts/verify
+   - **Nile**: https://nile.tronscan.org/#/contracts/verify
    - **Mainnet**: https://tronscan.org/#/contracts/verify
 
 2. Fill in the form:
 
    | Field | Value |
    |---|---|
-   | Contract Address | Implementation address from `deployments/…/IDRP_Implementation.json` |
+   | Contract Address | Implementation address from `deployments/nile/IDRP_Implementation.json` |
    | Compiler Version | `v0.8.20+commit.a1b79de6` |
    | License | MIT License (MIT) |
    | Optimization | **Yes** |
@@ -292,7 +290,7 @@ The proxy address is in `deployments/shasta/IDRP.json` → `"address"` field.
 3. Click **Verify and Publish**.
 
 4. Repeat the above for `IDRPController`:
-   - Address: `deployments/…/IDRPController_Implementation.json` → `"address"`
+   - Address: `deployments/nile/IDRPController_Implementation.json` → `"address"`
    - Source: `flattened/IDRPController_Flattened_hh.sol`
 
 ### 7b — Verify the Proxy Contract
@@ -301,7 +299,7 @@ The proxy address is in `deployments/shasta/IDRP.json` → `"address"` field.
 
    | Field | Value |
    |---|---|
-   | Contract Address | Proxy address from `deployments/…/IDRP.json` |
+   | Contract Address | Proxy address from `deployments/nile/IDRP.json` |
    | Compiler Version | `v0.8.20+commit.a1b79de6` |
    | License | MIT |
    | Optimization | **Yes** / 200 runs |
@@ -315,7 +313,7 @@ The proxy address is in `deployments/shasta/IDRP.json` → `"address"` field.
 
    Use the ABI encoder or run:
    ```bash
-   npx hardhat run scripts/utils/encode-proxy-args.ts --network shasta
+   npx hardhat run scripts/utils/encode-proxy-args.ts --network nile
    ```
 
    Or encode manually with `cast` (Foundry):
@@ -363,7 +361,7 @@ UPGRADER_ROLE    → granted on IDRP token to IDRPController proxy address
 Use `scripts/controller-setup.ts`:
 
 ```bash
-npx hardhat run scripts/controller-setup.ts --network shasta
+npx hardhat run scripts/controller-setup.ts --network nile
 ```
 
 ---
@@ -380,7 +378,7 @@ npx hardhat clean
 npx hardhat compile
 
 # 3. Deploy (testnet)
-npx hardhat deploy --network shasta
+npx hardhat deploy --network nile
 
 # 4. Deploy (mainnet)
 npx hardhat deploy --network tron
@@ -396,9 +394,9 @@ npx hardhat flatten contracts/IDRPController.sol > flattened/IDRPController_Flat
 
 | Resource | URL |
 |---|---|
-| Shasta TronScan | https://shasta.tronscan.org |
+| Nile TronScan | https://nile.tronscan.org |
 | Mainnet TronScan | https://tronscan.org |
 | TronScan Verify | https://tronscan.org/#/contracts/verify |
-| Shasta Faucet | https://shasta.tronex.io/ |
+| Nile Faucet | https://nileex.io/join/getJoinPage |
 | TronGrid (RPC) | https://www.trongrid.io/ |
 | TronLink Wallet | https://www.tronlink.org/ |

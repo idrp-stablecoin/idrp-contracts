@@ -31,7 +31,15 @@ const { deployments, getNamedAccounts } = hre;
 
   const { ethers } = hre;
   const signers = await ethers.getSigners();
-  const admin = signers[1];
+  // hardhat-tron only exposes one signer — signers[0] is IDRP_DEPLOYER_PRIVATE_KEY_TRON.
+  // The admin key is loaded separately via ethers.Wallet so both keys are available.
+  const { vars } = require("hardhat/config");
+  const adminPk = vars.get("IDRP_ADMIN_PRIVATE_KEY_TRON");
+  const adminWallet = new ethers.Wallet(
+    adminPk.startsWith("0x") ? adminPk : `0x${adminPk}`,
+    ethers.provider
+  );
+  const admin = adminWallet;
   console.log("admin", admin.address);
 
   const deploymentsData = await deployments.all();

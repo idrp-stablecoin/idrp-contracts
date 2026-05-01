@@ -6,13 +6,20 @@ import "hardhat-dependency-compiler";
 import "@layerzerolabs/hardhat-deploy";
 import "@layerzerolabs/hardhat-tron";
 
+const tronToHex = (tronKey: string): string => {
+  if (tronKey.startsWith("0x")) {
+    return tronKey; // Already in hex format
+  }
+  return "0x" + tronKey; // Convert to hex format
+}
+
 // const PRIVATE_KEY = vars.get("PRIVATE_KEY")
-const IDRP_DEPLOYER_PRIVATE_KEY = vars.get("IDRP_DEPLOYER_PRIVATE_KEY");
-const IDRP_ADMIN_PRIVATE_KEY = vars.get("IDRP_ADMIN_PRIVATE_KEY");
-const IDRP_DEPLOYER_PRIVATE_KEY_TRON = vars.get(
+const IDRP_DEPLOYER_PRIVATE_KEY = tronToHex(vars.get("IDRP_DEPLOYER_PRIVATE_KEY"));
+const IDRP_ADMIN_PRIVATE_KEY = tronToHex(vars.get("IDRP_ADMIN_PRIVATE_KEY"));
+const IDRP_DEPLOYER_PRIVATE_KEY_TRON = tronToHex(vars.get(
   "IDRP_DEPLOYER_PRIVATE_KEY_TRON"
-);
-const IDRP_ADMIN_PRIVATE_KEY_TRON = vars.get("IDRP_ADMIN_PRIVATE_KEY_TRON");
+));
+const IDRP_ADMIN_PRIVATE_KEY_TRON = tronToHex(vars.get("IDRP_ADMIN_PRIVATE_KEY_TRON"));
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
@@ -91,6 +98,12 @@ const config: HardhatUserConfig = {
     // TVM: @layerzerolabs/hardhat-tron
     shasta: {
       url: "https://api.shasta.trongrid.io/jsonrpc",
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
+      tron: true,
+    },
+    nile: {
+      // Tron Nile testnet JSON-RPC endpoint
+      url: "https://nile.trongrid.io/jsonrpc",
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
       tron: true,
     },
