@@ -23,8 +23,8 @@ const IDRP_ADMIN_PRIVATE_KEY_TRON = tronToHex(vars.get("IDRP_ADMIN_PRIVATE_KEY_T
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
-const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
-const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
+// const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
+// const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
 
 const config: HardhatUserConfig = {
   solidity: {

@@ -203,7 +203,6 @@ foreach ($file in Get-ChildItem flattened\*.sol) {
 ```bash
 for f in flattened/*.sol; do
     iconv -f UTF-16 -t UTF-8 "$f" -o "${f}.tmp" 2>/dev/null && mv "${f}.tmp" "$f" || true
-    kept
 done
 ```
 
@@ -247,9 +246,8 @@ for file in \
     flattened/IDRPController_Flattened_hh.sol \
     flattened/ERC1967Proxy_Flattened_hh.sol
 do
-    # Remove all SPDX lines, then prepend a single one
-    sed -i '/^\/\/ SPDX-License-Identifier:/d' "$file"
-    sed -i '1s/^/\/\/ SPDX-License-Identifier: MIT\n/' "$file"
+    sed -i '' '/^\/\/ SPDX-License-Identifier:/d' "$file"
+    sed -i '' '1i\'$'\n''// SPDX-License-Identifier: MIT'$'\n' "$file"
     echo "Processed: $file"
 done
 ```
