@@ -4,20 +4,34 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import type { ContractTransactionResponse } from "ethers";
 
 // ──────────────────────────────────────────────────────────────────────────────
-//  Tunables: cost columns are computed at the end of the run from these.
+//  PRICING TUNABLES — edit these to refresh the cost columns.
+//
+//  Each chain has two knobs: gas price (gwei) and native-token USD price.
+//  The cost = gasUsed * gwei * 1e-9 * nativeUsd. Numbers update every test run,
+//  so change them here and re-run `npx hardhat test test/sanctions/IDRPSanctionsRegistry.gas.test.ts`.
+//
+//  The same constants exist (in slightly different form) in:
+//    scripts/sanctions/measure-gas.ts        — the testnet measurement script
+//    notes/features/blacklist/plan.md        — the doc shown to the lead
+//  Keep them in sync when you update prices.
 // ──────────────────────────────────────────────────────────────────────────────
 
-const KAIA_GAS_PRICE_GWEI = 250; // Kairos hardcoded gas price (matches hardhat.config.ts)
+const KAIA_GAS_PRICE_GWEI = 250; // Kaia hardcoded gas price (matches hardhat.config.ts)
 const KAIA_NATIVE_USD = 0.15;
 
-const ETH_GAS_PRICE_GWEI = 20;
-const ETH_NATIVE_USD = 3500;
+const ETH_GAS_PRICE_GWEI = 1.5;
+const ETH_NATIVE_USD = 2310;
 
 const POLYGON_GAS_PRICE_GWEI = 50;
 const POLYGON_NATIVE_USD = 0.4;
 
 const BSC_GAS_PRICE_GWEI = 3;
 const BSC_NATIVE_USD = 650;
+
+// Base mainnet — Base Sepolia is the team's preferred first real-network target.
+// Sepolia itself is free, but the table projects to Base mainnet pricing for parity.
+const BASE_GAS_PRICE_GWEI = 0.05; // typical Base mainnet base fee in 2026
+const BASE_NATIVE_USD = 2310;
 
 const SOURCE_TAG = "OpenSanctions:NBCTF"; // representative production string
 const CAT_FOREIGN_GOV_LIST = 6;
@@ -57,10 +71,10 @@ function printReport() {
   console.log("# IDRP Sanctions Registry — measured gas (local Hardhat)");
   console.log("");
   console.log(
-    "| # | Scenario | Entries | Gas | Gas/entry | Kaia $ | Polygon $ | BSC $ | ETH $ |"
+    "| # | Scenario | Entries | Gas | Gas/entry | Kaia $ | Polygon $ | BSC $ | Base $ | ETH $ |"
   );
   console.log(
-    "|---:|---|---:|---:|---:|---:|---:|---:|---:|"
+    "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|"
   );
   results.forEach((r, i) => {
     const perEntry = typeof r.entries === "number" && r.entries > 0 ? Number(r.gasUsed) / r.entries : 0;
@@ -68,16 +82,18 @@ function printReport() {
     const kaia = fmtUsd(gasToCost(r.gasUsed, KAIA_GAS_PRICE_GWEI, KAIA_NATIVE_USD));
     const polygon = fmtUsd(gasToCost(r.gasUsed, POLYGON_GAS_PRICE_GWEI, POLYGON_NATIVE_USD));
     const bsc = fmtUsd(gasToCost(r.gasUsed, BSC_GAS_PRICE_GWEI, BSC_NATIVE_USD));
+    const base = fmtUsd(gasToCost(r.gasUsed, BASE_GAS_PRICE_GWEI, BASE_NATIVE_USD));
     const eth = fmtUsd(gasToCost(r.gasUsed, ETH_GAS_PRICE_GWEI, ETH_NATIVE_USD));
     console.log(
-      `| ${i + 1} | ${r.scenario} | ${r.entries} | ${r.gasUsed.toString()} | ${perEntryStr} | ${kaia} | ${polygon} | ${bsc} | ${eth} |`
+      `| ${i + 1} | ${r.scenario} | ${r.entries} | ${r.gasUsed.toString()} | ${perEntryStr} | ${kaia} | ${polygon} | ${bsc} | ${base} | ${eth} |`
     );
   });
   console.log("");
   console.log(
-    `Cost assumptions — Kaia: ${KAIA_GAS_PRICE_GWEI} ston @ $${KAIA_NATIVE_USD}/KAIA · ` +
+    `Cost assumptions — Kaia: ${KAIA_GAS_PRICE_GWEI} gwei @ $${KAIA_NATIVE_USD}/KAIA · ` +
       `Polygon: ${POLYGON_GAS_PRICE_GWEI} gwei @ $${POLYGON_NATIVE_USD}/MATIC · ` +
       `BSC: ${BSC_GAS_PRICE_GWEI} gwei @ $${BSC_NATIVE_USD}/BNB · ` +
+      `Base: ${BASE_GAS_PRICE_GWEI} gwei @ $${BASE_NATIVE_USD}/ETH · ` +
       `Ethereum: ${ETH_GAS_PRICE_GWEI} gwei @ $${ETH_NATIVE_USD}/ETH.`
   );
   console.log("");

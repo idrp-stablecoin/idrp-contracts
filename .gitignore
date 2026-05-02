@@ -18,3 +18,7 @@ ignition/deployments/chain-31337
 
 # Local deployment
 /deployment/chain-8545.json
+
+# Sanctions snapshots fetched from OpenSanctions — large, time-stamped, regenerated
+# on every fetch. Keep the directory itself via .gitkeep.
+/scripts/sanctions/results/*.json

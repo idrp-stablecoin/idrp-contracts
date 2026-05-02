@@ -153,9 +153,11 @@ async function main() {
     kaia: 0.15,
     polygon: 0.4,
     bsc: 650,
-    sepolia: 3500,
-    holesky: 3500,
-    mainnet: 3500,
+    sepolia: 2310,
+    holesky: 2310,
+    mainnet: 2310,
+    baseSepolia: 2310, // ETH (testnet — real cost is zero, USD shown for prod parity)
+    base: 2310,
   };
   const nativeSymbol: Record<string, string> = {
     kairos: "KAIA",
@@ -165,6 +167,8 @@ async function main() {
     sepolia: "ETH",
     holesky: "ETH",
     mainnet: "ETH",
+    baseSepolia: "ETH",
+    base: "ETH",
   };
 
   const usd = nativeUsd[networkName] ?? 0;

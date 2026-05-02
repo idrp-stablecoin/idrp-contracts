@@ -1,44 +1,42 @@
 /**
- * Seed (or sync) IDRPSanctionsRegistry from OpenSanctions.
+ * Apply a sanctions snapshot to IDRPSanctionsRegistry on-chain.
+ *
+ * Reads a snapshot JSON produced by `fetch-opensanctions.ts`, diffs it against
+ * the current on-chain state (reconstructed from events), and submits only the
+ * actual changes — chunked by MAX_BATCH_SIZE (500).
  *
  * SCOPE — sandbox milestone, per WhatsApp 2026-05-01:
- *   This is a SKELETON / MANUAL-RUN tool, not a long-lived daemon.
- *   It exists to:
- *     (a) prove the diff-only data flow end-to-end against a real on-chain registry,
- *     (b) bootstrap the initial blacklist when the contract is deployed,
- *     (c) serve as the reference implementation when we later promote it to a
- *         proper aggregator service.
+ *   This is a MANUAL-RUN tool, not a long-lived daemon.
  *
  * USAGE:
- *   # Set required env:
- *   #   SANCTIONS_REGISTRY_ADDRESS = 0x...
- *   #   OPENSANCTIONS_API_KEY      = <token>     (optional for dev, required at scale)
- *   #
- *   # Dry-run (default — fetches & diffs but does NOT submit):
- *   npx hardhat run scripts/sanctions/seed-from-opensanctions.ts --network kairos
- *   #
- *   # Apply diffs (sends txs):
- *   APPLY=1 npx hardhat run scripts/sanctions/seed-from-opensanctions.ts --network kairos
+ *   # 1) Fetch a snapshot (no chain access — writes JSON to scripts/sanctions/results/):
+ *   npx hardhat run scripts/sanctions/fetch-opensanctions.ts
  *
- * DATA POLICY:
- *   - OFAC is DISABLED by default — Indonesia non-aligned posture (lead 2026-05-01).
- *   - Source-to-category mapping codified in `SOURCE_CATEGORY` below.
- *   - To toggle a source on/off, edit `ENABLED_SOURCES`.
+ *   # 2) Apply that snapshot. Dry-run by default:
+ *   SANCTIONS_REGISTRY_ADDRESS=0x... \
+ *   SANCTIONS_SNAPSHOT_PATH=scripts/sanctions/results/<timestamp>.json \
+ *   npx hardhat run scripts/sanctions/seed-from-opensanctions.ts --network baseSepolia
+ *
+ *   # 3) Apply for real (sends txs):
+ *   SANCTIONS_REGISTRY_ADDRESS=0x... \
+ *   SANCTIONS_SNAPSHOT_PATH=scripts/sanctions/results/<timestamp>.json \
+ *   APPLY=1 \
+ *   npx hardhat run scripts/sanctions/seed-from-opensanctions.ts --network baseSepolia
+ *
+ *   If SANCTIONS_SNAPSHOT_PATH is omitted, the most recent .json file in
+ *   scripts/sanctions/results/ is used.
  *
  * DIFF RULE (critical):
  *   Re-pushing the entire desired state every cycle wastes ~50k gas/entry.
  *   This script computes only:
- *     toAdd     — addresses in source feed, not yet on-chain
- *     toRemove  — addresses on-chain, no longer in source feed
+ *     toAdd     — addresses in snapshot, not yet on-chain
+ *     toRemove  — addresses on-chain, no longer in snapshot
  *     toUpdate  — addresses present in both but with mismatched category
  *   and submits only those, chunked by MAX_BATCH_SIZE (500).
- *
- * IMPLEMENTATION STATUS:
- *   The OpenSanctions fetch is left as TODO with a clear interface — when
- *   we have an API token and decide which dataset endpoints to hit, fill
- *   in `fetchOpenSanctions()`. Everything below the fetch is functional.
  */
 
+import fs from "fs";
+import path from "path";
 import hre from "hardhat";
 import type { IDRPSanctionsRegistry } from "../../typechain-types";
 
@@ -53,17 +51,6 @@ type SourceKey =
   | "ransomwhere"
   | "stablecoin_chain_blacklist"
   | "us_ofac_sdn";
-
-const ENABLED_SOURCES: Record<SourceKey, boolean> = {
-  il_nbctf: true,
-  uk_hmt: true,
-  jp_mof: true,
-  fr_freezing: true,
-  fbi_lazarus: true,
-  ransomwhere: true,
-  stablecoin_chain_blacklist: true,
-  us_ofac_sdn: false, // disabled by default — Indonesia non-aligned posture
-};
 
 const SOURCE_CATEGORY: Record<SourceKey, number> = {
   il_nbctf: 6, // CAT_FOREIGN_GOV_LIST
@@ -102,29 +89,59 @@ interface OnChainEntry {
   source: string;
 }
 
-// ─── Data fetch — TODO ────────────────────────────────────────────────────────
+// ─── Snapshot loader ─────────────────────────────────────────────────────────
+
+interface Snapshot {
+  fetchedAt: string;
+  enabledSources: SourceKey[];
+  stats: Record<string, number>;
+  entries: SourceEntry[];
+}
 
 /**
- * Pull the active address set from OpenSanctions for the enabled Role-B sources.
- *
- * INTENT (when this gets implemented):
- *   - Hit `https://api.opensanctions.org/search/default?schema=CryptoWallet&...`
- *     with one query per enabled source, paginating via `next_url`.
- *   - For each entity, extract `properties.address[0]` (the wallet hex).
- *   - Filter to EVM addresses (40 hex chars after 0x); drop Tron (base58) until
- *     we deploy on Tron.
- *   - Checksum-normalize every address via `ethers.getAddress(...)`.
- *   - Return one entry per (address, source) tuple. If an address appears in
- *     multiple sources, we keep the first match by the order in ENABLED_SOURCES.
- *
- * Until the API token + dataset choices are confirmed with the lead, this
- * function returns an empty array, which makes the rest of the pipeline
- * trivially correct — it just produces a "no diff" report.
+ * Resolves the snapshot file to load. Honors SANCTIONS_SNAPSHOT_PATH if set;
+ * otherwise picks the most recent .json file in scripts/sanctions/results/.
  */
-async function fetchOpenSanctions(): Promise<SourceEntry[]> {
-  // TODO(adam): wire up fetch when OPENSANCTIONS_API_KEY is provisioned.
-  console.warn("⚠️  fetchOpenSanctions() not yet implemented — returning empty set.");
-  return [];
+function resolveSnapshotPath(): string {
+  const explicit = process.env.SANCTIONS_SNAPSHOT_PATH;
+  if (explicit) {
+    if (!fs.existsSync(explicit)) {
+      throw new Error(`SANCTIONS_SNAPSHOT_PATH=${explicit} does not exist.`);
+    }
+    return explicit;
+  }
+
+  const resultsDir = path.join(hre.config.paths.root || process.cwd(), "scripts/sanctions/results");
+  if (!fs.existsSync(resultsDir)) {
+    throw new Error(
+      `No SANCTIONS_SNAPSHOT_PATH set and no snapshot dir at ${resultsDir}. ` +
+        `Run scripts/sanctions/fetch-opensanctions.ts first.`
+    );
+  }
+
+  const candidates = fs
+    .readdirSync(resultsDir)
+    .filter((n) => n.endsWith(".json"))
+    .map((n) => path.join(resultsDir, n))
+    .sort(); // ISO-timestamp filenames sort chronologically
+  if (candidates.length === 0) {
+    throw new Error(
+      `No .json snapshots in ${resultsDir}. Run fetch-opensanctions.ts first.`
+    );
+  }
+  return candidates[candidates.length - 1];
+}
+
+function loadSnapshot(snapshotPath: string): Snapshot {
+  const raw = fs.readFileSync(snapshotPath, "utf-8");
+  const parsed = JSON.parse(raw) as Snapshot;
+
+  // Normalize addresses defensively — the snapshot SHOULD already be checksummed
+  // but we don't want a malformed file to silently misroute updates.
+  for (const e of parsed.entries) {
+    e.address = hre.ethers.getAddress(e.address);
+  }
+  return parsed;
 }
 
 // ─── On-chain state reconstruction ────────────────────────────────────────────
@@ -270,26 +287,27 @@ async function main() {
   const apply_ = process.env.APPLY === "1";
   const [signer] = await hre.ethers.getSigners();
 
+  const snapshotPath = resolveSnapshotPath();
+  const snapshot = loadSnapshot(snapshotPath);
+
   console.log(`network        : ${hre.network.name}`);
   console.log(`registry       : ${registryAddr}`);
   console.log(`signer         : ${signer.address}`);
   console.log(`mode           : ${apply_ ? "APPLY" : "DRY-RUN"}`);
-  console.log(`enabled sources: ${Object.entries(ENABLED_SOURCES).filter(([, v]) => v).map(([k]) => k).join(", ")}`);
+  console.log(`snapshot       : ${snapshotPath}`);
+  console.log(`  fetchedAt    : ${snapshot.fetchedAt}`);
+  console.log(`  sources      : ${snapshot.enabledSources.join(", ")}`);
+  console.log(`  entries      : ${snapshot.entries.length}`);
   console.log("");
 
   const registry = (await hre.ethers.getContractAt("IDRPSanctionsRegistry", registryAddr)) as unknown as IDRPSanctionsRegistry;
-
-  console.log("→ fetching desired state from OpenSanctions...");
-  const desiredAll = await fetchOpenSanctions();
-  const desired = desiredAll.filter((e) => ENABLED_SOURCES[e.source]);
-  console.log(`  fetched: ${desiredAll.length}  enabled-after-filter: ${desired.length}`);
 
   console.log("→ reconstructing on-chain state from events...");
   const onChain = await readOnChainEntries(registry);
   console.log(`  on-chain: ${onChain.size}`);
 
   console.log("→ computing diff...");
-  const diff = computeDiff(desired, onChain);
+  const diff = computeDiff(snapshot.entries, onChain);
   const totalAdd = [...diff.toAdd.values()].reduce((n, arr) => n + arr.length, 0);
   const totalUpdate = [...diff.toUpdate.values()].reduce((n, arr) => n + arr.length, 0);
   console.log(`  toAdd: ${totalAdd}  toUpdate: ${totalUpdate}  toRemove: ${diff.toRemove.length}`);
