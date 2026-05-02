@@ -10,24 +10,27 @@
  * Env:
  *   OPENSANCTIONS_API_KEY  — required for paginated/full-volume access (optional in dev)
  *   FETCH_OUTPUT_DIR       — override the default scripts/sanctions/results directory
+ *   OPENSANCTIONS_FIXTURE  — set to "1" for a small fixture set (no API key needed)
  *
  * Output snapshot shape (one file per run):
  *   {
- *     "fetchedAt":      "2026-05-01T12:34:56.000Z",
+ *     "fetchedAt":      "2026-05-02T08:00:00.000Z",
  *     "enabledSources": ["il_nbctf","uk_hmt", ...],
  *     "stats":          { "il_nbctf": 1639, "uk_hmt": 20, ... },
- *     "entries":        [{ "address": "0x...", "source": "il_nbctf" }, ...]
+ *     "addresses":      ["0x1111...", "0x2222...", ...]  // checksummed, deduped
  *   }
  *
- * Source policy: same as seed-from-opensanctions.ts. OFAC disabled by default
- * (Indonesia non-aligned posture). To toggle, edit ENABLED_SOURCES.
+ * Source policy: OFAC disabled by default (Indonesia non-aligned posture).
+ * The downstream `addToSanctionsList(address[])` call has no per-entry
+ * metadata — we just push a flat address array. The `enabledSources` and
+ * `stats` fields exist purely for the audit trail of what feed produced it.
  */
 
 import fs from "fs";
 import path from "path";
 import hre from "hardhat";
 
-// ─── Source policy (mirror of seed-from-opensanctions.ts) ────────────────────
+// ─── Source policy ────────────────────────────────────────────────────────────
 
 type SourceKey =
   | "il_nbctf"
@@ -50,43 +53,32 @@ const ENABLED_SOURCES: Record<SourceKey, boolean> = {
   us_ofac_sdn: false, // disabled by default — Indonesia non-aligned posture
 };
 
-interface SourceEntry {
+interface SourcedAddress {
   address: string; // checksummed EVM address
-  source: SourceKey;
+  source: SourceKey; // first source that contributed this address
 }
 
 interface Snapshot {
   fetchedAt: string;
   enabledSources: SourceKey[];
   stats: Record<string, number>;
-  entries: SourceEntry[];
+  addresses: string[]; // flat checksummed list — what the on-chain call consumes
 }
 
 // ─── OpenSanctions fetch — TODO when API key is provisioned ───────────────────
 
 /**
- * INTENT (when this gets implemented):
- *   - Hit `https://api.opensanctions.org/search/default?schema=CryptoWallet&...`
- *     with one query per enabled source dataset, paginating via `next_url`.
- *   - For each entity, extract `properties.address[0]` (the wallet hex).
- *   - Filter to EVM addresses (40 hex chars after 0x); drop Tron base58 until we
- *     deploy on Tron.
- *   - Checksum-normalize via `ethers.getAddress(...)`.
- *   - Return one entry per (address, source) tuple. If an address appears in
- *     multiple sources, keep the first match by order of ENABLED_SOURCES.
- *
- * Until OPENSANCTIONS_API_KEY is provisioned, this returns a small fixture set
- * (with the OPENSANCTIONS_FIXTURE env var) or an empty array.
+ * Returns one entry per (address, source) before dedup. The caller dedupes
+ * and records per-source contribution stats from this list.
  */
-async function fetchFromOpenSanctions(enabled: SourceKey[]): Promise<SourceEntry[]> {
+async function fetchFromOpenSanctions(enabled: SourceKey[]): Promise<SourcedAddress[]> {
   const apiKey = process.env.OPENSANCTIONS_API_KEY;
   if (!apiKey) {
-    console.warn("⚠️  OPENSANCTIONS_API_KEY not set — using empty fixture set.");
+    console.warn("⚠️  OPENSANCTIONS_API_KEY not set — using empty/fixture set.");
     console.warn("   Provide a key (or fill in fetchFromOpenSanctions) before production use.");
 
-    // Optional fixture mode for local end-to-end testing of the snapshot/diff/apply pipeline.
     if (process.env.OPENSANCTIONS_FIXTURE === "1") {
-      const samples: SourceEntry[] = [
+      const samples: SourcedAddress[] = [
         { address: hre.ethers.getAddress("0x" + "1".repeat(40)), source: "il_nbctf" },
         { address: hre.ethers.getAddress("0x" + "2".repeat(40)), source: "uk_hmt" },
         { address: hre.ethers.getAddress("0x" + "3".repeat(40)), source: "ransomwhere" },
@@ -96,10 +88,9 @@ async function fetchFromOpenSanctions(enabled: SourceKey[]): Promise<SourceEntry
     return [];
   }
 
-  // TODO(adam): implement the paginated OpenSanctions fetch here once the API
-  // key is provisioned. Suggested shape:
+  // TODO(adam): paginated OpenSanctions fetch. Suggested shape:
   //
-  //   const results: SourceEntry[] = [];
+  //   const results: SourcedAddress[] = [];
   //   for (const source of enabled) {
   //     const datasetSlug = OPEN_SANCTIONS_DATASET_SLUG[source];
   //     let url = `https://api.opensanctions.org/search/${datasetSlug}?schema=CryptoWallet&limit=200`;
@@ -127,24 +118,22 @@ async function main() {
 
   const all = await fetchFromOpenSanctions(enabled);
 
-  // De-dupe by address — keep the first (most-trusted) source per address.
+  // De-dupe by address; keep the first source for the stats column.
   const seen = new Set<string>();
-  const entries: SourceEntry[] = [];
+  const stats: Record<string, number> = {};
+  const addresses: string[] = [];
   for (const e of all) {
     if (seen.has(e.address)) continue;
     seen.add(e.address);
-    entries.push(e);
+    addresses.push(e.address);
+    stats[e.source] = (stats[e.source] ?? 0) + 1;
   }
-
-  // Build per-source stats so the snapshot shows volume contribution at a glance.
-  const stats: Record<string, number> = {};
-  for (const e of entries) stats[e.source] = (stats[e.source] ?? 0) + 1;
 
   const snapshot: Snapshot = {
     fetchedAt: new Date().toISOString(),
     enabledSources: enabled,
     stats,
-    entries,
+    addresses,
   };
 
   const outDir =
@@ -154,16 +143,15 @@ async function main() {
     fs.mkdirSync(outDir, { recursive: true });
   }
 
-  // ISO timestamp with `:` swapped for `-` so the filename is filesystem-safe on Windows.
   const tsSafe = snapshot.fetchedAt.replace(/[:.]/g, "-");
   const outPath = path.join(outDir, `${tsSafe}.json`);
   fs.writeFileSync(outPath, JSON.stringify(snapshot, null, 2));
 
-  console.log(`fetched ${entries.length} unique addresses across ${Object.keys(stats).length} sources`);
+  console.log(`fetched ${addresses.length} unique addresses across ${Object.keys(stats).length} sources`);
   for (const [src, n] of Object.entries(stats)) console.log(`  ${src.padEnd(28)} ${n}`);
   console.log("");
   console.log(`✓ snapshot written to ${outPath}`);
-  console.log(`  next: SANCTIONS_REGISTRY_ADDRESS=0x... \\`);
+  console.log(`  next: SANCTIONS_LIST_ADDRESS=0x... \\`);
   console.log(`        SANCTIONS_SNAPSHOT_PATH=${outPath} \\`);
   console.log(`        APPLY=1 npx hardhat run scripts/sanctions/seed-from-opensanctions.ts --network <chain>`);
 }

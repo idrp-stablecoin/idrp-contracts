@@ -1,11 +1,11 @@
 /**
- * Apply a sanctions snapshot to IDRPSanctionsRegistry on-chain.
+ * Apply a sanctions snapshot to SanctionsList on-chain.
  *
  * Reads a snapshot JSON produced by `fetch-opensanctions.ts`, diffs it against
  * the current on-chain state (reconstructed from events), and submits only the
- * actual changes — chunked by MAX_BATCH_SIZE (500).
+ * actual changes — chunked at MAX_BATCH (default 500).
  *
- * SCOPE — sandbox milestone, per WhatsApp 2026-05-01:
+ * SCOPE — sandbox milestone, per WhatsApp 2026-05-02:
  *   This is a MANUAL-RUN tool, not a long-lived daemon.
  *
  * USAGE:
@@ -13,94 +13,47 @@
  *   npx hardhat run scripts/sanctions/fetch-opensanctions.ts
  *
  *   # 2) Apply that snapshot. Dry-run by default:
- *   SANCTIONS_REGISTRY_ADDRESS=0x... \
+ *   SANCTIONS_LIST_ADDRESS=0x... \
  *   SANCTIONS_SNAPSHOT_PATH=scripts/sanctions/results/<timestamp>.json \
- *   npx hardhat run scripts/sanctions/seed-from-opensanctions.ts --network baseSepolia
+ *   npx hardhat run scripts/sanctions/seed-from-opensanctions.ts --network kairos
  *
  *   # 3) Apply for real (sends txs):
- *   SANCTIONS_REGISTRY_ADDRESS=0x... \
+ *   SANCTIONS_LIST_ADDRESS=0x... \
  *   SANCTIONS_SNAPSHOT_PATH=scripts/sanctions/results/<timestamp>.json \
  *   APPLY=1 \
- *   npx hardhat run scripts/sanctions/seed-from-opensanctions.ts --network baseSepolia
+ *   npx hardhat run scripts/sanctions/seed-from-opensanctions.ts --network kairos
  *
  *   If SANCTIONS_SNAPSHOT_PATH is omitted, the most recent .json file in
  *   scripts/sanctions/results/ is used.
  *
  * DIFF RULE (critical):
- *   Re-pushing the entire desired state every cycle wastes ~50k gas/entry.
- *   This script computes only:
+ *   Re-pushing the entire desired state every cycle still costs ~5k gas/entry
+ *   (non-zero → non-zero SSTORE). For 10k addresses that's ~$10/cycle on Kaia
+ *   wasted. Compute deltas only:
  *     toAdd     — addresses in snapshot, not yet on-chain
  *     toRemove  — addresses on-chain, no longer in snapshot
- *     toUpdate  — addresses present in both but with mismatched category
- *   and submits only those, chunked by MAX_BATCH_SIZE (500).
+ *   and submit only those, chunked at MAX_BATCH.
  */
 
 import fs from "fs";
 import path from "path";
 import hre from "hardhat";
-import type { IDRPSanctionsRegistry } from "../../typechain-types";
-
-// ─── Source policy ────────────────────────────────────────────────────────────
-
-type SourceKey =
-  | "il_nbctf"
-  | "uk_hmt"
-  | "jp_mof"
-  | "fr_freezing"
-  | "fbi_lazarus"
-  | "ransomwhere"
-  | "stablecoin_chain_blacklist"
-  | "us_ofac_sdn";
-
-const SOURCE_CATEGORY: Record<SourceKey, number> = {
-  il_nbctf: 6, // CAT_FOREIGN_GOV_LIST
-  uk_hmt: 6,
-  jp_mof: 6,
-  fr_freezing: 6,
-  fbi_lazarus: 4, // CAT_CRIMINAL_SCAM_THEFT
-  ransomwhere: 3, // CAT_CRIMINAL_RANSOMWARE
-  stablecoin_chain_blacklist: 4,
-  us_ofac_sdn: 8, // CAT_OFAC_SDN
-};
-
-const SOURCE_LABEL: Record<SourceKey, string> = {
-  il_nbctf: "OpenSanctions:IL_NBCTF",
-  uk_hmt: "OpenSanctions:UK_HMT",
-  jp_mof: "OpenSanctions:JP_MOF",
-  fr_freezing: "OpenSanctions:FR_FREEZING",
-  fbi_lazarus: "OpenSanctions:FBI_LAZARUS",
-  ransomwhere: "OpenSanctions:ransomwhe.re",
-  stablecoin_chain_blacklist: "OpenSanctions:on_chain_blacklist",
-  us_ofac_sdn: "OpenSanctions:US_OFAC_SDN",
-};
+import type { SanctionsList } from "../../typechain-types";
 
 const MAX_BATCH = 500;
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface SourceEntry {
-  address: string; // checksummed EVM address
-  source: SourceKey;
-}
-
-interface OnChainEntry {
-  address: string;
-  category: number;
-  source: string;
-}
 
 // ─── Snapshot loader ─────────────────────────────────────────────────────────
 
 interface Snapshot {
   fetchedAt: string;
-  enabledSources: SourceKey[];
+  enabledSources: string[];
   stats: Record<string, number>;
-  entries: SourceEntry[];
+  addresses: string[];
 }
 
 /**
- * Resolves the snapshot file to load. Honors SANCTIONS_SNAPSHOT_PATH if set;
- * otherwise picks the most recent .json file in scripts/sanctions/results/.
+ * Resolves the snapshot file. Honors SANCTIONS_SNAPSHOT_PATH if set; otherwise
+ * picks the most recent .json file in scripts/sanctions/results/.
  */
 function resolveSnapshotPath(): string {
   const explicit = process.env.SANCTIONS_SNAPSHOT_PATH;
@@ -125,9 +78,7 @@ function resolveSnapshotPath(): string {
     .map((n) => path.join(resultsDir, n))
     .sort(); // ISO-timestamp filenames sort chronologically
   if (candidates.length === 0) {
-    throw new Error(
-      `No .json snapshots in ${resultsDir}. Run fetch-opensanctions.ts first.`
-    );
+    throw new Error(`No .json snapshots in ${resultsDir}. Run fetch-opensanctions.ts first.`);
   }
   return candidates[candidates.length - 1];
 }
@@ -135,101 +86,67 @@ function resolveSnapshotPath(): string {
 function loadSnapshot(snapshotPath: string): Snapshot {
   const raw = fs.readFileSync(snapshotPath, "utf-8");
   const parsed = JSON.parse(raw) as Snapshot;
-
-  // Normalize addresses defensively — the snapshot SHOULD already be checksummed
-  // but we don't want a malformed file to silently misroute updates.
-  for (const e of parsed.entries) {
-    e.address = hre.ethers.getAddress(e.address);
-  }
+  // Normalize defensively — checksum every address.
+  parsed.addresses = parsed.addresses.map((a) => hre.ethers.getAddress(a));
   return parsed;
 }
 
-// ─── On-chain state reconstruction ────────────────────────────────────────────
+// ─── On-chain state reconstruction ───────────────────────────────────────────
 
 /**
- * Reads the current sanctioned set from the registry by replaying the
- * `SanctionedAddressAdded` and `SanctionedAddressRemoved` events.
- *
- * This is more reliable than maintaining off-chain mirror state, and works
- * across script reruns / different operator machines.
+ * Reads the current sanctioned set by replaying the SanctionsList events.
+ * More reliable than maintaining off-chain mirror state, and reproducible
+ * across operators / machines.
  */
-async function readOnChainEntries(registry: IDRPSanctionsRegistry): Promise<Map<string, OnChainEntry>> {
-  const fromBlock = 0; // tighten this in production — store the deploy block in deployment metadata
+async function readOnChainSet(list: SanctionsList): Promise<Set<string>> {
+  const fromBlock = 0; // tighten in production — store deploy block in deployment metadata
   const toBlock = "latest" as const;
 
-  const addedFilter = registry.filters.SanctionedAddressAdded();
-  const removedFilter = registry.filters.SanctionedAddressRemoved();
+  const addedFilter = list.filters.SanctionedAddressesAdded();
+  const removedFilter = list.filters.SanctionedAddressesRemoved();
 
   const [addedEvents, removedEvents] = await Promise.all([
-    registry.queryFilter(addedFilter, fromBlock, toBlock),
-    registry.queryFilter(removedFilter, fromBlock, toBlock),
+    list.queryFilter(addedFilter, fromBlock, toBlock),
+    list.queryFilter(removedFilter, fromBlock, toBlock),
   ]);
 
-  const state = new Map<string, OnChainEntry>();
-
-  // Walk in block/log order so the latest event for an address wins.
+  // Merge in chronological order so the latest event wins per address.
   const allEvents = [...addedEvents, ...removedEvents].sort((a, b) => {
     if (a.blockNumber !== b.blockNumber) return a.blockNumber - b.blockNumber;
     return a.index - b.index;
   });
 
+  const state = new Set<string>();
   for (const ev of allEvents) {
-    if (ev.eventName === "SanctionedAddressAdded") {
-      const addr = hre.ethers.getAddress(ev.args[0]);
-      const category = Number(ev.args[1]);
-      const source = ev.args[2] as string;
-      state.set(addr, { address: addr, category, source });
-    } else if (ev.eventName === "SanctionedAddressRemoved") {
-      const addr = hre.ethers.getAddress(ev.args[0]);
-      state.delete(addr);
+    const addrs = ev.args[0] as string[];
+    if (ev.eventName === "SanctionedAddressesAdded") {
+      for (const a of addrs) state.add(hre.ethers.getAddress(a));
+    } else if (ev.eventName === "SanctionedAddressesRemoved") {
+      for (const a of addrs) state.delete(hre.ethers.getAddress(a));
     }
   }
-
   return state;
 }
 
-// ─── Diff ─────────────────────────────────────────────────────────────────────
+// ─── Diff ────────────────────────────────────────────────────────────────────
 
 interface Diff {
-  toAdd: Map<SourceKey, string[]>; // grouped by source so each batch tags one category
+  toAdd: string[];
   toRemove: string[];
-  toUpdate: Map<SourceKey, string[]>; // present in both, but on-chain category mismatches source
 }
 
-function computeDiff(desired: SourceEntry[], current: Map<string, OnChainEntry>): Diff {
-  const desiredMap = new Map<string, SourceKey>();
-  for (const e of desired) {
-    if (!desiredMap.has(e.address)) desiredMap.set(e.address, e.source);
-  }
-
-  const toAdd = new Map<SourceKey, string[]>();
-  const toUpdate = new Map<SourceKey, string[]>();
-
-  for (const [addr, source] of desiredMap) {
-    const onChain = current.get(addr);
-    const expectedCategory = SOURCE_CATEGORY[source];
-    if (!onChain) {
-      pushTo(toAdd, source, addr);
-    } else if (onChain.category !== expectedCategory) {
-      pushTo(toUpdate, source, addr);
-    }
-  }
-
+function computeDiff(desired: string[], current: Set<string>): Diff {
+  const desiredSet = new Set(desired);
+  const toAdd: string[] = [];
   const toRemove: string[] = [];
-  for (const addr of current.keys()) {
-    if (!desiredMap.has(addr)) toRemove.push(addr);
-  }
 
-  return { toAdd, toRemove, toUpdate };
+  for (const a of desiredSet) if (!current.has(a)) toAdd.push(a);
+  for (const a of current) if (!desiredSet.has(a)) toRemove.push(a);
+
+  return { toAdd, toRemove };
 }
 
-function pushTo(m: Map<SourceKey, string[]>, k: SourceKey, v: string): void {
-  const arr = m.get(k);
-  if (arr) arr.push(v);
-  else m.set(k, [v]);
-}
-
-// ─── Apply ────────────────────────────────────────────────────────────────────
+// ─── Apply ───────────────────────────────────────────────────────────────────
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -237,39 +154,22 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
-async function apply(registry: IDRPSanctionsRegistry, diff: Diff, dryRun: boolean): Promise<bigint> {
+async function apply(list: SanctionsList, diff: Diff, dryRun: boolean): Promise<bigint> {
   let totalGas = 0n;
 
-  for (const [source, addrs] of diff.toAdd) {
-    const cat = SOURCE_CATEGORY[source];
-    const label = SOURCE_LABEL[source];
-    for (const batch of chunk(addrs, MAX_BATCH)) {
-      console.log(`  + ${batch.length} addr  ${label} (cat ${cat})`);
-      if (!dryRun) {
-        const tx = await registry.batchAddSanctioned(batch, cat, label);
-        const r = await tx.wait();
-        if (r) totalGas += r.gasUsed;
-      }
-    }
-  }
-
-  for (const [source, addrs] of diff.toUpdate) {
-    const cat = SOURCE_CATEGORY[source];
-    const label = SOURCE_LABEL[source];
-    for (const batch of chunk(addrs, MAX_BATCH)) {
-      console.log(`  ~ ${batch.length} addr  → ${label} (cat ${cat})`);
-      if (!dryRun) {
-        const tx = await registry.batchAddSanctioned(batch, cat, label);
-        const r = await tx.wait();
-        if (r) totalGas += r.gasUsed;
-      }
+  for (const batch of chunk(diff.toAdd, MAX_BATCH)) {
+    console.log(`  + ${batch.length} addr  add`);
+    if (!dryRun) {
+      const tx = await list.addToSanctionsList(batch);
+      const r = await tx.wait();
+      if (r) totalGas += r.gasUsed;
     }
   }
 
   for (const batch of chunk(diff.toRemove, MAX_BATCH)) {
     console.log(`  - ${batch.length} addr  remove`);
     if (!dryRun) {
-      const tx = await registry.batchRemoveSanctioned(batch);
+      const tx = await list.removeFromSanctionsList(batch);
       const r = await tx.wait();
       if (r) totalGas += r.gasUsed;
     }
@@ -278,11 +178,11 @@ async function apply(registry: IDRPSanctionsRegistry, diff: Diff, dryRun: boolea
   return totalGas;
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const registryAddr = process.env.SANCTIONS_REGISTRY_ADDRESS;
-  if (!registryAddr) throw new Error("Set SANCTIONS_REGISTRY_ADDRESS in env.");
+  const listAddr = process.env.SANCTIONS_LIST_ADDRESS;
+  if (!listAddr) throw new Error("Set SANCTIONS_LIST_ADDRESS in env.");
 
   const apply_ = process.env.APPLY === "1";
   const [signer] = await hre.ethers.getSigners();
@@ -291,30 +191,31 @@ async function main() {
   const snapshot = loadSnapshot(snapshotPath);
 
   console.log(`network        : ${hre.network.name}`);
-  console.log(`registry       : ${registryAddr}`);
+  console.log(`list           : ${listAddr}`);
   console.log(`signer         : ${signer.address}`);
   console.log(`mode           : ${apply_ ? "APPLY" : "DRY-RUN"}`);
   console.log(`snapshot       : ${snapshotPath}`);
   console.log(`  fetchedAt    : ${snapshot.fetchedAt}`);
   console.log(`  sources      : ${snapshot.enabledSources.join(", ")}`);
-  console.log(`  entries      : ${snapshot.entries.length}`);
+  console.log(`  addresses    : ${snapshot.addresses.length}`);
   console.log("");
 
-  const registry = (await hre.ethers.getContractAt("IDRPSanctionsRegistry", registryAddr)) as unknown as IDRPSanctionsRegistry;
+  const list = (await hre.ethers.getContractAt(
+    "SanctionsList",
+    listAddr
+  )) as unknown as SanctionsList;
 
   console.log("→ reconstructing on-chain state from events...");
-  const onChain = await readOnChainEntries(registry);
-  console.log(`  on-chain: ${onChain.size}`);
+  const current = await readOnChainSet(list);
+  console.log(`  on-chain: ${current.size}`);
 
   console.log("→ computing diff...");
-  const diff = computeDiff(snapshot.entries, onChain);
-  const totalAdd = [...diff.toAdd.values()].reduce((n, arr) => n + arr.length, 0);
-  const totalUpdate = [...diff.toUpdate.values()].reduce((n, arr) => n + arr.length, 0);
-  console.log(`  toAdd: ${totalAdd}  toUpdate: ${totalUpdate}  toRemove: ${diff.toRemove.length}`);
+  const diff = computeDiff(snapshot.addresses, current);
+  console.log(`  toAdd: ${diff.toAdd.length}  toRemove: ${diff.toRemove.length}`);
 
   console.log("");
   console.log(apply_ ? "→ applying..." : "→ dry-run (set APPLY=1 to send txs)");
-  const totalGas = await apply(registry, diff, !apply_);
+  const totalGas = await apply(list, diff, !apply_);
 
   console.log("");
   console.log(`done. total gas used: ${totalGas.toString()}`);

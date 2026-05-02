@@ -1,19 +1,16 @@
 /**
- * Measure IDRPSanctionsRegistry gas on a real network.
+ * Measure SanctionsList gas on a real network.
  *
  * Usage:
  *   npx hardhat run scripts/sanctions/measure-gas.ts --network kairos
  *
  * Behavior:
- *   - Deploys a fresh registry (the deployer signer becomes both multisig and
- *     keeper). For Kairos this is fine — testnet KAIA is free from a faucet.
+ *   - Deploys a fresh SanctionsList (deployer becomes owner).
  *   - Runs a representative subset of the gas-test scenarios with REAL receipts
- *     (so any chain-specific data-availability or opcode pricing is included).
+ *     (any chain-specific data-availability or opcode pricing is included).
  *   - Prints a paste-ready markdown table with chain-specific cost columns.
  *
- * Subset choice: we run scenarios up to 500 fresh adds, plus the "realistic
- * keeper diff sync". Total gas burn ≈ 60M which is well below typical testnet
- * faucet drips (~5 KAIA covers it at 250 gwei = 1.25 KAIA / 30M gas ≈ 2.5 KAIA total).
+ * Total gas burn ≈ 30M which is well below typical testnet faucet drips.
  */
 
 import hre from "hardhat";
@@ -55,95 +52,66 @@ async function main() {
   console.log("");
 
   // ── Deploy ──────────────────────────────────────────────────────────────
-  const Factory = await hre.ethers.getContractFactory("IDRPSanctionsRegistry");
-  const registry = await Factory.deploy(deployer.address, deployer.address);
-  await registry.waitForDeployment();
-  const deployTx = registry.deploymentTransaction();
+  const Factory = await hre.ethers.getContractFactory("SanctionsList");
+  const list = await Factory.deploy();
+  await list.waitForDeployment();
+  const deployTx = list.deploymentTransaction();
   if (!deployTx) throw new Error("no deployment transaction");
   const deployReceipt = await deployTx.wait();
   if (!deployReceipt) throw new Error("no deployment receipt");
 
   const results: Row[] = [];
   results.push({ scenario: "Deployment", entries: "—", gasUsed: deployReceipt.gasUsed });
-  console.log(`✓ deployed at ${await registry.getAddress()} (gas ${deployReceipt.gasUsed.toString()})`);
-
-  const SOURCE = "OpenSanctions:NBCTF";
-  const CAT_FOREIGN_GOV_LIST = 6;
-  const CAT_OJK_DOMESTIC = 7;
+  console.log(`✓ deployed at ${await list.getAddress()} (gas ${deployReceipt.gasUsed.toString()})`);
 
   // ── Add 1 ───────────────────────────────────────────────────────────────
-  let g = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x10_0001, 1), CAT_FOREIGN_GOV_LIST, SOURCE)
-  );
+  let g = await gasOf(await list.addToSanctionsList(makeAddrs(0x10_0001, 1)));
   results.push({ scenario: "Add 1 fresh", entries: 1, gasUsed: g });
   console.log(`✓ add 1 fresh: ${g.toString()} gas`);
 
   // ── Add 10 ──────────────────────────────────────────────────────────────
-  g = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x10_0010, 10), CAT_FOREIGN_GOV_LIST, SOURCE)
-  );
+  g = await gasOf(await list.addToSanctionsList(makeAddrs(0x10_0010, 10)));
   results.push({ scenario: "Add 10 fresh", entries: 10, gasUsed: g });
   console.log(`✓ add 10 fresh: ${g.toString()} gas`);
 
   // ── Add 100 ─────────────────────────────────────────────────────────────
-  g = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x10_0100, 100), CAT_FOREIGN_GOV_LIST, SOURCE)
-  );
+  g = await gasOf(await list.addToSanctionsList(makeAddrs(0x10_0100, 100)));
   results.push({ scenario: "Add 100 fresh", entries: 100, gasUsed: g });
   console.log(`✓ add 100 fresh: ${g.toString()} gas`);
 
   // ── Add 200 ─────────────────────────────────────────────────────────────
-  g = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x10_0200, 200), CAT_FOREIGN_GOV_LIST, SOURCE)
-  );
+  g = await gasOf(await list.addToSanctionsList(makeAddrs(0x10_0200, 200)));
   results.push({ scenario: "Add 200 fresh", entries: 200, gasUsed: g });
   console.log(`✓ add 200 fresh: ${g.toString()} gas`);
 
   // ── Add 220 (lead's specific question) ──────────────────────────────────
-  g = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x10_0400, 220), CAT_FOREIGN_GOV_LIST, SOURCE)
-  );
+  g = await gasOf(await list.addToSanctionsList(makeAddrs(0x10_0400, 220)));
   results.push({ scenario: "Add 220 fresh", entries: 220, gasUsed: g });
   console.log(`✓ add 220 fresh: ${g.toString()} gas`);
 
   // ── Add 500 (round 1) ───────────────────────────────────────────────────
-  g = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x10_1000, 500), CAT_FOREIGN_GOV_LIST, SOURCE)
-  );
+  g = await gasOf(await list.addToSanctionsList(makeAddrs(0x10_1000, 500)));
   results.push({ scenario: "Add 500 fresh (round 1)", entries: 500, gasUsed: g });
   console.log(`✓ add 500 fresh (round 1): ${g.toString()} gas`);
 
   // ── Add 500 (round 2) — proves O(1) per-entry ───────────────────────────
-  g = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x10_2000, 500), CAT_FOREIGN_GOV_LIST, SOURCE)
-  );
+  g = await gasOf(await list.addToSanctionsList(makeAddrs(0x10_2000, 500)));
   results.push({ scenario: "Add 500 fresh (round 2)", entries: 500, gasUsed: g });
   console.log(`✓ add 500 fresh (round 2): ${g.toString()} gas`);
 
   // ── Re-add 100 (no-op fast lane) ────────────────────────────────────────
-  g = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x10_0100, 100), CAT_FOREIGN_GOV_LIST, SOURCE)
-  );
+  g = await gasOf(await list.addToSanctionsList(makeAddrs(0x10_0100, 100)));
   results.push({ scenario: "Re-add 100 (no-op)", entries: 100, gasUsed: g });
   console.log(`✓ re-add 100 (no-op): ${g.toString()} gas`);
 
-  // ── Update category on 100 ──────────────────────────────────────────────
-  g = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x10_0100, 100), CAT_OJK_DOMESTIC, "OJK:Domestic")
-  );
-  results.push({ scenario: "Update category on 100", entries: 100, gasUsed: g });
-  console.log(`✓ update category on 100: ${g.toString()} gas`);
-
   // ── Remove 100 ──────────────────────────────────────────────────────────
-  g = await gasOf(await registry.batchRemoveSanctioned(makeAddrs(0x10_0100, 100)));
+  g = await gasOf(await list.removeFromSanctionsList(makeAddrs(0x10_0100, 100)));
   results.push({ scenario: "Remove 100 (batch)", entries: 100, gasUsed: g });
   console.log(`✓ remove 100: ${g.toString()} gas`);
 
   // ── Realistic keeper sync (5 add + 2 remove) ────────────────────────────
-  const addG = await gasOf(
-    await registry.batchAddSanctioned(makeAddrs(0x90_0000, 5), CAT_FOREIGN_GOV_LIST, SOURCE)
-  );
-  const removeG = await gasOf(await registry.batchRemoveSanctioned(makeAddrs(0x10_0010, 2)));
+  const addG = await gasOf(await list.addToSanctionsList(makeAddrs(0x90_0000, 5)));
+  const removeG = await gasOf(await list.removeFromSanctionsList(makeAddrs(0x10_0010, 2)));
   results.push({ scenario: "Keeper sync (5 add + 2 remove)", entries: 7, gasUsed: addG + removeG });
   console.log(`✓ keeper sync: ${(addG + removeG).toString()} gas`);
 
@@ -175,7 +143,7 @@ async function main() {
   const sym = nativeSymbol[networkName] ?? "native";
 
   console.log("");
-  console.log(`# IDRPSanctionsRegistry — measured gas on ${networkName}`);
+  console.log(`# SanctionsList — measured gas on ${networkName}`);
   console.log("");
   console.log(`> Captured: ${new Date().toISOString()}`);
   console.log(`> Gas price: ${gasPriceGwei} gwei · Native price assumed: $${usd}/${sym}`);

@@ -11,6 +11,13 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/// @notice Minimal interface IDRP needs from a sanctions list. Matches the
+///         Chainalysis SanctionsList ABI exactly so we can point at theirs on
+///         chains they support, and at our own clone on Kaia.
+interface ISanctionsList {
+    function isSanctioned(address addr) external view returns (bool);
+}
+
 contract IDRP is
     Initializable,
     ERC20Upgradeable,
@@ -38,6 +45,12 @@ contract IDRP is
     uint256 public upgradeScheduledAt;
     address public scheduledImplementation;
 
+    /// @notice Optional external sanctions list (Chainalysis SanctionsList ABI).
+    ///         When zero, no on-chain enforcement (advisory mode). When set,
+    ///         every non-mint, non-burn transfer pays one STATICCALL per side.
+    ///         Appended at the end of storage on purpose — UUPS layout safe.
+    address public sanctionsList;
+
     /// @dev Events
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
@@ -58,10 +71,16 @@ contract IDRP is
         address indexed newImplementation,
         address indexed cancelledBy
     );
+    event SanctionsListUpdated(
+        address indexed previousList,
+        address indexed newList
+    );
 
     /// @dev Errors
     error FrozenAccount();
     error NotUpgrader();
+    error SanctionedSender(address sender);
+    error SanctionedRecipient(address recipient);
 
     /// @dev Modifiers
     modifier onlyUpgrader() {
@@ -259,15 +278,41 @@ contract IDRP is
         emit DepositoryWalletUpdated(oldWallet, wallet);
     }
 
+    /// @notice Point IDRP at a sanctions list (Chainalysis SanctionsList ABI).
+    ///         Set to address(0) to disable on-chain enforcement (advisory only).
+    /// @dev NOT behind the 48h timelock — by design. The point of pluggable
+    ///      lists is fast swap (e.g. switch to Chainalysis when it lands on
+    ///      Kaia) and a one-tx kill switch (`setSanctionsList(0)`) if a list
+    ///      misbehaves. Multi-sig consensus is the gate.
+    function setSanctionsList(
+        address newList
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        address prev = sanctionsList;
+        sanctionsList = newList;
+        emit SanctionsListUpdated(prev, newList);
+    }
+
     function _update(
         address from,
         address to,
         uint256 value
     ) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
-        // Freeze check for regular transfers (not mint/burn)
+        // Freeze + sanctions checks only on regular transfers (not mint/burn).
         if (from != address(0) && to != address(0)) {
             if (frozen[from] || frozen[to]) revert FrozenAccount();
             require(value > 0, "Transfer amount must be greater than zero");
+
+            // Sanctions check fires only when a list is wired. Cached locally
+            // so we pay one warm SLOAD instead of two when wired.
+            address list = sanctionsList;
+            if (list != address(0)) {
+                if (ISanctionsList(list).isSanctioned(from)) {
+                    revert SanctionedSender(from);
+                }
+                if (ISanctionsList(list).isSanctioned(to)) {
+                    revert SanctionedRecipient(to);
+                }
+            }
         }
         super._update(from, to, value);
     }
