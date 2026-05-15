@@ -101,9 +101,6 @@ contract IDRP is
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, superAdmin);
-        _grantRole(PAUSER_ROLE, superAdmin);
-        _grantRole(MINTER_ROLE, superAdmin);
-        _grantRole(FREEZER_ROLE, superAdmin);
 
         upgrader = superAdmin;
         emit UpgraderUpdated(address(0), superAdmin);
