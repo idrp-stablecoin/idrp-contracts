@@ -11,6 +11,8 @@ describe("[C-2] Mint to address(0) When Depository Wallet Not Set", function () 
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
 
+    await idrp.connect(admin).grantRole(await idrp.MINTER_ROLE(), admin.address);
+
     const amount = parseUnits("1000000", 6); // 1M IDRP
 
     return { idrp, admin, user, depository, amount };

@@ -35,6 +35,12 @@ describe("IDRP — sanctions enforcement", function () {
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [superAdmin.address]);
     await idrp.waitForDeployment();
 
+    // initialize() only grants DEFAULT_ADMIN_ROLE; grant the operational roles
+    // to superAdmin so the tests below can mint/pause/freeze as that signer.
+    await idrp.connect(superAdmin).grantRole(await idrp.MINTER_ROLE(), superAdmin.address);
+    await idrp.connect(superAdmin).grantRole(await idrp.PAUSER_ROLE(), superAdmin.address);
+    await idrp.connect(superAdmin).grantRole(await idrp.FREEZER_ROLE(), superAdmin.address);
+
     // Deploy a fresh sanctions list — Chainalysis-clone contract; deployer is owner.
     const ListFactory = await hre.ethers.getContractFactory("SanctionsList");
     const list = await ListFactory.deploy();

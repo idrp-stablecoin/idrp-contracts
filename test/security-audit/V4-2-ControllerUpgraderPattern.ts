@@ -260,6 +260,8 @@ describe("[V4-2] IDRPController — Ownable removal + upgrader pattern", functio
         base.admin.address,
       ]);
       await stray.waitForDeployment();
+      // @ts-ignore — IDRP exposes grantRole/MINTER_ROLE
+      await stray.grantRole(await stray.MINTER_ROLE(), base.admin.address);
       // @ts-ignore — IDRP exposes setDepositoryWallet/mint
       await stray.setDepositoryWallet(await controller.getAddress());
       // @ts-ignore

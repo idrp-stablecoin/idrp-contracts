@@ -18,6 +18,9 @@ describe("[M-3] Missing SafeERC20 in IDRP.sol withdrawToken", function () {
       admin.address,
     ]);
     await mockToken.waitForDeployment();
+    await mockToken
+      .connect(admin)
+      .grantRole(await mockToken.MINTER_ROLE(), admin.address);
     await mockToken.connect(admin).setDepositoryWallet(admin.address);
 
     const amount = parseUnits("1000", 6);

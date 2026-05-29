@@ -81,6 +81,11 @@ describe("IDRPController", function () {
     await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
     await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
 
+    // Grant MINTER_ROLE to admin so admin-driven mint() calls succeed in tests
+    await idrp
+      .connect(admin)
+      .grantRole(await idrp.MINTER_ROLE(), admin.address);
+
     // Set quorum rules
     // await controller.setQuorumRules(OperationType.Mint, [
     //   {
@@ -1157,6 +1162,11 @@ describe("IDRPController", function () {
 
       // Set depositoryWallet
       await testToken.connect(admin).setDepositoryWallet(depository.address);
+
+      // Grant MINTER_ROLE to admin so admin-driven mint() calls succeed
+      await testToken
+        .connect(admin)
+        .grantRole(await testToken.MINTER_ROLE(), admin.address);
 
       // Mint some tokens to the depository
       await testToken.connect(admin).mint(hre.ethers.parseUnits("1000", 6));

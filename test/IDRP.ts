@@ -10,6 +10,12 @@ describe("IDRP", function () {
     const contract = await hre.upgrades.deployProxy(IDRP, [await defaultAdmin.getAddress()])
     await contract.waitForDeployment()
 
+    // initialize() only grants DEFAULT_ADMIN_ROLE. Grant the operational roles
+    // to defaultAdmin so the tests below can pause/mint/freeze as that signer.
+    await contract.connect(defaultAdmin).grantRole(await contract.PAUSER_ROLE(), defaultAdmin.address)
+    await contract.connect(defaultAdmin).grantRole(await contract.MINTER_ROLE(), defaultAdmin.address)
+    await contract.connect(defaultAdmin).grantRole(await contract.FREEZER_ROLE(), defaultAdmin.address)
+
     // Set depository wallet (required before minting)
     await contract.connect(defaultAdmin).setDepositoryWallet(depository.address)
 
