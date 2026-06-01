@@ -270,6 +270,7 @@ contract IDRP is
         address wallet
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(wallet != address(0), "Invalid wallet address");
+        require(wallet != depositoryWallet, "Same wallet");
         address oldWallet = depositoryWallet;
         depositoryWallet = wallet;
         emit DepositoryWalletUpdated(oldWallet, wallet);
