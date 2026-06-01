@@ -97,6 +97,16 @@ contract IDRPController is
     // on upgrade (slot is zero-initialized → migration runs via initializeV2).
     address public upgrader;
 
+    // Pending state for the quorum-rule timelock. Changes to existing rules go
+    // through schedule → wait UPGRADE_DELAY → apply. Appended at the end of
+    // storage (UUPS-safe): existing proxies zero-initialize these.
+    struct PendingQuorum {
+        bool exists;
+        uint256 scheduledAt;
+        QuorumRule[] rules;
+    }
+    mapping(OperationType => PendingQuorum) private pendingQuorumRules;
+
     // Events
     event OperationExecuted(
         OperationType indexed operationType,
@@ -108,6 +118,17 @@ contract IDRPController is
         OperationType indexed operationType,
         uint256 rulesCount,
         address indexed updatedBy
+    );
+    // Lifecycle events for the quorum-rule timelock.
+    event QuorumRulesScheduled(
+        OperationType indexed operationType,
+        uint256 rulesCount,
+        uint256 executableAfter,
+        address indexed scheduledBy
+    );
+    event QuorumRulesCancelled(
+        OperationType indexed operationType,
+        address indexed cancelledBy
     );
     event TokensWithdrawn(
         address indexed token,
@@ -199,12 +220,13 @@ contract IDRPController is
         emit UpgraderUpdated(oldUpgrader, _upgrader);
     }
 
-    // Set quorum rules for an operation type
+    // Quorum-rule management. First-time setup (no rules yet for an op type)
+    // applies instantly via setQuorumRules. Any CHANGE to an op type that already
+    // has rules must go through scheduleQuorumRules → wait UPGRADE_DELAY →
+    // applyQuorumRules; cancelQuorumRules aborts a pending change.
+
     // Validates ranges are contiguous: start at 0, no gaps, end at type(uint256).max
-    function setQuorumRules(
-        OperationType operationType,
-        QuorumRule[] calldata rules
-    ) external onlyRole(ADMIN_ROLE) {
+    function _validateQuorumRules(QuorumRule[] calldata rules) internal pure {
         require(rules.length > 0, "Rules cannot be empty");
 
         for (uint256 i = 0; i < rules.length; i++) {
@@ -225,13 +247,99 @@ contract IDRPController is
             rules[rules.length - 1].maxAmount == type(uint256).max,
             "Last rule must cover max amount"
         );
+    }
 
+    function _writeQuorumRules(
+        OperationType operationType,
+        QuorumRule[] calldata rules
+    ) internal {
         delete quorumRules[operationType];
         for (uint256 i = 0; i < rules.length; i++) {
             quorumRules[operationType].push(rules[i]);
         }
-
         emit QuorumRulesUpdated(operationType, rules.length, msg.sender);
+    }
+
+    /// @notice Set quorum rules. First-time setup applies instantly; changing an
+    ///         op type that already has rules is rejected and must use the
+    ///         timelocked scheduleQuorumRules/applyQuorumRules path.
+    function setQuorumRules(
+        OperationType operationType,
+        QuorumRule[] calldata rules
+    ) external onlyRole(ADMIN_ROLE) {
+        require(
+            quorumRules[operationType].length == 0,
+            "Rules exist: use schedule"
+        );
+        _validateQuorumRules(rules);
+        _writeQuorumRules(operationType, rules);
+    }
+
+    /// @notice Schedule a CHANGE to existing quorum rules. Validates eagerly
+    ///         (fail fast), then queues behind the UPGRADE_DELAY timelock.
+    function scheduleQuorumRules(
+        OperationType operationType,
+        QuorumRule[] calldata rules
+    ) external onlyRole(ADMIN_ROLE) {
+        _validateQuorumRules(rules);
+
+        PendingQuorum storage pending = pendingQuorumRules[operationType];
+        delete pending.rules;
+        for (uint256 i = 0; i < rules.length; i++) {
+            pending.rules.push(rules[i]);
+        }
+        pending.exists = true;
+        pending.scheduledAt = block.timestamp;
+
+        emit QuorumRulesScheduled(
+            operationType,
+            rules.length,
+            block.timestamp + UPGRADE_DELAY,
+            msg.sender
+        );
+    }
+
+    /// @notice Apply a previously scheduled quorum-rule change once the timelock
+    ///         has elapsed. Anyone with ADMIN_ROLE can finalise.
+    function applyQuorumRules(
+        OperationType operationType
+    ) external onlyRole(ADMIN_ROLE) {
+        PendingQuorum storage pending = pendingQuorumRules[operationType];
+        require(pending.exists, "No pending quorum rules");
+        require(
+            block.timestamp >= pending.scheduledAt + UPGRADE_DELAY,
+            "Timelock not expired"
+        );
+
+        delete quorumRules[operationType];
+        uint256 len = pending.rules.length;
+        for (uint256 i = 0; i < len; i++) {
+            quorumRules[operationType].push(pending.rules[i]);
+        }
+
+        delete pendingQuorumRules[operationType];
+
+        emit QuorumRulesUpdated(operationType, len, msg.sender);
+    }
+
+    /// @notice Cancel a pending (not-yet-applied) quorum-rule change.
+    function cancelQuorumRules(
+        OperationType operationType
+    ) external onlyRole(ADMIN_ROLE) {
+        require(pendingQuorumRules[operationType].exists, "No pending quorum rules");
+        delete pendingQuorumRules[operationType];
+        emit QuorumRulesCancelled(operationType, msg.sender);
+    }
+
+    /// @notice View a pending quorum-rule change (rules + when it becomes executable).
+    function getPendingQuorumRules(
+        OperationType operationType
+    ) external view returns (bool exists, uint256 executableAfter, QuorumRule[] memory rules) {
+        PendingQuorum storage pending = pendingQuorumRules[operationType];
+        uint256 execAfter = pending.exists
+            ? pending.scheduledAt + UPGRADE_DELAY
+            : 0;
+        return (pending.exists, execAfter, pending.rules);
     }
 
     // Main execution function - updated to use operationIdentifier instead of nonce
