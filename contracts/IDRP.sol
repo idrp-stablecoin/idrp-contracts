@@ -324,4 +324,21 @@ contract IDRP is
         require(token != address(this), "Cannot withdraw IDRP token");
         IERC20(token).safeTransfer(to, amount);
     }
+
+    /// @notice ERC-2612 permit with an explicit freeze gate.
+    /// @dev Reverts when either the owner or the spender is frozen, so a frozen
+    ///      account cannot set allowances. Token movement is independently gated
+    ///      by the freeze checks in _update().
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public override {
+        if (frozen[owner] || frozen[spender]) revert FrozenAccount();
+        super.permit(owner, spender, value, deadline, v, r, s);
+    }
 }
