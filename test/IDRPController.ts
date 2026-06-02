@@ -39,19 +39,23 @@ describe("IDRPController", function () {
     const [admin, officer, manager, director, commissioner, user, depository] =
       await hre.ethers.getSigners();
 
+    // v3: deploy IDRP and Controller, then wire IDRP's `controller` slot to
+    // the Controller proxy. ACDAR Controller's `initialize` makes `admin` the
+    // sole DEFAULT_ADMIN_ROLE holder, with the standard OZ chain gating
+    // grantRole on it.
     const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
-
-    // Set depositoryWallet
     await idrp.connect(admin).setDepositoryWallet(depository.address);
-    //const IDRPControllerFactory = await hre.ethers.getContractFactory("IDRPController")
-    //const controller = await IDRPControllerFactory.deploy(await idrp.getAddress(), admin.address)
+
     const controller = await hre.upgrades.deployProxy(
       await hre.ethers.getContractFactory("IDRPController"),
       [await idrp.getAddress(), admin.address],
     );
     await controller.waitForDeployment();
+
+    // Wire IDRP -> Controller for v3 operational gating.
+    await idrp.connect(admin).setController(await controller.getAddress());
 
     // Domain for EIP-712
     const domain = {
@@ -71,20 +75,14 @@ describe("IDRPController", function () {
       ],
     };
 
-    // Set up roles
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
-    await controller.grantRole(COMMISSIONER_ROLE, commissioner.address);
+    // Grant signer roles via stock ACDAR/OZ flow (admin holds DEFAULT_ADMIN_ROLE).
+    await controller.connect(admin).grantRole(OFFICER_ROLE, officer.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, manager.address);
+    await controller.connect(admin).grantRole(DIRECTOR_ROLE, director.address);
+    await controller.connect(admin).grantRole(COMMISSIONER_ROLE, commissioner.address);
 
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
-
-    // Grant MINTER_ROLE to admin so admin-driven mint() calls succeed in tests
-    await idrp
-      .connect(admin)
-      .grantRole(await idrp.MINTER_ROLE(), admin.address);
+    // No more IDRP MINTER/FREEZER/PAUSER role grants — those gates are gone.
+    // `controller` slot is what authorizes Controller -> IDRP operational calls.
 
     // Set quorum rules
     // await controller.setQuorumRules(OperationType.Mint, [
@@ -1153,20 +1151,15 @@ describe("IDRPController", function () {
         deployFixture,
       );
 
-      // Deploy a test ERC20 token
-      const TestTokenFactory = await hre.ethers.getContractFactory("IDRP"); // Reusing IDRP for simplicity
+      // Deploy a test ERC20 token (reusing IDRP for simplicity). v3 model:
+      // admin doubles as the controller slot so we can mint directly.
+      const TestTokenFactory = await hre.ethers.getContractFactory("IDRP");
       const testToken = await hre.upgrades.deployProxy(TestTokenFactory, [
         admin.address,
       ]);
       await testToken.waitForDeployment();
-
-      // Set depositoryWallet
+      await testToken.connect(admin).setController(admin.address);
       await testToken.connect(admin).setDepositoryWallet(depository.address);
-
-      // Grant MINTER_ROLE to admin so admin-driven mint() calls succeed
-      await testToken
-        .connect(admin)
-        .grantRole(await testToken.MINTER_ROLE(), admin.address);
 
       // Mint some tokens to the depository
       await testToken.connect(admin).mint(hre.ethers.parseUnits("1000", 6));
@@ -1205,16 +1198,17 @@ describe("IDRPController", function () {
         deployFixture,
       );
 
-      // Mint some IDRP tokens to the controller for testing
+      // v3: temporarily flip IDRP's `controller` slot to admin so we can mint
+      // directly for test-seeding, then point it back at the real Controller.
+      const realController = await controller.getAddress();
+      await idrp.connect(admin).setController(admin.address);
       await idrp.connect(admin).mint(hre.ethers.parseUnits("100", 6));
+      await idrp.connect(admin).setController(realController);
 
       // Transfer some IDRP tokens to the controller
       await idrp
         .connect(depository)
-        .transfer(
-          await controller.getAddress(),
-          hre.ethers.parseUnits("100", 6),
-        );
+        .transfer(realController, hre.ethers.parseUnits("100", 6));
 
       // // Attempt to withdraw IDRP tokens, should fail
       // await expect(

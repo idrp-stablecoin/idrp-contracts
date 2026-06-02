@@ -2,23 +2,22 @@ import hre from "hardhat"
 import { expect } from "chai"
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers"
 import { parseUnits } from "ethers"
+import { deployIDRPv3ForTests } from "./utils/utils"
 
 describe("IDRP", function () {
+  // v3 unit-test fixture. The v3 model gates operational methods on
+  // `msg.sender == controller`; for unit tests we set controller = defaultAdmin
+  // so the existing test bodies (defaultAdmin.pause/mint/freeze) keep working.
+  // The `defaultAdmin` signer is therefore acting as BOTH the admin slot
+  // (config) AND the controller slot (operations). Production wires those
+  // separately — that's covered by the integration / Safe / fork tests.
   async function contractFixture() {
     const [defaultAdmin, user, depository] = await hre.ethers.getSigners()
-    const IDRP = await hre.ethers.getContractFactory("IDRP")
-    const contract = await hre.upgrades.deployProxy(IDRP, [await defaultAdmin.getAddress()])
-    await contract.waitForDeployment()
-
-    // initialize() only grants DEFAULT_ADMIN_ROLE. Grant the operational roles
-    // to defaultAdmin so the tests below can pause/mint/freeze as that signer.
-    await contract.connect(defaultAdmin).grantRole(await contract.PAUSER_ROLE(), defaultAdmin.address)
-    await contract.connect(defaultAdmin).grantRole(await contract.MINTER_ROLE(), defaultAdmin.address)
-    await contract.connect(defaultAdmin).grantRole(await contract.FREEZER_ROLE(), defaultAdmin.address)
-
-    // Set depository wallet (required before minting)
-    await contract.connect(defaultAdmin).setDepositoryWallet(depository.address)
-
+    const contract = await deployIDRPv3ForTests(
+      defaultAdmin,
+      defaultAdmin,
+      depository.address
+    )
     return { contract, defaultAdmin, user, depository }
   }
 
@@ -67,17 +66,9 @@ describe("IDRP", function () {
     })
   })
 
-  describe("Role management", function () {
-    it("Should grant and revoke roles", async function () {
-      const { contract, defaultAdmin, user } = await loadFixture(contractFixture)
-
-      await contract.connect(defaultAdmin).grantRole(await contract.MINTER_ROLE(), user.address)
-      expect(await contract.hasRole(await contract.MINTER_ROLE(), user.address)).to.be.true
-
-      await contract.connect(defaultAdmin).revokeRole(await contract.MINTER_ROLE(), user.address)
-      expect(await contract.hasRole(await contract.MINTER_ROLE(), user.address)).to.be.false
-    })
-  })
+  // v3 removed the role-based gates on IDRP (no MINTER/PAUSER/FREEZER roles).
+  // Authority management is exercised by the V3-* migration tests and by the
+  // Controller's ACDAR tests, not here.
 
   describe("Minting", function () {
     it("Should mint tokens", async function () {

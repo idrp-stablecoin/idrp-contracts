@@ -1,6 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { deployIDRPv3ForTests } from "../utils/utils";
 
 /**
  * Tests for IDRP's on-chain sanctions enforcement wired into `_update`.
@@ -30,24 +31,16 @@ describe("IDRP — sanctions enforcement", function () {
   async function deployFixture() {
     const [superAdmin, alice, bob, carol] = await hre.ethers.getSigners();
 
-    // Deploy IDRP fresh via UUPS proxy.
-    const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
-    const idrp = await hre.upgrades.deployProxy(IDRPFactory, [superAdmin.address]);
-    await idrp.waitForDeployment();
-
-    // initialize() only grants DEFAULT_ADMIN_ROLE; grant the operational roles
-    // to superAdmin so the tests below can mint/pause/freeze as that signer.
-    await idrp.connect(superAdmin).grantRole(await idrp.MINTER_ROLE(), superAdmin.address);
-    await idrp.connect(superAdmin).grantRole(await idrp.PAUSER_ROLE(), superAdmin.address);
-    await idrp.connect(superAdmin).grantRole(await idrp.FREEZER_ROLE(), superAdmin.address);
+    // v3: deploy IDRP wired so superAdmin is BOTH admin and controller, with
+    // the depository wallet set to superAdmin so we can mint and seed alice.
+    const idrp = await deployIDRPv3ForTests(superAdmin, superAdmin, superAdmin.address);
 
     // Deploy a fresh sanctions list — Chainalysis-clone contract; deployer is owner.
     const ListFactory = await hre.ethers.getContractFactory("SanctionsList");
     const list = await ListFactory.deploy();
     await list.waitForDeployment();
 
-    // Give alice some IDRP — set depository, mint, then transfer to alice.
-    await idrp.connect(superAdmin).setDepositoryWallet(superAdmin.address);
+    // Give alice some IDRP — mint to depository (superAdmin) then transfer.
     await idrp.connect(superAdmin).mint(1_000_000n);
     await idrp.connect(superAdmin).transfer(alice.address, 100_000n);
 
@@ -77,11 +70,11 @@ describe("IDRP — sanctions enforcement", function () {
   });
 
   describe("setSanctionsList", function () {
-    it("only DEFAULT_ADMIN_ROLE can wire the list", async function () {
+    it("only `admin` can wire the list", async function () {
       const { idrp, list, alice } = await loadFixture(deployFixture);
       await expect(
         idrp.connect(alice).setSanctionsList(await list.getAddress())
-      ).to.be.revertedWithCustomError(idrp, "AccessControlUnauthorizedAccount");
+      ).to.be.revertedWithCustomError(idrp, "NotAdmin");
     });
 
     it("emits SanctionsListUpdated with both previous and next addresses", async function () {
