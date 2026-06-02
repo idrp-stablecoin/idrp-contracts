@@ -58,30 +58,56 @@ async function main() {
   console.log(`Chain: ${networkId}`);
   console.log(`Proxy: ${proxyAddress}`);
   console.log(`Role:  UPGRADER_ROLE (${UPGRADER_ROLE})`);
-  console.log(`Scanning 0..${latestBlock} for role events...`);
+  // Per-chain deployment-block hints reduce the scan range from "whole chain"
+  // to "from proxy creation" — essential on chains like Kairos with 200M+ blocks.
+  // Add new entries as you onboard chains.
+  const PROXY_DEPLOY_BLOCK: Record<number, Record<string, number>> = {
+    1001: {
+      // Kaia Kairos IDRP — deploy tx
+      // https://kairos.kaiascan.io/tx/0x7f8ab3ff9971447364bbd5203ff55b04bc337f55a5311361e8720e58fbd79e51
+      "0x999f947F3c7C0cF64AE53571a7fda51ce7f66164": 212_900_397,
+    },
+  };
+  const startBlock =
+    PROXY_DEPLOY_BLOCK[networkId]?.[proxyAddress] ?? 0;
+  console.log(
+    `Scanning ${startBlock}..${latestBlock} for role events (range: ${latestBlock - startBlock})...`
+  );
 
-  // Chunked getLogs — some RPCs cap the range per call.
-  const CHUNK = 50_000;
+  // Chunked getLogs with adaptive shrinking — RPCs cap range and/or rate.
+  let chunk = 50_000;
   const grantedLogs: any[] = [];
   const revokedLogs: any[] = [];
-  for (let from = 0; from <= latestBlock; from += CHUNK) {
-    const to = Math.min(from + CHUNK - 1, latestBlock);
-    const [g, r] = await Promise.all([
-      provider.getLogs({
-        address: proxyAddress,
-        fromBlock: from,
-        toBlock: to,
-        topics: [grantedTopic, UPGRADER_ROLE],
-      }),
-      provider.getLogs({
-        address: proxyAddress,
-        fromBlock: from,
-        toBlock: to,
-        topics: [revokedTopic, UPGRADER_ROLE],
-      }),
-    ]);
-    grantedLogs.push(...g);
-    revokedLogs.push(...r);
+  let from = startBlock;
+  while (from <= latestBlock) {
+    const to = Math.min(from + chunk - 1, latestBlock);
+    try {
+      const [g, r] = await Promise.all([
+        provider.getLogs({
+          address: proxyAddress,
+          fromBlock: from,
+          toBlock: to,
+          topics: [grantedTopic, UPGRADER_ROLE],
+        }),
+        provider.getLogs({
+          address: proxyAddress,
+          fromBlock: from,
+          toBlock: to,
+          topics: [revokedTopic, UPGRADER_ROLE],
+        }),
+      ]);
+      grantedLogs.push(...g);
+      revokedLogs.push(...r);
+      from = to + 1;
+    } catch (e) {
+      if (chunk <= 1_000) {
+        throw new Error(
+          `getLogs failed even at chunk=${chunk} starting block ${from}: ${(e as Error).message}`
+        );
+      }
+      chunk = Math.floor(chunk / 5);
+      console.log(`  RPC rejected; shrinking chunk to ${chunk}`);
+    }
   }
 
   // Replay events in chronological order, tracking the running holder set.
