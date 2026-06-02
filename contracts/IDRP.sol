@@ -2,7 +2,6 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.22;
 
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
@@ -22,14 +21,37 @@ contract IDRP is
     Initializable,
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
-    AccessControlUpgradeable,
     ERC20PermitUpgradeable,
     UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant FREEZER_ROLE = keccak256("FREEZER_ROLE");
+
+    // v3 (no-access-control) authority model:
+    //   admin       — single-address slot for config setters; should be Safe.
+    //   controller  — single-address slot for operational calls (mint/burn/freeze/
+    //                 pause/unpause); wired to the IDRPController proxy.
+    //   upgrader    — single-address slot for upgrade authority + 48h timelock.
+    // No roles, no AccessControlUpgradeable. Migration from the v2 source
+    // (`upgrader`-only) happens via `initializeV3` (reinitializer(3), onlyUpgrader).
+
+    /// @dev Preserved storage namespace of the removed AccessControlUpgradeable
+    ///      parent. OZ Upgrades requires the namespace to remain declared so
+    ///      v2→v3 layout comparison passes; the namespace still holds legacy
+    ///      role-membership data (DEFAULT_ADMIN_ROLE granted to the Safe at v1
+    ///      deploy time) but is no longer read by any path in v3.
+    ///
+    ///      DO NOT REMOVE this struct. If a future version ever re-inherits
+    ///      AccessControlUpgradeable, the legacy entries in this namespace will
+    ///      silently regain effect — audit the holder set first via event replay
+    ///      (see scripts/list-upgrader-holders.ts for the existing pattern).
+    /// @custom:storage-location erc7201:openzeppelin.storage.AccessControl
+    struct AccessControlStorageDeprecated {
+        mapping(bytes32 role => RoleDataDeprecated) _roles;
+    }
+    struct RoleDataDeprecated {
+        mapping(address => bool) hasRole;
+        bytes32 adminRole;
+    }
 
     // Mapping to track frozen accounts
     mapping(address => bool) public frozen;
@@ -50,6 +72,26 @@ contract IDRP is
     ///         every non-mint, non-burn transfer pays one STATICCALL per side.
     ///         Appended at the end of storage on purpose — UUPS layout safe.
     address public sanctionsList;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // v3: single-entity authority model (no-access-control refactor)
+    // Both slots are appended at the end of sequential storage — UUPS-safe for
+    // existing v1/v2 proxies (zero-initialized post-upgrade, populated via
+    // initializeV3).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// @notice Single-address admin (replaces DEFAULT_ADMIN_ROLE).
+    ///         Gates config setters and rotation of the other authority slots.
+    ///         Should be a Safe/multisig in production (see no-access-control
+    ///         plan §4 — not enforced on-chain by design).
+    address public admin;
+
+    /// @notice Single-address operational entity (replaces MINTER_ROLE /
+    ///         PAUSER_ROLE / FREEZER_ROLE). Always the IDRPController proxy.
+    ///         Wired post-deploy via `setController` (Controller is deployed
+    ///         after IDRP). While `address(0)`, the `onlyController` modifier
+    ///         reverts `ControllerNotSet` — operational methods are inert.
+    address public controller;
 
     /// @dev Events
     event AccountFrozen(address indexed account);
@@ -75,10 +117,18 @@ contract IDRP is
         address indexed previousList,
         address indexed newList
     );
+    event AdminUpdated(address indexed oldAdmin, address indexed newAdmin);
+    event ControllerUpdated(
+        address indexed oldController,
+        address indexed newController
+    );
 
     /// @dev Errors
     error FrozenAccount();
     error NotUpgrader();
+    error NotAdmin();
+    error NotController();
+    error ControllerNotSet();
     error SanctionedSender(address sender);
     error SanctionedRecipient(address recipient);
 
@@ -88,57 +138,93 @@ contract IDRP is
         _;
     }
 
+    modifier onlyAdmin() {
+        if (_msgSender() != admin) revert NotAdmin();
+        _;
+    }
+
+    /// @dev Reverts ControllerNotSet while `controller` is the zero address, so
+    ///      operational methods are inert between deploy and `setController`.
+    modifier onlyController() {
+        if (controller == address(0)) revert ControllerNotSet();
+        if (_msgSender() != controller) revert NotController();
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
+    /// @notice Fresh-deploy initializer. Wires `admin` = `upgrader` =
+    ///         `superAdmin`; `controller` is wired post-deploy via
+    ///         `setController` once the IDRPController proxy exists.
     function initialize(address superAdmin) public initializer {
+        require(superAdmin != address(0), "Invalid superAdmin");
         __ERC20_init("IDRP", "IDRP");
         __ERC20Pausable_init();
-        __AccessControl_init();
         __ERC20Permit_init("IDRP");
         __UUPSUpgradeable_init();
 
-        _grantRole(DEFAULT_ADMIN_ROLE, superAdmin);
+        admin = superAdmin;
+        emit AdminUpdated(address(0), superAdmin);
 
         upgrader = superAdmin;
         emit UpgraderUpdated(address(0), superAdmin);
+        // `controller` stays address(0); wired post-deploy via setController.
     }
 
-    /// @notice One-time migration for proxies originally deployed with UPGRADER_ROLE.
-    /// @dev Sets the single `upgrader` and revokes the legacy role from historical
-    ///      grantees so stale state does not re-grant authority if the role is ever
-    ///      reintroduced with the same string ("UPGRADER_ROLE") in a future upgrade.
-    ///      Plain AccessControlUpgradeable cannot enumerate holders on-chain, so the
-    ///      caller must pass the per-chain list obtained by replaying RoleGranted /
-    ///      RoleRevoked events (see scripts/list-upgrader-holders.ts).
-    ///      Gated by DEFAULT_ADMIN_ROLE so an attacker cannot frontrun the post-upgrade
-    ///      migration tx and seize `upgrader`.
-    /// @param _upgrader New single-address upgrader (e.g. Safe).
-    /// @param _legacyUpgraderHolders Addresses that ever held UPGRADER_ROLE on this chain.
-    function initializeV2(
-        address _upgrader,
-        address[] calldata _legacyUpgraderHolders
-    ) external reinitializer(2) onlyRole(DEFAULT_ADMIN_ROLE) {
+    /// @notice One-time v2→v3 migration: wires `admin` and `controller`,
+    ///         optionally rotates `upgrader`.
+    /// @dev Gated by `onlyUpgrader` because every chain that's at v2 has the
+    ///      upgrader slot populated. reinitializer(3) blocks replay.
+    /// @param _admin       New admin (Safe).
+    /// @param _controller  IDRPController proxy address.
+    /// @param _upgrader    New upgrader (may equal current).
+    function initializeV3(
+        address _admin,
+        address _controller,
+        address _upgrader
+    ) external reinitializer(3) onlyUpgrader {
+        require(_admin != address(0), "Invalid admin");
+        require(_controller != address(0), "Invalid controller");
         require(_upgrader != address(0), "Invalid upgrader");
 
         address oldUpgrader = upgrader;
+        admin = _admin;
+        controller = _controller;
         upgrader = _upgrader;
-        emit UpgraderUpdated(oldUpgrader, _upgrader);
 
-        bytes32 legacyUpgraderRole = keccak256("UPGRADER_ROLE");
-        for (uint256 i = 0; i < _legacyUpgraderHolders.length; i++) {
-            _revokeRole(legacyUpgraderRole, _legacyUpgraderHolders[i]);
-        }
+        emit AdminUpdated(address(0), _admin);
+        emit ControllerUpdated(address(0), _controller);
+        emit UpgraderUpdated(oldUpgrader, _upgrader);
     }
 
-    /// @notice Rotate the single upgrader address. Only DEFAULT_ADMIN_ROLE (Safe) may rotate.
-    function setUpgrader(address _upgrader) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    /// @notice Rotate the single upgrader address. Only `admin` (Safe) may rotate.
+    function setUpgrader(address _upgrader) external onlyAdmin {
         require(_upgrader != address(0), "Invalid upgrader");
         address oldUpgrader = upgrader;
         upgrader = _upgrader;
         emit UpgraderUpdated(oldUpgrader, _upgrader);
+    }
+
+    /// @notice Rotate the admin address. Only the current `admin` may rotate.
+    function setAdmin(address _admin) external onlyAdmin {
+        require(_admin != address(0), "Invalid admin");
+        address oldAdmin = admin;
+        admin = _admin;
+        emit AdminUpdated(oldAdmin, _admin);
+    }
+
+    /// @notice Rotate the controller address. Only `admin` may rotate.
+    /// @dev Rejects `address(0)` — rotation only goes address→address; the unset
+    ///      state can only exist between deploy and the first `setController` /
+    ///      `initializeV3` call.
+    function setController(address _controller) external onlyAdmin {
+        require(_controller != address(0), "Invalid controller");
+        address oldController = controller;
+        controller = _controller;
+        emit ControllerUpdated(oldController, _controller);
     }
 
     /// @notice Schedule a UUPS upgrade. Starts the 48h timelock window.
@@ -170,17 +256,17 @@ contract IDRP is
         return 6;
     }
 
-    function pause() public onlyRole(PAUSER_ROLE) {
+    function pause() public onlyController {
         _pause();
     }
 
-    function unpause() public onlyRole(PAUSER_ROLE) {
+    function unpause() public onlyController {
         _unpause();
     }
 
     /// @notice Mint stablecoins to a specific address
     /// @param amount The amount of stablecoins to mint
-    function mint(uint256 amount) public onlyRole(MINTER_ROLE) whenNotPaused {
+    function mint(uint256 amount) public onlyController whenNotPaused {
         require(
             depositoryWallet != address(0),
             "Depository wallet not set"
@@ -195,9 +281,7 @@ contract IDRP is
 
     /// @notice Set the maximum supply cap
     /// @param _maxSupply The max supply (0 = unlimited)
-    function setMaxSupply(
-        uint256 _maxSupply
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMaxSupply(uint256 _maxSupply) external onlyAdmin {
         uint256 oldMaxSupply = maxSupply;
         maxSupply = _maxSupply;
         emit MaxSupplyUpdated(oldMaxSupply, _maxSupply);
@@ -206,21 +290,23 @@ contract IDRP is
     /// @notice Burn stablecoins from a specific address
     /// @param from The address from which the stablecoins will be burned
     /// @param amount The amount of stablecoins to burn
-    /// @dev If `from` is the IDRPController (caller), no allowance check is needed
-    /// since the user has already transferred tokens to the controller.
-    /// If `from` is another address, allowance check is required.
+    /// @dev SC-01 burn-consent invariant (052026 audit, pinned by SC-01): only the
+    ///      operator's own funds, the depository cold wallet (which cannot approve),
+    ///      or an account that pre-approved the operator can be burned. Third-party
+    ///      burns without allowance revert. This guarantee is unchanged by the v3
+    ///      refactor — only the role gate changed (MINTER_ROLE → onlyController).
     function burn(
         address from,
         uint256 amount
-    ) public onlyRole(MINTER_ROLE) whenNotPaused {
+    ) public onlyController whenNotPaused {
         if (frozen[from]) revert FrozenAccount();
 
-        // If `from` is not the caller (MINTER_ROLE/IDRPController) and not depositoryWallet,
-        // ensure the caller has allowance from 'from'
+        // If `from` is not the caller (controller) and not the depositoryWallet,
+        // ensure the caller has allowance from `from`.
         // - depositoryWallet is a cold wallet and can't approve
         // - controller transfers tokens to itself before burning, so no allowance needed
         if (from != _msgSender() && from != depositoryWallet) {
-            // Ensure the MINTER_ROLE has an allowance from 'from'
+            // Ensure the controller has an allowance from `from`.
             uint256 currentAllowance = allowance(from, _msgSender());
             require(
                 currentAllowance >= amount,
@@ -252,23 +338,23 @@ contract IDRP is
 
     /// @notice Freeze an account, preventing transfers
     /// @param account The address to freeze
-    function freeze(address account) external onlyRole(FREEZER_ROLE) {
+    function freeze(address account) external onlyController {
         frozen[account] = true;
         emit AccountFrozen(account);
     }
 
     /// @notice Unfreeze an account, allowing transfers
     /// @param account The address to unfreeze
-    function unfreeze(address account) external onlyRole(FREEZER_ROLE) {
+    function unfreeze(address account) external onlyController {
         frozen[account] = false;
         emit AccountUnfrozen(account);
     }
 
     /// @notice Set the depository wallet address
     /// @param wallet The address of the depository wallet
-    function setDepositoryWallet(
-        address wallet
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    /// @dev SC-06 (052026 audit): rejects a no-op set to the current wallet so a
+    ///      no-op update cannot silently emit a misleading event. Preserved verbatim.
+    function setDepositoryWallet(address wallet) external onlyAdmin {
         require(wallet != address(0), "Invalid wallet address");
         require(wallet != depositoryWallet, "Same wallet");
         address oldWallet = depositoryWallet;
@@ -281,10 +367,8 @@ contract IDRP is
     /// @dev NOT behind the 48h timelock — by design. The point of pluggable
     ///      lists is fast swap (e.g. switch to Chainalysis when it lands on
     ///      Kaia) and a one-tx kill switch (`setSanctionsList(0)`) if a list
-    ///      misbehaves. Multi-sig consensus is the gate.
-    function setSanctionsList(
-        address newList
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ///      misbehaves. Multi-sig consensus (admin = Safe) is the gate.
+    function setSanctionsList(address newList) external onlyAdmin {
         address prev = sanctionsList;
         sanctionsList = newList;
         emit SanctionsListUpdated(prev, newList);
@@ -320,7 +404,7 @@ contract IDRP is
         address token,
         address to,
         uint256 amount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyAdmin {
         require(token != address(this), "Cannot withdraw IDRP token");
         IERC20(token).safeTransfer(to, amount);
     }

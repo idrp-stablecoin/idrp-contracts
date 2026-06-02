@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -26,13 +26,13 @@ interface IIDRP {
 
 contract IDRPController is
     Initializable,
-    AccessControlUpgradeable,
+    AccessControlDefaultAdminRulesUpgradeable,
     UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
 
     /// @dev Preserved storage namespace of the removed OwnableUpgradeable parent
-    ///      (audit v4.0 finding V4-2). OZ Upgrades requires the namespace to
+    ///      (042026 audit finding MINOR-2). OZ Upgrades requires the namespace to
     ///      remain declared so v1→v2 layout comparison passes; the slot still
     ///      holds its legacy `_owner` value but is no longer read by any path.
     /// @custom:storage-location erc7201:openzeppelin.storage.Ownable
@@ -40,8 +40,12 @@ contract IDRPController is
         address _owner;
     }
 
-    // Role definitions
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    // Role definitions.
+    // ADMIN_ROLE and DEFAULT_ADMIN_ROLE were removed in v3 (no-access-control
+    // refactor); they collapsed to the single `admin` slot below. The four
+    // quorum-signer roles remain in AccessControlUpgradeable because they have
+    // many holders each (staff/executors); admin manages them via the overridden
+    // grantRole/revokeRole entry points.
     bytes32 public constant OFFICER_ROLE = keccak256("OFFICER_ROLE");
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 public constant DIRECTOR_ROLE = keccak256("DIRECTOR_ROLE");
@@ -91,7 +95,7 @@ contract IDRPController is
     uint256 public upgradeScheduledAt;
     address public scheduledImplementation;
 
-    // Single-address upgrader (audit v4.0 finding V4-2: removed OwnableUpgradeable
+    // Single-address upgrader (042026 audit finding MINOR-2: removed OwnableUpgradeable
     // in favour of an explicit, rotatable upgrader — same shape as IDRP.sol).
     // Appended at the end of storage so existing v1 proxies preserve their layout
     // on upgrade (slot is zero-initialized → migration runs via initializeV2).
@@ -106,6 +110,12 @@ contract IDRPController is
         QuorumRule[] rules;
     }
     mapping(OperationType => PendingQuorum) private pendingQuorumRules;
+
+    // v3 admin lives in ACDAR's ERC-7201 namespace (no sequential slot).
+    // Initialised by `initializeV3` with revoke-then-init ordering — see
+    // docs/design/no-defaultadmin-leftbehind.md §3.
+    // Initial admin transfer delay (passed to ACDAR's __init):
+    uint48 public constant DEFAULT_ADMIN_DELAY = 48 hours;
 
     // Events
     event OperationExecuted(
@@ -166,22 +176,14 @@ contract IDRPController is
         address _idrpToken,
         address _safeAddress
     ) public initializer {
-        __AccessControl_init();
+        __AccessControlDefaultAdminRules_init(DEFAULT_ADMIN_DELAY, _safeAddress);
         __UUPSUpgradeable_init();
 
         idrpToken = _idrpToken;
 
-        // Setup roles - set Safe address as the admin
-        _grantRole(DEFAULT_ADMIN_ROLE, _safeAddress);
-        _grantRole(ADMIN_ROLE, _safeAddress);
-
-        // Single-address upgrader. Safe is the same address that was previously
-        // wired to OwnableUpgradeable's _owner — fresh deploys keep the same
-        // authorisation semantics, just via the rotatable upgrader slot.
         upgrader = _safeAddress;
         emit UpgraderUpdated(address(0), _safeAddress);
 
-        // Initialize domain separator for EIP-712
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256(
@@ -198,8 +200,8 @@ contract IDRPController is
     /// @notice One-time migration for proxies originally deployed with OwnableUpgradeable.
     /// @dev Sets `upgrader` for existing v1 proxies whose slot is still zero.
     ///      Gated by DEFAULT_ADMIN_ROLE so an attacker cannot frontrun the
-    ///      post-upgrade migration tx (audit v4.0 finding V4-1, mirrored on
-    ///      controller for V4-2). The orphaned `_owner` slot in the OZ Ownable
+    ///      post-upgrade migration tx (042026 audit finding MINOR-1, mirrored on
+    ///      controller for MINOR-2). The orphaned `_owner` slot in the OZ Ownable
     ///      ERC-7201 namespace is harmless — it is no longer read by any path.
     function initializeV2(
         address _upgrader
@@ -210,15 +212,60 @@ contract IDRPController is
         emit UpgraderUpdated(oldUpgrader, _upgrader);
     }
 
-    /// @notice Rotate the single upgrader address. Only DEFAULT_ADMIN_ROLE (Safe) may rotate.
-    function setUpgrader(
-        address _upgrader
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    /// @notice One-time migration to the v3 (ACDAR) authority model.
+    /// @dev Order is critical and pins the safety property documented in
+    ///      docs/design/no-defaultadmin-leftbehind.md §3:
+    ///        1. Revoke EVERY legacy DEFAULT_ADMIN_ROLE holder via the
+    ///           inherited AccessControl machinery, BEFORE ACDAR is initialised.
+    ///           At this point ACDAR's `defaultAdmin()` slot is still zero, so
+    ///           the override's "clear current admin" branch is inert. Inherited
+    ///           AccessControl._revokeRole clears each legacy holder cleanly.
+    ///        2. Initialise ACDAR with the intended single admin. ACDAR's
+    ///           `_grantRole` re-adds `_admin` to legacy storage AND sets
+    ///           `_currentDefaultAdmin = _admin`. If `_admin` was in the
+    ///           legacy list (the normal case), this re-grants it — net
+    ///           result is exactly one DEFAULT_ADMIN_ROLE holder.
+    ///        3. Rotate the upgrader slot if requested.
+    ///
+    ///      Gated by `onlyUpgrader`: production proxies have `upgrader =
+    ///      0xb2480DF5...c1779` (v2 is deployed on all four mainnets per the
+    ///      verified source in deployment/logs/contracts/). reinitializer(3)
+    ///      itself blocks replay.
+    /// @param _admin                       Intended single admin (ACDAR).
+    /// @param _upgrader                    Updated upgrader address (may equal current).
+    /// @param _legacyDefaultAdminHolders   Addresses currently holding DEFAULT_ADMIN_ROLE in legacy storage. Enumerate off-chain via event replay (scripts/list-default-admin-holders.ts).
+    function initializeV3(
+        address _admin,
+        address _upgrader,
+        address[] calldata _legacyDefaultAdminHolders
+    ) external reinitializer(3) onlyUpgrader {
+        require(_admin != address(0), "Invalid admin");
+        require(_upgrader != address(0), "Invalid upgrader");
+
+        // Step 1: revoke every legacy DEFAULT_ADMIN_ROLE holder.
+        for (uint256 i = 0; i < _legacyDefaultAdminHolders.length; i++) {
+            _revokeRole(DEFAULT_ADMIN_ROLE, _legacyDefaultAdminHolders[i]);
+        }
+
+        // Step 2: initialise ACDAR with the intended single admin.
+        __AccessControlDefaultAdminRules_init(DEFAULT_ADMIN_DELAY, _admin);
+
+        // Step 3: rotate upgrader if requested.
+        if (_upgrader != upgrader) {
+            address oldUpgrader = upgrader;
+            upgrader = _upgrader;
+            emit UpgraderUpdated(oldUpgrader, _upgrader);
+        }
+    }
+
+    /// @notice Rotate the single upgrader address. Gated by ACDAR DEFAULT_ADMIN_ROLE.
+    function setUpgrader(address _upgrader) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_upgrader != address(0), "Invalid upgrader");
         address oldUpgrader = upgrader;
         upgrader = _upgrader;
         emit UpgraderUpdated(oldUpgrader, _upgrader);
     }
+
 
     // Quorum-rule management. First-time setup (no rules yet for an op type)
     // applies instantly via setQuorumRules. Any CHANGE to an op type that already
@@ -266,7 +313,7 @@ contract IDRPController is
     function setQuorumRules(
         OperationType operationType,
         QuorumRule[] calldata rules
-    ) external onlyRole(ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(
             quorumRules[operationType].length == 0,
             "Rules exist: use schedule"
@@ -280,7 +327,7 @@ contract IDRPController is
     function scheduleQuorumRules(
         OperationType operationType,
         QuorumRule[] calldata rules
-    ) external onlyRole(ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateQuorumRules(rules);
 
         PendingQuorum storage pending = pendingQuorumRules[operationType];
@@ -300,10 +347,10 @@ contract IDRPController is
     }
 
     /// @notice Apply a previously scheduled quorum-rule change once the timelock
-    ///         has elapsed. Anyone with ADMIN_ROLE can finalise.
+    ///         has elapsed. Only `admin` (Safe) can finalise.
     function applyQuorumRules(
         OperationType operationType
-    ) external onlyRole(ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         PendingQuorum storage pending = pendingQuorumRules[operationType];
         require(pending.exists, "No pending quorum rules");
         require(
@@ -325,7 +372,7 @@ contract IDRPController is
     /// @notice Cancel a pending (not-yet-applied) quorum-rule change.
     function cancelQuorumRules(
         OperationType operationType
-    ) external onlyRole(ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(pendingQuorumRules[operationType].exists, "No pending quorum rules");
         delete pendingQuorumRules[operationType];
         emit QuorumRulesCancelled(operationType, msg.sender);
@@ -351,9 +398,14 @@ contract IDRPController is
         uint256 deadline,
         bytes[] calldata signatures
     ) external {
-        // Ensure only Admin, Officer, Manager, Director, or Commissioner can call this
+        // Ensure only admin, Officer, Manager, Director, or Commissioner can call this.
+        // Behaviour-preserving across the v3 refactor: pre-v3 the Safe held both
+        // DEFAULT_ADMIN_ROLE and ADMIN_ROLE and could submit; under ACDAR the
+        // single DEFAULT_ADMIN_ROLE holder keeps that capability. Authorization
+        // is still the quorum signatures verified below — submission cannot
+        // bypass the quorum.
         require(
-            hasRole(ADMIN_ROLE, msg.sender) ||
+            hasRole(DEFAULT_ADMIN_ROLE, msg.sender) ||
                 hasRole(OFFICER_ROLE, msg.sender) ||
                 hasRole(MANAGER_ROLE, msg.sender) ||
                 hasRole(DIRECTOR_ROLE, msg.sender) ||
