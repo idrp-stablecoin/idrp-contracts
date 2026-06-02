@@ -12,7 +12,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
  * of the contract: only the admin can run the migration, and the original
  * reinitializer-once protection still holds.
  */
-describe("[V4-1] IDRP.initializeV2 access control", function () {
+describe("[0426 MINOR-1] IDRP.initializeV2 access control", function () {
   const UPGRADER_ROLE = hre.ethers.keccak256(
     hre.ethers.toUtf8Bytes("UPGRADER_ROLE")
   );
@@ -27,8 +27,12 @@ describe("[V4-1] IDRP.initializeV2 access control", function () {
     const [superAdmin, attacker, newUpgrader, legacyA, legacyB] =
       await hre.ethers.getSigners();
 
-    const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
-    const idrp = await hre.upgrades.deployProxy(IDRPFactory, [
+    // The v1→v2 migration (with the DEFAULT_ADMIN_ROLE access-control gate)
+    // lives in legacy/IDRPv2.sol since v3 dropped AccessControlUpgradeable.
+    // Pin the audit fix against the legacy contract — that's what testnets
+    // still on v1 will deploy via scripts/v1-to-v2/.
+    const LegacyV2Factory = await hre.ethers.getContractFactory("IDRPv2");
+    const idrp = await hre.upgrades.deployProxy(LegacyV2Factory, [
       superAdmin.address,
     ]);
     await idrp.waitForDeployment();

@@ -22,7 +22,7 @@ import {
  * These tests pin the lifecycle and prove the same-tx lower-then-execute bypass
  * is no longer possible.
  */
-describe("[V5-4] IDRPController.setQuorumRules — timelock (SC-05)", function () {
+describe("[0526 SC-05] IDRPController.setQuorumRules — timelock", function () {
   const OFFICER_ROLE = hre.ethers.keccak256(
     hre.ethers.toUtf8Bytes("OFFICER_ROLE")
   );
@@ -63,9 +63,9 @@ describe("[V5-4] IDRPController.setQuorumRules — timelock (SC-05)", function (
     );
     await controller.waitForDeployment();
 
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
+    await controller.connect(admin).grantRole(OFFICER_ROLE, officer.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, manager.address);
+    await idrp.connect(admin).setController(await controller.getAddress());
 
     const domain = {
       name: "IDRPController",

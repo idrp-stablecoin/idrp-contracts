@@ -24,7 +24,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
  * These tests pin: the dangerous no-allowance third-party burn REVERTS, while
  * the three legitimate paths work.
  */
-describe("[V5-3] IDRP.burn — consent invariant (SC-01)", function () {
+describe("[0526 SC-01] IDRP.burn — consent invariant", function () {
   const ONE_HUNDRED = hre.ethers.parseUnits("100", 6);
 
   async function deployFixture() {
@@ -35,16 +35,17 @@ describe("[V5-3] IDRP.burn — consent invariant (SC-01)", function () {
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
 
-    const MINTER_ROLE = await idrp.MINTER_ROLE();
-    const FREEZER_ROLE = await idrp.FREEZER_ROLE();
-    await idrp.connect(admin).grantRole(MINTER_ROLE, admin.address);
-    await idrp.connect(admin).grantRole(MINTER_ROLE, minter.address);
-    await idrp.connect(admin).grantRole(FREEZER_ROLE, admin.address);
-
+    // v3 collapses MINTER_ROLE → single `controller`. For SC-01 we test the
+    // burn-consent invariant against `minter` as the controller. We temporarily
+    // flip controller to `admin` for setup (mint pool), then to `minter` for
+    // the burn paths the test exercises.
+    await idrp.connect(admin).setController(admin.address);
     await idrp.connect(admin).setDepositoryWallet(depository.address);
-    // Mint a pool, then fund the victim with real tokens.
     await idrp.connect(admin).mint(ONE_HUNDRED * 100n);
     await idrp.connect(depository).transfer(victim.address, ONE_HUNDRED * 10n);
+
+    // Hand the controller role to `minter` for the burn-invariant tests.
+    await idrp.connect(admin).setController(minter.address);
 
     return { idrp, admin, depository, minter, victim, attackerSink };
   }
@@ -99,10 +100,11 @@ describe("[V5-3] IDRP.burn — consent invariant (SC-01)", function () {
   });
 
   it("depository path works: burning the depository cold wallet needs no allowance", async function () {
-    const { idrp, admin, depository } = await loadFixture(deployFixture);
+    const { idrp, minter, depository } = await loadFixture(deployFixture);
 
     const before = await idrp.balanceOf(depository.address);
-    await idrp.connect(admin).burn(depository.address, ONE_HUNDRED);
+    // v3: only `controller` (= minter in this fixture) can burn.
+    await idrp.connect(minter).burn(depository.address, ONE_HUNDRED);
     expect(await idrp.balanceOf(depository.address)).to.equal(before - ONE_HUNDRED);
   });
 
@@ -120,10 +122,11 @@ describe("[V5-3] IDRP.burn — consent invariant (SC-01)", function () {
   });
 
   it("frozen third party cannot be burned even with an allowance (freeze takes precedence)", async function () {
-    const { idrp, admin, minter, victim } = await loadFixture(deployFixture);
+    const { idrp, minter, victim } = await loadFixture(deployFixture);
 
     await idrp.connect(victim).approve(minter.address, ONE_HUNDRED);
-    await idrp.connect(admin).freeze(victim.address);
+    // v3: only `controller` (= minter) can freeze.
+    await idrp.connect(minter).freeze(victim.address);
 
     await expect(
       idrp.connect(minter).burn(victim.address, ONE_HUNDRED)

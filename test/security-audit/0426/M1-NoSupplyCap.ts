@@ -10,7 +10,7 @@ describe("[M-1] No Maximum Supply Cap", function () {
     const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
-    await idrp.connect(admin).grantRole(await idrp.MINTER_ROLE(), admin.address);
+    await idrp.connect(admin).setController(admin.address);
     await idrp.connect(admin).setDepositoryWallet(depository.address);
 
     return { idrp, admin, depository };

@@ -1,10 +1,10 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import rulesMintBurn from "../utils/rules.mint.burn.v2.json";
-import rulesFreezeUnfreeze from "../utils/rules.freeze.unfreeze.json";
-import rulesPause from "../utils/rules.pause.json";
-import rulesUnpause from "../utils/rules.unpause.json";
+import rulesMintBurn from "../../utils/rules.mint.burn.v2.json";
+import rulesFreezeUnfreeze from "../../utils/rules.freeze.unfreeze.json";
+import rulesPause from "../../utils/rules.pause.json";
+import rulesUnpause from "../../utils/rules.unpause.json";
 
 describe("[H-3] Unvalidated 'to' Parameter for Mint/Pause/Unpause", function () {
   const OFFICER_ROLE = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("OFFICER_ROLE"));
@@ -45,14 +45,11 @@ describe("[H-3] Unvalidated 'to' Parameter for Mint/Pause/Unpause", function () 
       ],
     };
 
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
-    await controller.grantRole(COMMISSIONER_ROLE, commissioner.address);
-
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await idrp.connect(admin).setController(await controller.getAddress());
+    await controller.connect(admin).grantRole(OFFICER_ROLE, officer.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, manager.address);
+    await controller.connect(admin).grantRole(DIRECTOR_ROLE, director.address);
+    await controller.connect(admin).grantRole(COMMISSIONER_ROLE, commissioner.address);
 
     await controller.setQuorumRules(OperationType.Mint, rulesMintBurn);
     await controller.setQuorumRules(OperationType.Burn, rulesMintBurn);

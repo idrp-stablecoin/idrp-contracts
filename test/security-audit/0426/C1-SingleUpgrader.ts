@@ -56,9 +56,13 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
       expect(await idrp.upgrader()).to.equal(superAdmin.address);
     });
 
-    it("Should not grant legacy UPGRADER_ROLE to superAdmin on fresh deploy", async function () {
-      const { idrp, superAdmin } = await loadFixture(deployFixture);
-      expect(await idrp.hasRole(UPGRADER_ROLE, superAdmin.address)).to.be.false;
+    it("Should not expose AccessControl on fresh deploy (v3 dropped the parent)", async function () {
+      const { idrp } = await loadFixture(deployFixture);
+      // v3 dropped AccessControlUpgradeable from inheritance. The
+      // openzeppelin.storage.AccessControl namespace is preserved (so v2→v3
+      // upgrades are storage-safe) but the parent's public surface is gone.
+      const idrpAny = idrp as unknown as { hasRole?: unknown };
+      expect(typeof idrpAny.hasRole).to.equal("undefined");
     });
 
     it("Should initialize timelock state empty", async function () {
@@ -256,15 +260,26 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
 
   describe("initializeV2 migration (simulated v1 → v2)", function () {
     /**
+     * The v1→v2 migration lives in the legacy v2 contract (contracts/legacy/IDRPv2.sol)
+     * since v3 dropped AccessControlUpgradeable. The migration behavior is still
+     * exercised on testnets that haven't run v1→v2 yet — scripts/v1-to-v2/ deploys
+     * legacy/IDRPv2.sol there. We pin the migration behavior against that same
+     * legacy contract here.
+     *
      * Simulate a v1 proxy's storage preconditions (legacy UPGRADER_ROLE grants
      * populated, Initializable counter reset to 1), then run initializeV2 and
      * assert the migration sets the new upgrader and revokes every listed
-     * historical grantee. The timelock state is NOT initialized by initializeV2
-     * — default zeroes already mean "no pending upgrade", which is correct.
+     * historical grantee.
      */
     async function v1SimulatedFixture() {
-      const base = await deployFixture();
-      const { idrp, superAdmin, legacyA, legacyB } = base;
+      const [superAdmin, newUpgrader, other, legacyA, legacyB] =
+        await hre.ethers.getSigners();
+
+      const LegacyV2Factory = await hre.ethers.getContractFactory("IDRPv2");
+      const idrp = await hre.upgrades.deployProxy(LegacyV2Factory, [
+        superAdmin.address,
+      ]);
+      await idrp.waitForDeployment();
 
       await idrp
         .connect(superAdmin)
@@ -282,7 +297,7 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
         "0x0000000000000000000000000000000000000000000000000000000000000001",
       ]);
 
-      return base;
+      return { idrp, superAdmin, newUpgrader, other, legacyA, legacyB };
     }
 
     it("Should set new upgrader and emit UpgraderUpdated", async function () {

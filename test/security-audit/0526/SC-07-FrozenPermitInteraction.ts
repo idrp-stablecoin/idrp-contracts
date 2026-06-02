@@ -23,7 +23,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
  *   2. transferFrom of a frozen holder reverts in _update() even if an allowance
  *      was set BEFORE the freeze (the SC-15 scenario; the deeper guarantee).
  */
-describe("[V5-2] IDRP — frozen account + permit() interaction (SC-07)", function () {
+describe("[0526 SC-07] IDRP — frozen account + permit() interaction", function () {
   const ONE_HUNDRED = hre.ethers.parseUnits("100", 6);
 
   async function deployFixture() {
@@ -33,10 +33,8 @@ describe("[V5-2] IDRP — frozen account + permit() interaction (SC-07)", functi
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
 
-    const MINTER_ROLE = await idrp.MINTER_ROLE();
-    const FREEZER_ROLE = await idrp.FREEZER_ROLE();
-    await idrp.connect(admin).grantRole(MINTER_ROLE, admin.address);
-    await idrp.connect(admin).grantRole(FREEZER_ROLE, admin.address);
+    // v3: admin doubles as controller for direct mint/freeze in tests.
+    await idrp.connect(admin).setController(admin.address);
 
     // Mint to depository, then move a balance to `holder` so it has real funds.
     await idrp.connect(admin).setDepositoryWallet(depository.address);

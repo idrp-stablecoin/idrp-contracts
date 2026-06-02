@@ -30,7 +30,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
  * (we're waiting on the final report). These tests describe the guarantee the
  * current code actually provides.
  */
-describe("[V5-1] IDRPController.executeOperation — signature replay (SC-04)", function () {
+describe("[0526 SC-04] IDRPController.executeOperation — signature replay", function () {
   const OFFICER_ROLE = hre.ethers.keccak256(
     hre.ethers.toUtf8Bytes("OFFICER_ROLE")
   );
@@ -85,13 +85,12 @@ describe("[V5-1] IDRPController.executeOperation — signature replay (SC-04)", 
       ],
     };
 
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
+    await controller.connect(admin).grantRole(OFFICER_ROLE, officer.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, manager.address);
+    await controller.connect(admin).grantRole(DIRECTOR_ROLE, director.address);
 
-    // executeOperation requires the *caller* to hold a controller role too.
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
+    // v3: wire IDRP -> Controller for operational gating.
+    await idrp.connect(admin).setController(await controller.getAddress());
 
     await controller.setQuorumRules(OperationType.Mint, [
       { minAmount: 0, maxAmount: ONE_HUNDRED_MILLION, requiredRoles: [OFFICER_ROLE] },

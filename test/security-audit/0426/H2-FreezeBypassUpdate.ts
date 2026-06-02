@@ -11,9 +11,8 @@ describe("[H-2] Freeze Check Bypass via _update Internal", function () {
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
 
-    await idrp.connect(admin).grantRole(await idrp.MINTER_ROLE(), admin.address);
-    await idrp.connect(admin).grantRole(await idrp.FREEZER_ROLE(), admin.address);
-
+    // v3: set controller = admin so admin can mint/freeze directly.
+    await idrp.connect(admin).setController(admin.address);
     await idrp.connect(admin).setDepositoryWallet(depository.address);
 
     const amount = parseUnits("1000000", 6);

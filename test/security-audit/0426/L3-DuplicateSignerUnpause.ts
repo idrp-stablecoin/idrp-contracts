@@ -1,8 +1,8 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import rulesPause from "../utils/rules.pause.json";
-import rulesUnpause from "../utils/rules.unpause.json";
+import rulesPause from "../../utils/rules.pause.json";
+import rulesUnpause from "../../utils/rules.unpause.json";
 
 describe("[L-3] Duplicate Signer in verifyUnpauseSignatures", function () {
   const OFFICER_ROLE = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("OFFICER_ROLE"));
@@ -42,17 +42,16 @@ describe("[L-3] Duplicate Signer in verifyUnpauseSignatures", function () {
       ],
     };
 
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
-    await controller.grantRole(COMMISSIONER_ROLE, commissioner.address);
+    await idrp.connect(admin).setController(await controller.getAddress());
+    await controller.connect(admin).grantRole(OFFICER_ROLE, officer.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, manager.address);
+    await controller.connect(admin).grantRole(DIRECTOR_ROLE, director.address);
+    await controller.connect(admin).grantRole(COMMISSIONER_ROLE, commissioner.address);
 
     // dualRoleUser has Officer + Manager + Director roles
-    await controller.grantRole(OFFICER_ROLE, dualRoleUser.address);
-    await controller.grantRole(MANAGER_ROLE, dualRoleUser.address);
-    await controller.grantRole(DIRECTOR_ROLE, dualRoleUser.address);
-
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await controller.connect(admin).grantRole(OFFICER_ROLE, dualRoleUser.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, dualRoleUser.address);
+    await controller.connect(admin).grantRole(DIRECTOR_ROLE, dualRoleUser.address);
     await controller.setQuorumRules(OperationType.Pause, rulesPause);
     await controller.setQuorumRules(OperationType.Unpause, rulesUnpause);
 

@@ -1,7 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import rulesMintBurn from "../utils/rules.mint.burn.v2.json";
+import rulesMintBurn from "../../utils/rules.mint.burn.v2.json";
 
 describe("[M-2] Deprecated Nonce Still Being Incremented", function () {
   const OFFICER_ROLE = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("OFFICER_ROLE"));
@@ -39,9 +39,9 @@ describe("[M-2] Deprecated Nonce Still Being Incremented", function () {
       ],
     };
 
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
+    await idrp.connect(admin).setController(await controller.getAddress());
+    await controller.connect(admin).grantRole(OFFICER_ROLE, officer.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, manager.address);
 
     await controller.setQuorumRules(OperationType.Mint, rulesMintBurn);
 

@@ -21,7 +21,7 @@ import {
  * any sequential storage slot. This file pins that contract upgrades v1 → v2
  * preserve every state variable.
  */
-describe("[V4-2] IDRPController — Ownable removal + upgrader pattern", function () {
+describe("[0426 MINOR-2] IDRPController — Ownable removal + upgrader pattern", function () {
   const ADMIN_ROLE = hre.ethers.keccak256(
     hre.ethers.toUtf8Bytes("ADMIN_ROLE")
   );
@@ -109,7 +109,7 @@ describe("[V4-2] IDRPController — Ownable removal + upgrader pattern", functio
       expect(events[0].args[1]).to.equal(admin.address);
     });
 
-    it("Should grant DEFAULT_ADMIN_ROLE and ADMIN_ROLE to safe address", async function () {
+    it("Should grant DEFAULT_ADMIN_ROLE to safe address", async function () {
       const { controller, admin } = await loadFixture(freshDeployFixture);
       expect(
         await controller.hasRole(
@@ -117,7 +117,7 @@ describe("[V4-2] IDRPController — Ownable removal + upgrader pattern", functio
           admin.address
         )
       ).to.be.true;
-      expect(await controller.hasRole(ADMIN_ROLE, admin.address)).to.be.true;
+      // v3: ADMIN_ROLE was collapsed into DEFAULT_ADMIN_ROLE (ACDAR).
     });
   });
 
@@ -260,8 +260,8 @@ describe("[V4-2] IDRPController — Ownable removal + upgrader pattern", functio
         base.admin.address,
       ]);
       await stray.waitForDeployment();
-      // @ts-ignore — IDRP exposes grantRole/MINTER_ROLE
-      await stray.grantRole(await stray.MINTER_ROLE(), base.admin.address);
+      // @ts-ignore — v3: set controller = admin so admin can mint directly.
+      await stray.setController(base.admin.address);
       // @ts-ignore — IDRP exposes setDepositoryWallet/mint
       await stray.setDepositoryWallet(await controller.getAddress());
       // @ts-ignore
@@ -335,11 +335,8 @@ describe("[V4-2] IDRPController — Ownable removal + upgrader pattern", functio
         .connect(admin)
         .setQuorumRulesRaw(OperationType.Mint, QuorumRule);
 
-      const fakeImpl = "0x000000000000000000000000000000000000bEEF";
-      const fakeTs = 12345678n;
-      await controllerV1
-        .connect(admin)
-        .setScheduledImplementationRaw(fakeImpl, fakeTs);
+      // Note: scheduledImplementation / upgradeScheduledAt are v2 additions —
+      // the true v1 mock no longer carries them so there's nothing to seed on v1.
 
       return {
         idrp,
@@ -348,20 +345,13 @@ describe("[V4-2] IDRPController — Ownable removal + upgrader pattern", functio
         attacker,
         newUpgrader,
         savedRule: QuorumRule[0],
-        savedImpl: fakeImpl,
-        savedTs: fakeTs,
       };
     }
 
     it("Should preserve idrpToken, quorumRules, scheduled state, and roles after upgrade", async function () {
-      const {
-        idrp,
-        controllerV1,
-        admin,
-        savedRule,
-        savedImpl,
-        savedTs,
-      } = await loadFixture(v1ProxyFixture);
+      const { idrp, controllerV1, admin, savedRule } = await loadFixture(
+        v1ProxyFixture
+      );
 
       const proxyAddr = await controllerV1.getAddress();
 
@@ -389,8 +379,12 @@ describe("[V4-2] IDRPController — Ownable removal + upgrader pattern", functio
 
       // Sequential storage all preserved.
       expect(await upgraded.idrpToken()).to.equal(expectedIdrp);
-      expect(await upgraded.scheduledImplementation()).to.equal(savedImpl);
-      expect(await upgraded.upgradeScheduledAt()).to.equal(savedTs);
+      // Note: scheduledImplementation / upgradeScheduledAt are v2 additions —
+      // on v2 they're zero-initialised because v1 never had them.
+      expect(await upgraded.scheduledImplementation()).to.equal(
+        hre.ethers.ZeroAddress
+      );
+      expect(await upgraded.upgradeScheduledAt()).to.equal(0);
 
       const ruleAfter = await upgraded.quorumRules(OperationType.Mint, 0);
       expect(ruleAfter.minAmount).to.equal(savedRule.minAmount);

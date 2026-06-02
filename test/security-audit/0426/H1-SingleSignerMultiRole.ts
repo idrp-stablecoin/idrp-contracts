@@ -1,7 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import rulesMintBurn from "../utils/rules.mint.burn.v2.json";
+import rulesMintBurn from "../../utils/rules.mint.burn.v2.json";
 
 describe("[H-1] Single Signer Can Satisfy Multiple Required Roles", function () {
   const OFFICER_ROLE = hre.ethers.keccak256(
@@ -61,19 +61,18 @@ describe("[H-1] Single Signer Can Satisfy Multiple Required Roles", function () 
       ],
     };
 
-    // Setup roles
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
-    await controller.grantRole(COMMISSIONER_ROLE, commissioner.address);
+    // v3: wire IDRP -> Controller.
+    await idrp.connect(admin).setController(await controller.getAddress());
+
+    // Setup signer roles.
+    await controller.connect(admin).grantRole(OFFICER_ROLE, officer.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, manager.address);
+    await controller.connect(admin).grantRole(DIRECTOR_ROLE, director.address);
+    await controller.connect(admin).grantRole(COMMISSIONER_ROLE, commissioner.address);
 
     // Grant dualRoleUser BOTH officer and manager roles
-    await controller.grantRole(OFFICER_ROLE, dualRoleUser.address);
-    await controller.grantRole(MANAGER_ROLE, dualRoleUser.address);
-
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await controller.connect(admin).grantRole(OFFICER_ROLE, dualRoleUser.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, dualRoleUser.address);
 
     // Set quorum rules — mint 500M-1B requires Officer + Manager + Director
     await controller.setQuorumRules(OperationType.Mint, rulesMintBurn);
