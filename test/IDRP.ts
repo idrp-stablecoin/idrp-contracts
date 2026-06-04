@@ -79,21 +79,27 @@ describe("IDRP", function () {
       expect(await contract.balanceOf(depository.address)).to.equal(amount)
     })
 
-    it("Should burn tokens", async function () {
+    it("Should burn tokens via the transfer-then-self-burn offramp pattern", async function () {
+      // 062026 controller-only invariant: burn(from, ...) only works when
+      // from == controller (self-burn) or from == depositoryWallet. Third
+      // parties cannot be burned. The offramp pattern is:
+      //   1. user transfers tokens to controller
+      //   2. controller (= defaultAdmin in this fixture) self-burns
       const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
       // Mint tokens (goes to depository wallet)
       await contract.connect(defaultAdmin).mint(amount)
-
-      // Transfer from depository to user
       await contract.connect(depository).transfer(user.address, amount)
 
-      // User set allowance for defaultAdmin to be burned
-      await contract.connect(user).approve(await defaultAdmin.getAddress(), amount)
+      // Step 1: user transfers tokens to the controller (defaultAdmin in this
+      // fixture stands in for the controller).
+      await contract.connect(user).transfer(await defaultAdmin.getAddress(), amount)
+      expect(await contract.balanceOf(await defaultAdmin.getAddress())).to.equal(amount)
 
-      // Burn tokens from user
-      await contract.connect(defaultAdmin).burn(user.address, amount)
+      // Step 2: controller self-burns.
+      await contract.connect(defaultAdmin).burn(await defaultAdmin.getAddress(), amount)
+      expect(await contract.balanceOf(await defaultAdmin.getAddress())).to.equal(0)
       expect(await contract.balanceOf(user.address)).to.equal(0)
     })
 
@@ -115,7 +121,10 @@ describe("IDRP", function () {
       await expect(contract.connect(user).burn(user.address, amount)).to.be.rejected
     })
 
-    it("Should not burn tokens if minter role doesn't have allowance", async function () {
+    it("Should not burn tokens from a third party (controller-only invariant)", async function () {
+      // 062026 update: there is no allowance path anymore. Calling
+      // burn(user, amount) from the controller always reverts when `user` is
+      // not the controller itself and not the depository wallet.
       const { contract, defaultAdmin, user, depository } = await loadFixture(contractFixture)
       const amount = parseUnits("1000000000", 6)
 
@@ -124,7 +133,7 @@ describe("IDRP", function () {
       await contract.connect(depository).transfer(user.address, amount)
 
       await expect(contract.connect(defaultAdmin).burn(user.address, amount)).to.be.revertedWith(
-        "Burn amount exceeds allowance"
+        "Only controller or depository wallet can burn tokens"
       )
     })
 

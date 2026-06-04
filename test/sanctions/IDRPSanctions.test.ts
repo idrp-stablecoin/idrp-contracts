@@ -211,19 +211,26 @@ describe("IDRP — sanctions enforcement", function () {
       await expect(idrp.connect(superAdmin).mint(100n)).to.not.be.reverted;
     });
 
-    it("burn from a sanctioned address still works (used for seizure)", async function () {
-      const { idrp, list, superAdmin, alice } = await loadFixture(deployFixture);
+    it("burn from a sanctioned depository / controller still works (sanctions guard skips burns)", async function () {
+      const { idrp, list, superAdmin } = await loadFixture(deployFixture);
       await idrp.connect(superAdmin).setSanctionsList(await list.getAddress());
 
-      // alice has 100_000 IDRP from fixture setup; sanction her, then burn.
-      await list.connect(superAdmin).addToSanctionsList([alice.address]);
+      // 062026 burn-consent invariant: burn(from, ...) only authorizes
+      // from == controller (self-burn) or from == depository. The previous
+      // version of this test burned from a sanctioned `alice` via an allowance
+      // path — that path no longer exists.
+      //
+      // What we still want to pin is: even when the from-address is on the
+      // sanctions list, the sanctions guard does NOT fire on burn (because
+      // _update short-circuits when `to == address(0)`). To exercise that under
+      // the controller-or-depository invariant, sanction the depository wallet
+      // (which is `superAdmin` in this fixture) and burn from it. The burn
+      // should succeed; only frozen would stop it.
+      await list.connect(superAdmin).addToSanctionsList([superAdmin.address]);
 
-      // alice must approve the minter to burn her tokens.
-      await idrp.connect(alice).approve(superAdmin.address, 100n);
-
-      // burn → _burn → _update with `to = address(0)`, which the _update guard short-circuits.
-      await expect(idrp.connect(superAdmin).burn(alice.address, 100n)).to.not.be.reverted;
-      expect(await idrp.balanceOf(alice.address)).to.equal(99_900n);
+      const before = await idrp.balanceOf(superAdmin.address);
+      await expect(idrp.connect(superAdmin).burn(superAdmin.address, 100n)).to.not.be.reverted;
+      expect(await idrp.balanceOf(superAdmin.address)).to.equal(before - 100n);
     });
   });
 

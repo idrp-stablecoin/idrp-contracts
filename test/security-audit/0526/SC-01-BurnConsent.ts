@@ -3,28 +3,25 @@ import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 /**
- * [V5-3] Audit v5.0 finding SC-01 (Critical): MINTER_ROLE force-burning any
- * user's tokens without consent.
+ * [0526 SC-01] IDRP.burn — controller-or-depository invariant.
  *
- * Meeting 29-05: "[SC.01] burn only on controller, `from` dihapus" — discussed,
- * then revised: the live offramp burns from the USER's wallet after they
- * approve() the controller, so `from` must stay. The real invariant we want is
- * the audit's: a MINTER cannot destroy a THIRD PARTY's balance without that
- * party's consent.
+ * 052026 audit SC-01 (Critical) raised: MINTER_ROLE force-burning a user's
+ * balance without consent. The 052026 fix landed an allowance-gated consent
+ * path. The 062026 controller-only update tightened it further:
  *
- * Current IDRP.burn(from, amount) authorizes exactly three sources:
- *   1. from == msg.sender   → caller burns its OWN balance (transfer-approach
- *                             offramp: user transfers to controller, controller
- *                             self-burns). Not a third party.
- *   2. from == depository   → protocol cold wallet, can't approve (intentional).
- *   3. any other from       → REQUIRES from's allowance to the caller (consent),
- *                             decremented per burn.
+ *   IDRP.burn(from, amount) now authorizes EXACTLY TWO sources:
+ *     1. from == _msgSender()  → the controller burns its OWN balance.
+ *     2. from == depository    → the protocol cold wallet (cannot approve).
  *
- * audit-5.0 phase-1 (SC-01) makes that consent invariant explicit + tested.
- * These tests pin: the dangerous no-allowance third-party burn REVERTS, while
- * the three legitimate paths work.
+ *   Any other `from` reverts unconditionally — there is no allowance path
+ *   anymore. The offramp pattern is "user transfers to controller, controller
+ *   self-burns" (exercised by IDRPController.TransferApproachBurnTests.ts).
+ *
+ * These tests pin: third-party burns ALWAYS revert (with or without
+ * allowance), self-burn and depository-burn still work, frozen takes
+ * precedence over both.
  */
-describe("[0526 SC-01] IDRP.burn — consent invariant", function () {
+describe("[0526 SC-01] IDRP.burn — controller-or-depository invariant", function () {
   const ONE_HUNDRED = hre.ethers.parseUnits("100", 6);
 
   async function deployFixture() {
@@ -35,63 +32,57 @@ describe("[0526 SC-01] IDRP.burn — consent invariant", function () {
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
 
-    // v3 collapses MINTER_ROLE → single `controller`. For SC-01 we test the
-    // burn-consent invariant against `minter` as the controller. We temporarily
-    // flip controller to `admin` for setup (mint pool), then to `minter` for
-    // the burn paths the test exercises.
+    // v3 collapses MINTER_ROLE → single `controller`. For SC-01 we exercise
+    // burn against `minter` as the controller. Temporarily flip controller to
+    // `admin` for setup (mint pool + seed victim), then hand it to `minter`.
     await idrp.connect(admin).setController(admin.address);
     await idrp.connect(admin).setDepositoryWallet(depository.address);
     await idrp.connect(admin).mint(ONE_HUNDRED * 100n);
     await idrp.connect(depository).transfer(victim.address, ONE_HUNDRED * 10n);
 
-    // Hand the controller role to `minter` for the burn-invariant tests.
     await idrp.connect(admin).setController(minter.address);
 
     return { idrp, admin, depository, minter, victim, attackerSink };
   }
 
-  it("CRITICAL path blocked: MINTER force-burning a third party WITHOUT allowance reverts", async function () {
+  it("CRITICAL path blocked: controller burning a third party reverts", async function () {
     const { idrp, minter, victim } = await loadFixture(deployFixture);
 
-    // The exact SC-01 attack: a MINTER tries to destroy the victim's balance.
+    // The exact SC-01 attack: the controller tries to destroy the victim's
+    // balance. Under the tightened invariant this reverts even when the
+    // controller is a fully-trusted signer.
     await expect(
       idrp.connect(minter).burn(victim.address, ONE_HUNDRED)
-    ).to.be.revertedWith("Burn amount exceeds allowance");
+    ).to.be.revertedWith("Only controller or depository wallet can burn tokens");
 
     // Victim's balance is untouched.
     expect(await idrp.balanceOf(victim.address)).to.equal(ONE_HUNDRED * 10n);
   });
 
-  it("consent path works: third-party burn succeeds with allowance and decrements it", async function () {
+  it("allowance does NOT unlock a third-party burn anymore (path removed in 062026)", async function () {
     const { idrp, minter, victim } = await loadFixture(deployFixture);
 
-    // Victim consents by approving the minter for a bounded amount.
-    await idrp.connect(victim).approve(minter.address, ONE_HUNDRED);
-
-    await idrp.connect(minter).burn(victim.address, ONE_HUNDRED);
-
-    expect(await idrp.balanceOf(victim.address)).to.equal(ONE_HUNDRED * 9n);
-    // Allowance fully consumed.
-    expect(await idrp.allowance(victim.address, minter.address)).to.equal(0);
-  });
-
-  it("consent is bounded: burning MORE than the approved allowance reverts", async function () {
-    const { idrp, minter, victim } = await loadFixture(deployFixture);
-
+    // Pre-062026 this would have been the "consent" path; now even a fully
+    // approved allowance does not allow burning a third party.
     await idrp.connect(victim).approve(minter.address, ONE_HUNDRED);
 
     await expect(
-      idrp.connect(minter).burn(victim.address, ONE_HUNDRED * 2n)
-    ).to.be.revertedWith("Burn amount exceeds allowance");
+      idrp.connect(minter).burn(victim.address, ONE_HUNDRED)
+    ).to.be.revertedWith("Only controller or depository wallet can burn tokens");
 
     expect(await idrp.balanceOf(victim.address)).to.equal(ONE_HUNDRED * 10n);
+    // Allowance is untouched — the call reverted before any state change.
+    expect(await idrp.allowance(victim.address, minter.address)).to.equal(
+      ONE_HUNDRED
+    );
   });
 
-  it("self-burn path works: a MINTER burning its OWN balance needs no allowance", async function () {
-    const { idrp, admin, depository, minter } = await loadFixture(deployFixture);
+  it("self-burn path works: the controller burning its OWN balance succeeds", async function () {
+    const { idrp, depository, minter } = await loadFixture(deployFixture);
 
-    // Give the minter its own tokens (simulating tokens transferred to the
-    // controller in the transfer-approach offramp), then it self-burns.
+    // Give the controller (minter) its own tokens (simulating tokens
+    // transferred to the controller in the transfer-approach offramp), then
+    // it self-burns.
     await idrp.connect(depository).transfer(minter.address, ONE_HUNDRED);
     expect(await idrp.balanceOf(minter.address)).to.equal(ONE_HUNDRED);
 
@@ -99,37 +90,58 @@ describe("[0526 SC-01] IDRP.burn — consent invariant", function () {
     expect(await idrp.balanceOf(minter.address)).to.equal(0);
   });
 
-  it("depository path works: burning the depository cold wallet needs no allowance", async function () {
+  it("depository path works: burning the depository cold wallet succeeds", async function () {
     const { idrp, minter, depository } = await loadFixture(deployFixture);
 
     const before = await idrp.balanceOf(depository.address);
-    // v3: only `controller` (= minter in this fixture) can burn.
     await idrp.connect(minter).burn(depository.address, ONE_HUNDRED);
-    expect(await idrp.balanceOf(depository.address)).to.equal(before - ONE_HUNDRED);
+    expect(await idrp.balanceOf(depository.address)).to.equal(
+      before - ONE_HUNDRED
+    );
   });
 
-  it("self-burn does NOT let a MINTER reach a third party: allowance is still required for others", async function () {
+  it("controller cannot reach an arbitrary third party EVEN with mint-to-attackerSink-style indirection", async function () {
     const { idrp, minter, victim, attackerSink } = await loadFixture(deployFixture);
 
-    // Even though the minter can self-burn freely, it cannot use that to touch
-    // the victim — the third-party branch still demands the victim's allowance.
+    // The only `from` values that work are the controller's own address and
+    // the depositoryWallet. Any other address — including a freshly-created
+    // sink — reverts.
+    await expect(
+      idrp.connect(minter).burn(attackerSink.address, 1n)
+    ).to.be.revertedWith("Only controller or depository wallet can burn tokens");
+
     await expect(
       idrp.connect(minter).burn(victim.address, 1n)
-    ).to.be.revertedWith("Burn amount exceeds allowance");
+    ).to.be.revertedWith("Only controller or depository wallet can burn tokens");
 
-    // And it certainly cannot mint-to-attackerSink-then-burn-victim; victim is safe.
+    // Both balances untouched.
     expect(await idrp.balanceOf(victim.address)).to.equal(ONE_HUNDRED * 10n);
+    expect(await idrp.balanceOf(attackerSink.address)).to.equal(0n);
   });
 
-  it("frozen third party cannot be burned even with an allowance (freeze takes precedence)", async function () {
-    const { idrp, minter, victim } = await loadFixture(deployFixture);
+  it("frozen takes precedence: the freeze check runs BEFORE the from-must-be-controller-or-depository check", async function () {
+    const { idrp, minter, depository } = await loadFixture(deployFixture);
 
-    await idrp.connect(victim).approve(minter.address, ONE_HUNDRED);
-    // v3: only `controller` (= minter) can freeze.
-    await idrp.connect(minter).freeze(victim.address);
+    // Freeze the depository wallet — even though it's a legitimate burn
+    // target, the frozen check should fire first.
+    await idrp.connect(minter).freeze(depository.address);
 
     await expect(
-      idrp.connect(minter).burn(victim.address, ONE_HUNDRED)
+      idrp.connect(minter).burn(depository.address, ONE_HUNDRED)
+    ).to.be.revertedWithCustomError(idrp, "FrozenAccount");
+  });
+
+  it("frozen also fires on a third-party burn attempt (defense in depth)", async function () {
+    const { idrp, minter, victim } = await loadFixture(deployFixture);
+
+    await idrp.connect(minter).freeze(victim.address);
+
+    // The error here is FrozenAccount, not the controller/depository revert —
+    // the frozen check runs first. This is the SAME outcome (revert) but the
+    // specific custom error is what we assert so a future reordering of the
+    // checks is caught by this test.
+    await expect(
+      idrp.connect(minter).burn(victim.address, 1n)
     ).to.be.revertedWithCustomError(idrp, "FrozenAccount");
   });
 });

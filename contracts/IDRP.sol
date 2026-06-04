@@ -287,33 +287,35 @@ contract IDRP is
         emit MaxSupplyUpdated(oldMaxSupply, _maxSupply);
     }
 
-    /// @notice Burn stablecoins from a specific address
-    /// @param from The address from which the stablecoins will be burned
-    /// @param amount The amount of stablecoins to burn
-    /// @dev SC-01 burn-consent invariant (052026 audit, pinned by SC-01): only the
-    ///      operator's own funds, the depository cold wallet (which cannot approve),
-    ///      or an account that pre-approved the operator can be burned. Third-party
-    ///      burns without allowance revert. This guarantee is unchanged by the v3
-    ///      refactor — only the role gate changed (MINTER_ROLE → onlyController).
+    /// @notice Burn stablecoins from the controller's own balance or from the
+    ///         depository cold wallet.
+    /// @param from MUST be either the calling controller itself or the
+    ///             configured depositoryWallet. Any other source reverts —
+    ///             third-party balances are NOT burnable from this entry point.
+    /// @param amount The amount of stablecoins to burn.
+    /// @dev Burn-consent invariant: third-party balances cannot be destroyed
+    ///      from this entry point. The off-ramp pattern is "user transfers to
+    ///      controller, controller burns from itself" for user redemptions, or
+    ///      "controller burns from depository" for protocol-managed cold balances.
+    ///
+    ///      Authorization layering:
+    ///        1. onlyController — only the wired IDRPController proxy can call.
+    ///        2. whenNotPaused.
+    ///        3. frozen[from] check — burning a frozen account reverts.
+    ///        4. from MUST be controller or depositoryWallet, else revert.
     function burn(
         address from,
         uint256 amount
     ) public onlyController whenNotPaused {
         if (frozen[from]) revert FrozenAccount();
 
-        // If `from` is not the caller (controller) and not the depositoryWallet,
-        // ensure the caller has allowance from `from`.
-        // - depositoryWallet is a cold wallet and can't approve
-        // - controller transfers tokens to itself before burning, so no allowance needed
+        // onlyController already guarantees _msgSender() == controller, so the
+        // first leg of the predicate below is equivalent to "from is the
+        // controller's own balance." The second leg covers the cold wallet.
+        // - depositoryWallet is a cold wallet (cannot sign, cannot approve).
+        // - controller funds itself via user transfers before calling burn.
         if (from != _msgSender() && from != depositoryWallet) {
-            // Ensure the controller has an allowance from `from`.
-            uint256 currentAllowance = allowance(from, _msgSender());
-            require(
-                currentAllowance >= amount,
-                "Burn amount exceeds allowance"
-            );
-            // Deduct the burned amount from the allowance
-            _approve(from, _msgSender(), currentAllowance - amount);
+            revert("Only controller or depository wallet can burn tokens");
         }
 
         _burn(from, amount);
@@ -352,8 +354,8 @@ contract IDRP is
 
     /// @notice Set the depository wallet address
     /// @param wallet The address of the depository wallet
-    /// @dev SC-06 (052026 audit): rejects a no-op set to the current wallet so a
-    ///      no-op update cannot silently emit a misleading event. Preserved verbatim.
+    /// @dev Rejects a no-op set to the current wallet so a no-op update cannot
+    ///      silently emit a misleading event.
     function setDepositoryWallet(address wallet) external onlyAdmin {
         require(wallet != address(0), "Invalid wallet address");
         require(wallet != depositoryWallet, "Same wallet");

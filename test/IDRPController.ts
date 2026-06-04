@@ -635,22 +635,21 @@ describe("IDRPController", function () {
 
       // Transfer tokens from depository to user
       await idrp.connect(depository).transfer(user.address, mintAmount);
-
-      // Verify minted balance
       expect(await idrp.balanceOf(user.address)).to.equal(mintAmount);
 
-      // Then burn half the tokens
+      // 062026 burn-consent invariant: third-party burns are no longer
+      // permitted. The off-ramp pattern is "user transfers to controller,
+      // controller self-burns." User moves half their balance to the
+      // controller, then the quorum signs a burn against the controller.
       const burnAmount = hre.ethers.parseUnits("25000000", 6);
+      const controllerAddr = await controller.getAddress();
+      await idrp.connect(user).transfer(controllerAddr, burnAmount);
+      expect(await idrp.balanceOf(controllerAddr)).to.equal(burnAmount);
 
-      // User needs to approve controller for burn
-      await idrp
-        .connect(user)
-        .approve(await controller.getAddress(), burnAmount);
-
-      // Burn operation
+      // Burn operation with `to` = controller (controller burns from itself).
       const burnDeadline = Math.floor(Date.now() / 1000) + 3600;
       const burnOperation = {
-        to: user.address,
+        to: controllerAddr,
         operationType: OperationType.Burn,
         amount: burnAmount,
         operationIdentifier: "tx1004", // Use operation ID
