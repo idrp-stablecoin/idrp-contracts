@@ -8,6 +8,7 @@ import {
   DIRECTOR_ADDRESS,
   MANAGER_ADDRESS,
   OFFICER_ADDRESS,
+  DEPOSITORY_WALLET_ADDRESS,
 } from "./utils/constants";
 import { delay } from "./utils/misc";
 
@@ -16,8 +17,19 @@ async function main() {
   const signers = await ethers.getSigners();
   const admin = signers[1];
 
-  const [officerAddress, managerAddress, directorAddress, commissionerAddress] =
-    [OFFICER_ADDRESS, MANAGER_ADDRESS, DIRECTOR_ADDRESS, COMMISSIONER_ADDRESS];
+  const [
+    officerAddress,
+    managerAddress,
+    directorAddress,
+    commissionerAddress,
+    depositoryWalletAddress,
+  ] = [
+    OFFICER_ADDRESS,
+    MANAGER_ADDRESS,
+    DIRECTOR_ADDRESS,
+    COMMISSIONER_ADDRESS,
+    DEPOSITORY_WALLET_ADDRESS,
+  ];
 
   console.log("admin", admin.address);
   console.log("approver", {
@@ -81,11 +93,22 @@ async function main() {
     .grantRole(await idrp.PAUSER_ROLE(), await controller.getAddress());
   console.log("Controller granted roles on IDRP token");
 
+  // Set depository wallet
+  await idrp.connect(admin).setDepositoryWallet(depositoryWalletAddress);
+  console.log("Depository wallet set to:", depositoryWalletAddress);
+
   // Set quorum rules
   const ONE_HUNDRED_MILLION = ethers.parseUnits("100000000", 6);
   const FIVE_HUNDRED_MILLION = ethers.parseUnits("500000000", 6);
   const ONE_BILLION = ethers.parseUnits("1000000000", 6);
   const TEN_BILLION = ethers.parseUnits("10000000000", 6);
+
+  console.log("Setting quorum rules...", {
+    ONE_HUNDRED_MILLION: ONE_HUNDRED_MILLION.toString(),
+    FIVE_HUNDRED_MILLION: FIVE_HUNDRED_MILLION.toString(),
+    ONE_BILLION: ONE_BILLION.toString(),
+    TEN_BILLION: TEN_BILLION.toString(),
+  });
 
   // Set mint/burn quorum rules
   await controller.connect(admin).setQuorumRules(
@@ -142,7 +165,7 @@ async function main() {
       },
       {
         minAmount: ONE_BILLION,
-        maxAmount: TEN_BILLION,
+        maxAmount: ethers.MaxUint256,
         requiredRoles: [
           OFFICER_ROLE,
           MANAGER_ROLE,

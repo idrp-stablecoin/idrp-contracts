@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.22;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -13,7 +13,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 ///         consumer's pointer to their address — no other change needed.
 ///
 ///         Differences from the verbatim Chainalysis source (cosmetic only):
-///           - pragma bumped from 0.8.7 to ^0.8.20 to fit IDRP's Tron toolchain
+///           - pragma bumped from 0.8.7 to ^0.8.22 to fit IDRP's toolchain
+///           - OZ Ownable v5 (constructor takes initialOwner) instead of v4
 ///         The on-chain interface a caller sees is identical.
 contract SanctionsList is Ownable {
     mapping(address => bool) private sanctionedAddresses;
@@ -23,9 +24,7 @@ contract SanctionsList is Ownable {
     event SanctionedAddressesAdded(address[] addrs);
     event SanctionedAddressesRemoved(address[] addrs);
 
-    // OZ v4 Ownable: default constructor sets _owner = _msgSender() automatically.
-    // No explicit constructor needed — leaving one in place would require calling
-    // Ownable() with no args (v4 signature) instead of Ownable(initialOwner) (v5).
+    constructor() Ownable(msg.sender) {}
 
     function name() external pure returns (string memory) {
         return "Chainalysis sanctions oracle";

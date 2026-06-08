@@ -61,14 +61,12 @@ describe("IDRPController - Burn Tests", function () {
       ],
     };
 
-    // Set up roles
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
+    // v3: wire IDRP -> Controller for operational gating.
+    await idrp.connect(admin).setController(await controller.getAddress());
 
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await controller.connect(admin).grantRole(OFFICER_ROLE, officer.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, manager.address);
+    await controller.connect(admin).grantRole(DIRECTOR_ROLE, director.address);
 
     // Set quorum rules for burn operations
     await controller.setQuorumRules(OperationType.Burn, [
@@ -84,7 +82,7 @@ describe("IDRPController - Burn Tests", function () {
       },
       {
         minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
       },
     ]);
@@ -103,7 +101,7 @@ describe("IDRPController - Burn Tests", function () {
       },
       {
         minAmount: FIVE_HUNDRED_MILLION,
-        maxAmount: ONE_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [OFFICER_ROLE, MANAGER_ROLE, DIRECTOR_ROLE],
       },
     ]);
@@ -134,7 +132,7 @@ describe("IDRPController - Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "tx1"; // Use operation ID from database
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -182,7 +180,10 @@ describe("IDRPController - Burn Tests", function () {
         burnOperation
       );
 
-      // This should fail because user has not approved the controller to burn tokens
+      // Under the 062026 controller-only burn invariant, a third-party `from`
+      // address ALWAYS reverts — there is no allowance path. The off-ramp
+      // pattern is "user transfers to controller, controller self-burns",
+      // covered separately by IDRPController.TransferApproachBurnTests.ts.
       await expect(
         controller.executeOperation(
           burnOperation.operationType,
@@ -192,13 +193,13 @@ describe("IDRPController - Burn Tests", function () {
           burnOperation.deadline,
           [officerBurnSignature]
         )
-      ).to.be.revertedWith("Burn amount exceeds allowance");
+      ).to.be.revertedWith("Only controller or depository wallet can burn tokens");
 
       // Verify balance is unchanged
       expect(await idrp.balanceOf(user.address)).to.equal(mintAmount);
     });
 
-    it("Should successfully burn with proper allowance", async function () {
+    it("Should STILL fail even with a proper allowance (allowance path removed in 062026)", async function () {
       const { idrp, controller, officer, user, depository, domain, types } =
         await loadFixture(deployFixture);
 
@@ -209,7 +210,7 @@ describe("IDRPController - Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "tx3"; // Use operation ID
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -264,27 +265,31 @@ describe("IDRPController - Burn Tests", function () {
         burnOperation
       );
 
-      await controller.executeOperation(
-        burnOperation.operationType,
-        burnOperation.to,
-        burnOperation.amount,
-        burnOperation.operationIdentifier,
-        burnOperation.deadline,
-        [officerBurnSignature]
-      );
+      // Even though `user` approved the controller, the burn still reverts —
+      // the 062026 update removed the allowance path entirely. Allowance is
+      // ignored; only controller-self and depository are valid `from` values.
+      await expect(
+        controller.executeOperation(
+          burnOperation.operationType,
+          burnOperation.to,
+          burnOperation.amount,
+          burnOperation.operationIdentifier,
+          burnOperation.deadline,
+          [officerBurnSignature]
+        )
+      ).to.be.revertedWith("Only controller or depository wallet can burn tokens");
 
-      // Verify balance after burn
-      expect(await idrp.balanceOf(user.address)).to.equal(
-        mintAmount - burnAmount
-      );
+      // Verify balance is unchanged
+      expect(await idrp.balanceOf(user.address)).to.equal(mintAmount);
 
-      // Verify allowance is used up
+      // Verify the allowance was NOT consumed — the call reverted before any
+      // state change.
       expect(
         await idrp.allowance(user.address, controller.getAddress())
-      ).to.equal(0);
+      ).to.equal(burnAmount);
     });
 
-    it("Should fail to burn with insufficient allowance", async function () {
+    it("Should fail to burn a third party even with partial allowance (allowance ignored entirely)", async function () {
       const { idrp, controller, officer, user, depository, domain, types } =
         await loadFixture(deployFixture);
 
@@ -295,7 +300,7 @@ describe("IDRPController - Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "tx5"; // Use operation ID
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -350,7 +355,8 @@ describe("IDRPController - Burn Tests", function () {
         burnOperation
       );
 
-      // Should fail due to insufficient allowance
+      // Under the 062026 invariant, any third-party `from` reverts regardless
+      // of allowance amount (sufficient, insufficient, or zero — all the same).
       await expect(
         controller.executeOperation(
           burnOperation.operationType,
@@ -360,7 +366,7 @@ describe("IDRPController - Burn Tests", function () {
           burnOperation.deadline,
           [officerBurnSignature]
         )
-      ).to.be.revertedWith("Burn amount exceeds allowance");
+      ).to.be.revertedWith("Only controller or depository wallet can burn tokens");
 
       // Verify balance and allowance are unchanged
       expect(await idrp.balanceOf(user.address)).to.equal(mintAmount);
@@ -369,7 +375,7 @@ describe("IDRPController - Burn Tests", function () {
       ).to.equal(allowanceAmount);
     });
 
-    it("Should burn the exact allowance amount", async function () {
+    it("Should fail to burn a third party even with EXACT allowance (allowance is irrelevant in 062026)", async function () {
       const { idrp, controller, officer, user, depository, domain, types } =
         await loadFixture(deployFixture);
 
@@ -380,7 +386,7 @@ describe("IDRPController - Burn Tests", function () {
       const mintDeadline = Math.floor(Date.now() / 1000) + 3600;
       const mintOperationId = "tx7"; // Use operation ID
       const mintOperation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: mintAmount,
         operationIdentifier: mintOperationId,
@@ -432,22 +438,26 @@ describe("IDRPController - Burn Tests", function () {
         burnOperation
       );
 
-      await controller.executeOperation(
-        burnOperation.operationType,
-        burnOperation.to,
-        burnOperation.amount,
-        burnOperation.operationIdentifier,
-        burnOperation.deadline,
-        [officerBurnSignature]
-      );
+      // Even with the exact allowance set, the burn reverts — the allowance
+      // path is fully gone. The expected off-ramp pattern is now "user
+      // transfers to controller, controller self-burns" instead of
+      // "user approves controller, controller burns from user."
+      await expect(
+        controller.executeOperation(
+          burnOperation.operationType,
+          burnOperation.to,
+          burnOperation.amount,
+          burnOperation.operationIdentifier,
+          burnOperation.deadline,
+          [officerBurnSignature]
+        )
+      ).to.be.revertedWith("Only controller or depository wallet can burn tokens");
 
-      // Verify burn was successful
-      expect(await idrp.balanceOf(user.address)).to.equal(
-        mintAmount - burnAmount
-      );
+      // Verify balance and allowance both unchanged.
+      expect(await idrp.balanceOf(user.address)).to.equal(mintAmount);
       expect(
         await idrp.allowance(user.address, controller.getAddress())
-      ).to.equal(0);
+      ).to.equal(burnAmount);
     });
   });
 });

@@ -24,3 +24,16 @@ ignition/deployments/chain-31337
 
 # Local deployment
 /deployment/chain-8545.json
+
+# Sanctions snapshots fetched from OpenSanctions — large, time-stamped, regenerated
+# on every fetch. Keep the directory itself via .gitkeep.
+# /scripts/sanctions/results/*.json
+
+# Claude Code project rules — local discipline notes, not for the public repo
+/.claude/
+
+# Testnet operational records — kept local while testnets are mid-migration
+/docs/migration-log/
+/deployment/state-snapshot/
+/deployment/chain-*-legacy-upgrader-holders.json
+/deployment/chain-*-legacy-default-admin-holders.json

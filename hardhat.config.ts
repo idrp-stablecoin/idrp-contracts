@@ -3,6 +3,8 @@ import { vars } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
+import "@nomicfoundation/hardhat-verify";
+import "hardhat-gas-reporter";
 import "@layerzerolabs/hardhat-deploy";
 import "@layerzerolabs/hardhat-tron";
 
@@ -23,20 +25,21 @@ const IDRP_ADMIN_PRIVATE_KEY_TRON = tronToHex(vars.get("IDRP_ADMIN_PRIVATE_KEY_T
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
-// const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
-// const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
+const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
+const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
+const KAIA_API_KEY = vars.get("KAIA_API_KEY");
 
 const config: HardhatUserConfig = {
   solidity: {
-  version: "0.8.20",       // ← OZ v4 support 0.8.20
-  settings: {
-    optimizer: {
-      enabled: true,
-      runs: 200,
+    version: "0.8.28",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+      // viaIR: true,
     },
-    evmVersion: "istanbul", // ← OZ v4 kompatibel dengan istanbul
   },
-},
   namedAccounts: {
     deployer: {
       default: 0,
@@ -94,6 +97,11 @@ const config: HardhatUserConfig = {
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       gasMultiplier: 1.1, // Add 10% buffer to estimated gas
     },
+    kaia: {
+      chainId: 8217,
+      url: `https://public-en.node.kaia.io`,
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
+    },
 
     // TVM: @layerzerolabs/hardhat-tron
     shasta: {
@@ -115,22 +123,50 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
+    // `apiKey` mode picker (READ THIS BEFORE VERIFYING ON KAIA / KAIROS):
+    //
+    // - String form (this default): forces hardhat-verify v2 mode, which
+    //   routes through `api.etherscan.io/v2/api?chainid=<id>`. Works for
+    //   every Etherscan-derived explorer (Basescan, BSCscan, Polygonscan,
+    //   Sepolia, Holesky, etc.). Does NOT work for Kaia / Kairos — chainId
+    //   1001 / 8217 are not on the Etherscan v2 chainlist, so the request
+    //   fails with "Missing or unsupported chainid parameter".
+    //
+    // - Object form (commented out below): forces hardhat-verify v1 mode,
+    //   which uses each network's `customChains[i].urls.apiURL`. This works
+    //   for Kaia / Kairos (Kaiascan has its own non-Etherscan endpoint) but
+    //   triggers a "deprecated V1 endpoint" warning for Etherscan-derived
+    //   explorers (Basescan still verifies, just noisily).
+    //
+    // To verify on Kaia / Kairos: temporarily swap to the object form below.
+    // Then revert back to the string form for everything else. (We'd ideally
+    // mix modes per-network, but hardhat-verify treats the choice as binary.)
+    apiKey: ETHERSCAN_API_KEY,
     // apiKey: {
-    //   holesky: ETHERSCAN_API_KEY,
     //   sepolia: ETHERSCAN_API_KEY,
+    //   holesky: ETHERSCAN_API_KEY,
     //   polygon: ETHERSCAN_API_KEY,
     //   mainnet: ETHERSCAN_API_KEY,
-    //   kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
     //   bsc: ETHERSCAN_API_KEY,
+    //   baseSepolia: ETHERSCAN_API_KEY,
+    //   kairos: KAIROS_API_KEY || "unnecessary",
+    //   kaia: KAIA_API_KEY || "unnecessary",
     // },
-    apiKey: ETHERSCAN_API_KEY,
     customChains: [
       {
         chainId: 1001,
         network: "kairos",
         urls: {
-          apiURL: "https://kairos-api.kaiascan.io/hardhat-verify",
+          apiURL: "https://compiler-api-v2.kaiascan.io/kairos/hardhat-verify",
           browserURL: "https://kairos.kaiascan.io",
+        },
+      },
+      {
+        chainId: 8217,
+        network: "kaia",
+        urls: {
+          apiURL: "https://compiler-api-v2.kaiascan.io/mainnet/hardhat-verify",
+          browserURL: "https://kaiascan.io",
         },
       },
       {

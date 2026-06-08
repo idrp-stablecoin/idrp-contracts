@@ -68,15 +68,13 @@ describe("IDRPController - Quorum Rule Tests", function () {
       ],
     };
 
-    // Set up roles
-    await controller.grantRole(OFFICER_ROLE, officer.address);
-    await controller.grantRole(MANAGER_ROLE, manager.address);
-    await controller.grantRole(DIRECTOR_ROLE, director.address);
-    await controller.grantRole(COMMISSIONER_ROLE, commissioner.address);
+    // v3: wire IDRP -> Controller for operational gating.
+    await idrp.connect(admin).setController(await controller.getAddress());
 
-    await idrp.grantRole(await idrp.MINTER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.FREEZER_ROLE(), controller.getAddress());
-    await idrp.grantRole(await idrp.PAUSER_ROLE(), controller.getAddress());
+    await controller.connect(admin).grantRole(OFFICER_ROLE, officer.address);
+    await controller.connect(admin).grantRole(MANAGER_ROLE, manager.address);
+    await controller.connect(admin).grantRole(DIRECTOR_ROLE, director.address);
+    await controller.connect(admin).grantRole(COMMISSIONER_ROLE, commissioner.address);
 
     // Set quorum rules for mint
     await controller.setQuorumRules(OperationType.Mint, [
@@ -97,7 +95,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
       },
       {
         minAmount: ONE_BILLION,
-        maxAmount: TEN_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [
           OFFICER_ROLE,
           MANAGER_ROLE,
@@ -126,7 +124,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
       },
       {
         minAmount: ONE_BILLION,
-        maxAmount: TEN_BILLION,
+        maxAmount: hre.ethers.MaxUint256,
         requiredRoles: [
           OFFICER_ROLE,
           MANAGER_ROLE,
@@ -362,7 +360,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
       console.log("Max amount:", hre.ethers.formatUnits(rule.maxAmount, 6));
 
       expect(rule.minAmount).to.equal(ONE_BILLION);
-      expect(rule.maxAmount).to.equal(TEN_BILLION);
+      expect(rule.maxAmount).to.equal(hre.ethers.MaxUint256);
       expect(rule.requiredRoles.length).to.equal(4);
       expect(rule.requiredRoles[0]).to.equal(OFFICER_ROLE);
       expect(rule.requiredRoles[1]).to.equal(MANAGER_ROLE);
@@ -389,7 +387,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
       const operationIdentifier = "tx101"; // Use operation ID
 
       const operation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -444,7 +442,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
       const operationIdentifier = "tx102"; // Use operation ID
 
       const operation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
@@ -530,7 +528,7 @@ describe("IDRPController - Quorum Rule Tests", function () {
       const operationIdentifier = "tx103"; // Use operation ID
 
       const operation = {
-        to: depository.address,
+        to: hre.ethers.ZeroAddress,
         operationType: OperationType.Mint,
         amount: amount,
         operationIdentifier: operationIdentifier,
