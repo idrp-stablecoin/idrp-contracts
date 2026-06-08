@@ -83,23 +83,50 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
+    // `apiKey` mode picker (READ THIS BEFORE VERIFYING ON KAIA / KAIROS):
+    //
+    // - String form (this default): forces hardhat-verify v2 mode, which
+    //   routes through `api.etherscan.io/v2/api?chainid=<id>`. Works for
+    //   every Etherscan-derived explorer (Basescan, BSCscan, Polygonscan,
+    //   Sepolia, Holesky, etc.). Does NOT work for Kaia / Kairos — chainId
+    //   1001 / 8217 are not on the Etherscan v2 chainlist, so the request
+    //   fails with "Missing or unsupported chainid parameter".
+    //
+    // - Object form (commented out below): forces hardhat-verify v1 mode,
+    //   which uses each network's `customChains[i].urls.apiURL`. This works
+    //   for Kaia / Kairos (Kaiascan has its own non-Etherscan endpoint) but
+    //   triggers a "deprecated V1 endpoint" warning for Etherscan-derived
+    //   explorers (Basescan still verifies, just noisily).
+    //
+    // To verify on Kaia / Kairos: temporarily swap to the object form below.
+    // Then revert back to the string form for everything else. (We'd ideally
+    // mix modes per-network, but hardhat-verify treats the choice as binary.)
+    apiKey: ETHERSCAN_API_KEY,
     // apiKey: {
-    //   holesky: ETHERSCAN_API_KEY,
     //   sepolia: ETHERSCAN_API_KEY,
+    //   holesky: ETHERSCAN_API_KEY,
     //   polygon: ETHERSCAN_API_KEY,
     //   mainnet: ETHERSCAN_API_KEY,
-    //   kairos: KAIROS_API_KEY || "unnecessary", // see: https://docs.kaiascan.io/smart-contract-verification/hardhat-verify#kairos
     //   bsc: ETHERSCAN_API_KEY,
+    //   baseSepolia: ETHERSCAN_API_KEY,
+    //   kairos: KAIROS_API_KEY || "unnecessary",
     //   kaia: KAIA_API_KEY || "unnecessary",
     // },
-    apiKey: ETHERSCAN_API_KEY,
     customChains: [
       {
         chainId: 1001,
         network: "kairos",
         urls: {
-          apiURL: "https://kairos-api.kaiascan.io/hardhat-verify",
+          apiURL: "https://compiler-api-v2.kaiascan.io/kairos/hardhat-verify",
           browserURL: "https://kairos.kaiascan.io",
+        },
+      },
+      {
+        chainId: 8217,
+        network: "kaia",
+        urls: {
+          apiURL: "https://compiler-api-v2.kaiascan.io/mainnet/hardhat-verify",
+          browserURL: "https://kaiascan.io",
         },
       },
       {
@@ -108,22 +135,6 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.etherscan.io/v2/api?chainid=56",
           browserURL: "https://bscscan.com",
-        },
-      },
-      {
-        network: "kaia",
-        chainId: 8217,
-        urls: {
-          apiURL: "https://mainnet-api.kaiascan.io/hardhat-verify",
-          browserURL: "https://kaiascan.io",
-        },
-      },
-      {
-        network: "kairos",
-        chainId: 1001,
-        urls: {
-          apiURL: "https://compiler-api-v2.kaiascan.io/kairos/hardhat-verify?chainid=1001",
-          browserURL: "https://kairos.kaiascan.io",
         },
       },
     ],

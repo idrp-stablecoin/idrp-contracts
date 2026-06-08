@@ -75,6 +75,13 @@ async function main() {
     const remaining = executableAt > now ? executableAt - now : 0n;
     const remainingHours = Number(remaining) / 3600;
 
+    // Reconcile JSON to on-chain truth before bailing — a stale local file
+    // gets corrected so subsequent scripts see accurate state.
+    deployments["IDRPScheduledImpl"] = existingScheduled;
+    deployments["IDRPScheduledAt"] = scheduledAt.toString();
+    deployments["IDRPExecutableAfter"] = executableAt.toString();
+    fs.writeFileSync(deploymentFile, JSON.stringify(deployments, null, 2));
+
     console.log("\n--- Pending Upgrade Already Exists ---");
     console.log("Scheduled implementation:", existingScheduled);
     console.log(
@@ -86,6 +93,7 @@ async function main() {
       new Date(Number(executableAt) * 1000).toISOString()
     );
     console.log(`Time remaining: ${remainingHours.toFixed(2)} hours`);
+    console.log("(JSON reconciled to on-chain state.)");
     console.log("\nTo proceed, either:");
     console.log(
       `  1. Wait for timelock, then run: npx hardhat run ./scripts/upgrade.ts --network ${hre.network.name}`

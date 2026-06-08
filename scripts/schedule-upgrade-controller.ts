@@ -55,11 +55,18 @@ async function main() {
     const remainingSeconds = executableAt > now ? executableAt - now : 0n;
     const remainingHours = Number(remainingSeconds) / 3600;
 
+    // Reconcile JSON to on-chain truth so a stale local file gets corrected.
+    deployments["IDRPControllerScheduledImpl"] = existingScheduled as string;
+    deployments["IDRPControllerScheduledAt"] = scheduledAt.toString();
+    deployments["IDRPControllerExecutableAfter"] = executableAt.toString();
+    fs.writeFileSync(deploymentFile, JSON.stringify(deployments, null, 2));
+
     console.log("\n--- Pending Upgrade Already Exists ---");
     console.log("Scheduled implementation:", existingScheduled);
     console.log("Scheduled at:", new Date(Number(scheduledAt) * 1000).toISOString());
     console.log("Executable after:", new Date(Number(executableAt) * 1000).toISOString());
     console.log(`Time remaining: ${remainingHours.toFixed(2)} hours`);
+    console.log("(JSON reconciled to on-chain state.)");
     console.log("\nTo proceed, either:");
     console.log("  1. Wait for timelock and run: npx hardhat run ./scripts/upgrade-controller.ts --network", hre.network.name);
     console.log("  2. Cancel with: npx hardhat run ./scripts/cancel-upgrade-controller.ts --network", hre.network.name);

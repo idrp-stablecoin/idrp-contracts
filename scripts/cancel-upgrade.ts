@@ -32,7 +32,20 @@ async function main() {
 
   const scheduledImpl: string = await idrp.scheduledImplementation();
   if (scheduledImpl === hre.ethers.ZeroAddress) {
-    console.log("No upgrade scheduled. Nothing to cancel.");
+    console.log("No upgrade scheduled on-chain. Nothing to cancel.");
+    // Still reconcile JSON: clear any stale schedule entries so the local
+    // file stops misrepresenting state.
+    const hadStale =
+      deployments["IDRPScheduledImpl"] ||
+      deployments["IDRPScheduledAt"] ||
+      deployments["IDRPExecutableAfter"];
+    if (hadStale) {
+      delete deployments["IDRPScheduledImpl"];
+      delete deployments["IDRPScheduledAt"];
+      delete deployments["IDRPExecutableAfter"];
+      fs.writeFileSync(deploymentFile, JSON.stringify(deployments, null, 2));
+      console.log("(Cleared stale schedule entries from deployment file.)");
+    }
     return;
   }
 

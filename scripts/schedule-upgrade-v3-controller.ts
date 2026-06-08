@@ -68,8 +68,17 @@ async function main() {
 
   const existingScheduled = (await ctrl.scheduledImplementation()) as string;
   if (existingScheduled !== hre.ethers.ZeroAddress) {
+    // On-chain has a pending schedule. Sync the JSON to reflect the truth so
+    // a stale local file gets corrected, then bail.
+    const existingAt = (await ctrl.upgradeScheduledAt()) as bigint;
+    const existingDelay = (await ctrl.UPGRADE_DELAY()) as bigint;
+    deployments.IDRPControllerv3ScheduledImpl = existingScheduled;
+    deployments.IDRPControllerv3ScheduledAt = String(existingAt);
+    deployments.IDRPControllerv3ExecutableAfter = String(existingAt + existingDelay);
+    fs.writeFileSync(deploymentFile, JSON.stringify(deployments, null, 2));
     throw new Error(
-      `Already a pending scheduled upgrade: ${existingScheduled}.`
+      `Already a pending scheduled upgrade on-chain: ${existingScheduled}. ` +
+        `(JSON reconciled to match.) Cancel it before scheduling a new one.`
     );
   }
 
