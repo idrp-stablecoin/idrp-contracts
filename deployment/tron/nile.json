@@ -1,4 +1,18 @@
 {
   "IDRP": "TYdq9kGJQDSVxPeKH1zyXMuTgKK56tv1GU",
-  "IDRPController": "TWTjirsqPT6DGC63RMSAHGtb2NdzauiJWy"
+  "IDRPController": "TWTjirsqPT6DGC63RMSAHGtb2NdzauiJWy",
+
+  "IDRPv3ScheduledImpl": "0xdB1056806438fd8aCBDfa2D61a417dB33eB52D1c",
+  "IDRPv3ScheduledImplT": "TVwWZFGYop7QmdHAUWF219PTC3SUnyYhpb",
+  "IDRPv3ScheduledImplDeployTx": "0x6df8d853c628f099cce9dbc347e6c8c94d9c1ac4cf039a8110baaccb102e6e63",
+  "IDRPv3ScheduledAt": "1780971090",
+  "IDRPv3ExecutableAfter": "1781143890",
+  "IDRPv3ExecutableAfterIso": "2026-06-11T02:11:30.000Z",
+
+  "IDRPControllerv3ScheduledImpl": "0x799439c8E6cCad5c06b07211c123fb1e2837cf64",
+  "IDRPControllerv3ScheduledImplT": "TM44LB4CKmG6n9YNEXcmY9xcpzhd67LzuS",
+  "IDRPControllerv3ScheduledImplDeployTx": "0xcc45606cbdf7e50dfc21d0d54cabf6042b5f5bb58010ef3bae7c6777ffc7a60a",
+  "IDRPControllerv3ScheduledAt": "1780971327",
+  "IDRPControllerv3ExecutableAfter": "1781144127",
+  "IDRPControllerv3ExecutableAfterIso": "2026-06-11T02:15:27.000Z"
 }
