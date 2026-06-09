@@ -31,14 +31,30 @@ const KAIA_API_KEY = vars.get("KAIA_API_KEY");
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.28",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    // Multiple compilers:
+    //   0.8.28 — EVM target (paris evmVersion), main's pin.
+    //   0.8.22 — Tron target. evmVersion: istanbul is required here (NOT in
+    //            tronSolc.compilers[].settings) because @layerzerolabs/hardhat-tron's
+    //            updateCompilerConf only forwards optimizer + metadata settings,
+    //            not evmVersion. The compile pipeline copies solidity.compilers
+    //            settings as the base, then tronSolc overrides only the
+    //            optimizer/metadata bits. So evmVersion must be set at the
+    //            solidity.compilers level.
+    compilers: [
+      {
+        version: "0.8.28",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
       },
-      // viaIR: true,
-    },
+      {
+        version: "0.8.22",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+          evmVersion: "istanbul",
+        },
+      },
+    ],
   },
   namedAccounts: {
     deployer: {
@@ -199,9 +215,24 @@ const config: HardhatUserConfig = {
   },
 
   // TVM: @layerzerolabs/hardhat-tron
+  //
+  // tron-solc 0.8.22 is published at
+  // https://tronsuper.github.io/tron-solc-bin/bin/soljson_v0.8.22.js but
+  // isn't yet in the plugin's hardcoded version list (latest in
+  // node_modules/@layerzerolabs/hardhat-tron/dist/constants.js is 0.8.20).
+  // The plugin's validateTronSolcVersion warns "unknown version, attempting
+  // anyway..." for versions greater than 0.8.20 and proceeds to download.
+  // So 0.8.22 works.
+  //
+  // Main's solc target is 0.8.28 (paris evmVersion); only 0.8.22 is needed
+  // for Tron (istanbul). Remap 0.8.28 → 0.8.22 so the Tron build uses the
+  // same source files.
   tronSolc: {
     enable: true,
     filter: [], // compile all contracts
+    versionRemapping: [
+      ["0.8.28", "0.8.22"],
+    ],
     compilers: [
       {
         version: "0.8.22",
