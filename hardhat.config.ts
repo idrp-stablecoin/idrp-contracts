@@ -13,21 +13,35 @@ const tronToHex = (tronKey: string): string => {
     return tronKey; // Already in hex format
   }
   return "0x" + tronKey; // Convert to hex format
-}
+};
 
 // const PRIVATE_KEY = vars.get("PRIVATE_KEY")
-const IDRP_DEPLOYER_PRIVATE_KEY = tronToHex(vars.get("IDRP_DEPLOYER_PRIVATE_KEY"));
+const IDRP_DEPLOYER_PRIVATE_KEY = tronToHex(
+  vars.get("IDRP_DEPLOYER_PRIVATE_KEY"),
+);
 const IDRP_ADMIN_PRIVATE_KEY = tronToHex(vars.get("IDRP_ADMIN_PRIVATE_KEY"));
-const IDRP_DEPLOYER_PRIVATE_KEY_TRON = tronToHex(vars.get(
-  "IDRP_DEPLOYER_PRIVATE_KEY_TRON"
-));
-const IDRP_ADMIN_PRIVATE_KEY_TRON = tronToHex(vars.get("IDRP_ADMIN_PRIVATE_KEY_TRON"));
+const IDRP_DEPLOYER_PRIVATE_KEY_TRON = tronToHex(
+  vars.get("IDRP_DEPLOYER_PRIVATE_KEY_TRON"),
+);
+const IDRP_ADMIN_PRIVATE_KEY_TRON = tronToHex(
+  vars.get("IDRP_ADMIN_PRIVATE_KEY_TRON"),
+);
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
 const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
 const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
 const KAIA_API_KEY = vars.get("KAIA_API_KEY");
+// TRON-PRO-API-KEY (Trongrid free-tier API key — get one at https://www.trongrid.io/)
+// Set with: npx hardhat vars set TRONGRID_API_KEY
+// Optional. If unset, Tron RPCs hit the unauthenticated public quota
+// (~100k req/day per IP) and may 429 during heavy deploy ops.
+const TRONGRID_API_KEY = vars.has("TRONGRID_API_KEY")
+  ? vars.get("TRONGRID_API_KEY")
+  : "";
+const TRON_HEADERS: Record<string, string> = TRONGRID_API_KEY
+  ? { "TRON-PRO-API-KEY": TRONGRID_API_KEY }
+  : {};
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -120,22 +134,27 @@ const config: HardhatUserConfig = {
     },
 
     // TVM: @layerzerolabs/hardhat-tron
+    // httpHeaders forwards the TRON-PRO-API-KEY (when set) to Trongrid so
+    // heavy deploy ops don't hit the unauthenticated 429 rate-limit.
     shasta: {
       url: "https://api.shasta.trongrid.io/jsonrpc",
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
       tron: true,
+      httpHeaders: TRON_HEADERS,
     },
     nile: {
       // Tron Nile testnet JSON-RPC endpoint
       url: "https://nile.trongrid.io/jsonrpc",
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
       tron: true,
+      httpHeaders: TRON_HEADERS,
     },
     tron: {
       // Tron mainnet JSON-RPC endpoint via TronGrid (free tier: https://www.trongrid.io/)
       url: "https://api.trongrid.io/jsonrpc",
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY_TRON, IDRP_ADMIN_PRIVATE_KEY_TRON],
       tron: true,
+      httpHeaders: TRON_HEADERS,
     },
   },
   etherscan: {
@@ -230,9 +249,7 @@ const config: HardhatUserConfig = {
   tronSolc: {
     enable: true,
     filter: [], // compile all contracts
-    versionRemapping: [
-      ["0.8.28", "0.8.22"],
-    ],
+    versionRemapping: [["0.8.28", "0.8.22"]],
     compilers: [
       {
         version: "0.8.22",
