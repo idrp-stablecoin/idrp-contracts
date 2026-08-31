@@ -724,7 +724,9 @@ describe("IDRPController", function () {
       const freezeOperation = {
         to: user.address,
         operationType: OperationType.Freeze,
-        amount: 0, // Amount doesn't matter for freeze
+        // Declares more than the user's real 50M balance, so basis =
+        // max(amount, balanceOf(to)) = amount — stays in the base tier.
+        amount: FIVE_HUNDRED_MILLION - 1n,
         operationIdentifier: "tx1006", // Use operation ID
         deadline: freezeDeadline,
       };

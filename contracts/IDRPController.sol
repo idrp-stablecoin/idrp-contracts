@@ -431,8 +431,18 @@ contract IDRPController is
             require(to != address(0), "Invalid target address");
         }
 
-        // Get the appropriate quorum rule for this operation and amount
-        QuorumRule memory rule = getQuorumRule(operationType, amount);
+        // Tier is chosen from the larger of the declared amount and the target's balance: callers may escalate, never de-escalate.
+        uint256 basis = amount;
+        if (
+            operationType == OperationType.Freeze ||
+            operationType == OperationType.Unfreeze
+        ) {
+            uint256 bal = IERC20(idrpToken).balanceOf(to);
+            if (bal > basis) basis = bal;
+        }
+
+        // Get the appropriate quorum rule for this operation and basis
+        QuorumRule memory rule = getQuorumRule(operationType, basis);
 
         // Hash the operation data - using operationIdentifier instead of nonce
         bytes32 operationHash = getOperationHash(
