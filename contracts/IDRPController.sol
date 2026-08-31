@@ -22,6 +22,8 @@ interface IIDRP {
     function pause() external;
 
     function unpause() external;
+
+    function confiscate(address from, uint256 amount) external;
 }
 
 contract IDRPController is
@@ -56,13 +58,17 @@ contract IDRPController is
     uint256 public nonce;
 
     // Operation types
+    // NEVER reorder or insert — quorumRules is a mapping keyed by this enum's
+    // numeric value, and six live chains hold quorum rules keyed by the
+    // current ordering. New operation types must always be appended last.
     enum OperationType {
         Mint,
         Burn,
         Freeze,
         Unfreeze,
         Pause,
-        Unpause
+        Unpause,
+        Confiscate
     }
 
     // Quorum rule structure
@@ -273,8 +279,15 @@ contract IDRPController is
     // applyQuorumRules; cancelQuorumRules aborts a pending change.
 
     // Validates ranges are contiguous: start at 0, no gaps, end at type(uint256).max
-    function _validateQuorumRules(QuorumRule[] calldata rules) internal pure {
+    function _validateQuorumRules(
+        OperationType operationType,
+        QuorumRule[] calldata rules
+    ) internal pure {
         require(rules.length > 0, "Rules cannot be empty");
+        // Seizure requires the full role set regardless of amount; a second tier would weaken that.
+        if (operationType == OperationType.Confiscate) {
+            require(rules.length == 1, "Confiscate must be single-tier");
+        }
 
         for (uint256 i = 0; i < rules.length; i++) {
             require(
@@ -318,7 +331,7 @@ contract IDRPController is
             quorumRules[operationType].length == 0,
             "Rules exist: use schedule"
         );
-        _validateQuorumRules(rules);
+        _validateQuorumRules(operationType, rules);
         _writeQuorumRules(operationType, rules);
     }
 
@@ -328,7 +341,7 @@ contract IDRPController is
         OperationType operationType,
         QuorumRule[] calldata rules
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _validateQuorumRules(rules);
+        _validateQuorumRules(operationType, rules);
 
         PendingQuorum storage pending = pendingQuorumRules[operationType];
         delete pending.rules;
@@ -431,8 +444,31 @@ contract IDRPController is
             require(to != address(0), "Invalid target address");
         }
 
-        // Get the appropriate quorum rule for this operation and amount
-        QuorumRule memory rule = getQuorumRule(operationType, amount);
+        // Tier is chosen from the larger of the declared amount and the target's
+        // balance: callers may escalate, never de-escalate.
+        uint256 basis = amount;
+        if (
+            operationType == OperationType.Freeze ||
+            operationType == OperationType.Unfreeze
+        ) {
+            uint256 bal = IERC20(idrpToken).balanceOf(to);
+            if (bal > basis) basis = bal;
+        }
+
+        // Seizure: full role set regardless of amount, and all-or-nothing.
+        if (operationType == OperationType.Confiscate) {
+            require(
+                quorumRules[OperationType.Confiscate].length == 1,
+                "Confiscate must be single-tier"
+            );
+            require(
+                amount >= IERC20(idrpToken).balanceOf(to),
+                "amount below target balance"
+            );
+        }
+
+        // Get the appropriate quorum rule for this operation and basis
+        QuorumRule memory rule = getQuorumRule(operationType, basis);
 
         // Hash the operation data - using operationIdentifier instead of nonce
         bytes32 operationHash = getOperationHash(
@@ -466,6 +502,8 @@ contract IDRPController is
             IIDRP(idrpToken).pause();
         } else if (operationType == OperationType.Unpause) {
             IIDRP(idrpToken).unpause();
+        } else if (operationType == OperationType.Confiscate) {
+            IIDRP(idrpToken).confiscate(to, amount);
         }
 
         emit OperationExecuted(operationType, to, amount, operationIdentifier);

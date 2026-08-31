@@ -163,19 +163,31 @@ async function executeScheduledUpgrade(args: {
 }) {
   const {
     hre: h,
-    idrp,
-    admin,
     proxyAddress,
     currentUpgrader,
     deployments,
     deploymentFile,
   } = args;
+  let { idrp, admin } = args;
 
+  // The upgrader key differs per network (Base Sepolia's token upgrader is not
+  // Kairos's), so resolve the signer from on-chain state rather than an index.
   if (currentUpgrader.toLowerCase() !== admin.address.toLowerCase()) {
-    throw new Error(
-      `Admin ${admin.address} is not the current upgrader (${currentUpgrader}). ` +
-        `Use the correct signer or rotate via setUpgrader.`
+    const all = await h.ethers.getSigners();
+    const match = all.find(
+      (s: { address: string }) =>
+        s.address.toLowerCase() === currentUpgrader.toLowerCase()
     );
+    if (!match) {
+      throw new Error(
+        `None of the ${all.length} configured signer(s) is the current upgrader ` +
+          `(${currentUpgrader}). Available: ` +
+          all.map((s: { address: string }) => s.address).join(", ")
+      );
+    }
+    console.log("Re-resolved upgrader signer:", match.address);
+    admin = match;
+    idrp = idrp.connect(match);
   }
 
   const scheduledImpl: string = await idrp.scheduledImplementation();

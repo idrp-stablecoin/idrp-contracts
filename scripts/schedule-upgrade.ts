@@ -23,8 +23,6 @@ async function main() {
     "./deployment"
   );
   const signers = await hre.ethers.getSigners();
-  const admin = signers[1];
-  console.log("Admin (upgrader):", admin.address);
 
   if (!fs.existsSync(deploymentDir)) {
     fs.mkdirSync(deploymentDir, { recursive: true });
@@ -42,12 +40,15 @@ async function main() {
   }
   console.log("IDRP proxy:", proxyAddress);
 
-  const idrp = await hre.ethers.getContractAt("IDRP", proxyAddress, admin);
+  // Read-only first: the upgrader key differs per network (Base Sepolia's token
+  // upgrader is not Kairos's), so resolve the signer from on-chain state rather
+  // than assuming a fixed index.
+  const readOnly = await hre.ethers.getContractAt("IDRP", proxyAddress);
 
-  // Sanity: this is a v2+ proxy (has `upgrader`) and caller equals the upgrader.
+  // Sanity: this is a v2+ proxy (has `upgrader`) and we hold that key.
   let currentUpgrader: string;
   try {
-    currentUpgrader = await idrp.upgrader();
+    currentUpgrader = await readOnly.upgrader();
   } catch {
     throw new Error(
       `Proxy at ${proxyAddress} has no upgrader() — looks like a v1 proxy. ` +
@@ -59,11 +60,19 @@ async function main() {
       `upgrader() is unset on ${proxyAddress}. Run scripts/upgrade.ts to migrate v1 → v2 first.`
     );
   }
-  if (currentUpgrader.toLowerCase() !== admin.address.toLowerCase()) {
+  const admin = signers.find(
+    (s) => s.address.toLowerCase() === currentUpgrader.toLowerCase()
+  );
+  if (!admin) {
     throw new Error(
-      `Admin ${admin.address} is not the current upgrader (${currentUpgrader}).`
+      `None of the ${signers.length} configured signer(s) is the current upgrader ` +
+        `(${currentUpgrader}) on ${hre.network.name}. Available: ` +
+        signers.map((s) => s.address).join(", ")
     );
   }
+  console.log("Admin (upgrader):", admin.address);
+
+  const idrp = readOnly.connect(admin) as typeof readOnly;
 
   // Abort if there's already a pending scheduled upgrade.
   const existingScheduled: string = await idrp.scheduledImplementation();
