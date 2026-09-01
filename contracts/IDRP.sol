@@ -7,6 +7,7 @@ import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/toke
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {TronUUPSUpgradeable} from "./utils/TronUUPSUpgradeable.sol";
+import {LegacyAccessControlSlots} from "./utils/LegacyAccessControlSlots.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -21,6 +22,7 @@ contract IDRP is
     Initializable,
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
+    LegacyAccessControlSlots,
     ERC20PermitUpgradeable,
     TronUUPSUpgradeable
 {
@@ -54,6 +56,12 @@ contract IDRP is
     }
 
     // Mapping to track frozen accounts
+    // Final alignment for the deployed Tron layout. The live proxies keep the
+    // token's own variables at slots 504-510; the inherited stack above ends at
+    // 453, so 50 slots of padding put `frozen` on 504. Verified against Tron
+    // mainnet and Nile. Do not remove, reorder, or resize.
+    uint256[50] private __legacyTailGap;
+
     mapping(address => bool) public frozen;
 
     address public depositoryWallet;
