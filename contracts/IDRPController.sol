@@ -250,6 +250,17 @@ contract IDRPController is
         // Step 2: initialise ACDAR with the intended single admin.
         __AccessControlDefaultAdminRules_init(DEFAULT_ADMIN_DELAY, _admin);
 
+        // Step 2b: record the proxy address for TronUUPSUpgradeable.
+        // TVM cannot execute the immutable opcodes OZ's UUPSUpgradeable relies on, so
+        // TronUUPSUpgradeable keeps the proxy address in a storage slot instead and
+        // gates every upgrade entry point on it. The deployed Tron proxies were
+        // initialised before that variant existed, so the slot is still zero on both
+        // mainnet contracts. Writing it here — inside reinitializer(3), which is what
+        // makes the onlyInitializing call legal — means the FIRST v3 upgrade also
+        // restores the ability to upgrade again. Without this the proxy silently
+        // becomes permanently un-upgradeable the moment v3 goes live.
+        __UUPSUpgradeable_init_unchained();
+
         // Step 3: rotate upgrader if requested.
         if (_upgrader != upgrader) {
             address oldUpgrader = upgrader;
