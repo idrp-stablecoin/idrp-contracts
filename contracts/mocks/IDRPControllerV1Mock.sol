@@ -68,7 +68,8 @@ contract IDRPControllerV1Mock is
         address _safeAddress
     ) public initializer {
         __AccessControl_init();
-        __Ownable_init(_safeAddress);
+        __Ownable_init();
+        _transferOwnership(_safeAddress);
         __UUPSUpgradeable_init();
 
         idrpToken = _idrpToken;

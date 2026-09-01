@@ -313,7 +313,7 @@ contract IDRPv2 is
         emit SanctionsListUpdated(prev, newList);
     }
 
-    function _update(
+    function _beforeTokenTransfer(
         address from,
         address to,
         uint256 value
@@ -335,7 +335,7 @@ contract IDRPv2 is
                 }
             }
         }
-        super._update(from, to, value);
+        super._beforeTokenTransfer(from, to, value);
     }
 
     // Function to withdraw other tokens that might be sent to this contract

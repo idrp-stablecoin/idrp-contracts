@@ -67,12 +67,12 @@ contract IDRPV1Mock is
         _mint(to, amount);
     }
 
-    function _update(
+    function _beforeTokenTransfer(
         address from,
         address to,
         uint256 value
     ) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
-        super._update(from, to, value);
+        super._beforeTokenTransfer(from, to, value);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}

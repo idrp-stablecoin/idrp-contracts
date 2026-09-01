@@ -5,9 +5,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlDefaultAdminRulesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {TronUUPSUpgradeable} from "./utils/TronUUPSUpgradeable.sol";
 
 // Interface for IDRP-specific functions
 interface IIDRP {
@@ -27,7 +27,7 @@ interface IIDRP {
 contract IDRPController is
     Initializable,
     AccessControlDefaultAdminRulesUpgradeable,
-    UUPSUpgradeable
+    TronUUPSUpgradeable
 {
     using SafeERC20 for IERC20;
 

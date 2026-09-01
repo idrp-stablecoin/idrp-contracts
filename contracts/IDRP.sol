@@ -6,7 +6,7 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
 import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {TronUUPSUpgradeable} from "./utils/TronUUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -22,7 +22,7 @@ contract IDRP is
     ERC20Upgradeable,
     ERC20PausableUpgradeable,
     ERC20PermitUpgradeable,
-    UUPSUpgradeable
+    TronUUPSUpgradeable
 {
     using SafeERC20 for IERC20;
 
@@ -376,7 +376,11 @@ contract IDRP is
         emit SanctionsListUpdated(prev, newList);
     }
 
-    function _update(
+    // OZ 4.x hook. OZ 5 replaced _beforeTokenTransfer with _update; on Tron we stay
+    // on OZ 4 because the deployed proxies use its sequential storage layout, so the
+    // freeze/sanctions gate lives here instead. Same position in the transfer path:
+    // both run before balances move, and ERC20Pausable enforces whenNotPaused here too.
+    function _beforeTokenTransfer(
         address from,
         address to,
         uint256 value
@@ -398,7 +402,7 @@ contract IDRP is
                 }
             }
         }
-        super._update(from, to, value);
+        super._beforeTokenTransfer(from, to, value);
     }
 
     // Function to withdraw other tokens that might be sent to this contract
@@ -414,7 +418,7 @@ contract IDRP is
     /// @notice ERC-2612 permit with an explicit freeze gate.
     /// @dev Reverts when either the owner or the spender is frozen, so a frozen
     ///      account cannot set allowances. Token movement is independently gated
-    ///      by the freeze checks in _update().
+    ///      by the freeze checks in _beforeTokenTransfer().
     function permit(
         address owner,
         address spender,

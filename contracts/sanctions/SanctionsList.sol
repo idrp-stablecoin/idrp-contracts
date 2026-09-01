@@ -24,7 +24,7 @@ contract SanctionsList is Ownable {
     event SanctionedAddressesAdded(address[] addrs);
     event SanctionedAddressesRemoved(address[] addrs);
 
-    constructor() Ownable(msg.sender) {}
+    constructor() {}
 
     function name() external pure returns (string memory) {
         return "Chainalysis sanctions oracle";
