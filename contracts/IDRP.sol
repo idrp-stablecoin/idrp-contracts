@@ -6,7 +6,7 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
 import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {TronUUPSUpgradeable} from "./utils/TronUUPSUpgradeable.sol";
+import {TronGaplessUUPSUpgradeable} from "./utils/TronGaplessUUPSUpgradeable.sol";
 import {LegacyAccessControlSlots} from "./utils/LegacyAccessControlSlots.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -24,7 +24,7 @@ contract IDRP is
     ERC20PausableUpgradeable,
     LegacyAccessControlSlots,
     ERC20PermitUpgradeable,
-    TronUUPSUpgradeable
+    TronGaplessUUPSUpgradeable
 {
     using SafeERC20 for IERC20;
 
