@@ -110,7 +110,7 @@ async function main() {
 
   const abi = [
     { inputs: [{ name: "n", type: "address" }], name: "scheduleUpgrade", outputs: [], stateMutability: "nonpayable", type: "function" },
-    { inputs: [{ name: "n", type: "address" }, { name: "d", type: "bytes" }], name: "upgradeToAndCall", outputs: [], stateMutability: "payable", type: "function" },
+    { inputs: [{ name: "n", type: "address" }], name: "upgradeTo", outputs: [], stateMutability: "nonpayable", type: "function" },
     { inputs: [], name: "UPGRADE_DELAY", outputs: [{ type: "uint256" }], stateMutability: "view", type: "function" },
     { inputs: [], name: "upgrader", outputs: [{ type: "address" }], stateMutability: "view", type: "function" },
   ];
@@ -123,7 +123,11 @@ async function main() {
     await c.scheduleUpgrade(target).send({ feeLimit: 200_000_000, shouldPollResponse: true });
     console.log(`   scheduled; waiting ${delay}s`);
     await new Promise(r => setTimeout(r, delay * 1000 + 15000));
-    await c.upgradeToAndCall(target, "0x").send({ feeLimit: 500_000_000, callValue: 0, shouldPollResponse: true });
+    // Data-less upgrades MUST use upgradeTo. OZ 4's upgradeToAndCall passes
+    // forceCall = true, so it delegatecalls even with empty calldata, lands in the new
+    // implementation's fallback, and reverts "Address: low-level delegate call failed".
+    // Caught locally by test/upgrade/TronUpgradeRepeatability.ts before it cost TRX.
+    await c.upgradeTo(target).send({ feeLimit: 500_000_000, callValue: 0, shouldPollResponse: true });
     await new Promise(r => setTimeout(r, 9000));
     const live = "0x" + (await storageAt(proxyHex, IMPL_SLOT)).slice(-40);
     const ok = live.toLowerCase() === target.toLowerCase();
