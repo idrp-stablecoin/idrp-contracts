@@ -37,3 +37,6 @@ ignition/deployments/chain-31337
 /deployment/state-snapshot/
 /deployment/chain-*-legacy-upgrader-holders.json
 /deployment/chain-*-legacy-default-admin-holders.json
+
+# flattened sources are build output for explorer verification
+flattened/

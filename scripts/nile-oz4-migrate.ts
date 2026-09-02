@@ -1,4 +1,10 @@
 /**
+ * OBSOLETE — kept only as a record of what was attempted.
+ *
+ * The repair implementation this drives (IDRPControllerNileRepair) has been deleted: the
+ * Nile Controller's upgrade path is frozen, so nothing can be deployed to that proxy any
+ * more and the script cannot run. See notes/incidents/LOCAL-SIMULATION-RESULTS.md.
+ *
  * Nile ONLY — migrate the Controller proxy from the OZ5+gap implementation to the
  * OZ4 implementation, repairing the legacy Initializable slot on the way.
  *
