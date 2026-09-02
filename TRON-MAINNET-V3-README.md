@@ -1,6 +1,6 @@
 # Tron mainnet v3 — what this branch is
 
-**Branch:** `mainnet-ready-impl` · **Target:** Tron mainnet only · **Nothing here has been run on mainnet.**
+**Branch:** `mainnet-ready-impl` · **Merge into `tron` — NOT `main`** · **Nothing here has been run on mainnet.**
 
 This branch upgrades the Tron `IDRP` token and `IDRPController` from v2 to v3 with
 **no role re-grant and no service outage**, by building v3 on **OpenZeppelin 4.9.6**
@@ -10,6 +10,24 @@ Commands to run: **[notes/incidents/MAINNET-DEPLOY-AND-SCHEDULE.md](../notes/inc
 Why it is shaped this way: [notes/incidents/MAINNET-READY-RUNBOOK.md](../notes/incidents/MAINNET-READY-RUNBOOK.md)
 
 ---
+
+## ⛔ Merge target is `tron`. Do not merge this into `main`.
+
+`origin/main` is the **EVM line**: it pins OpenZeppelin `^5.3.0`, its `contracts/IDRP.sol`
+uses the OZ 5 `_update` hook, and it carries the EVM mainnet deployment records
+(Ethereum, BSC, Polygon, Kaia). Merging this branch into it would:
+
+- flip the repo pin from `^5.3.0` to `4.9.6`,
+- replace `_update` with the OZ 4 `_beforeTokenTransfer`,
+- and add Tron-specific layout padding to the shared token source.
+
+Any EVM deployment made from `main` afterwards would put an OZ 4 implementation behind
+an OZ 5 proxy. Merge into **`tron`**, which is the Tron line and where these commits
+already fast-forward cleanly.
+
+Unifying the two lines in one branch is possible — an aliased second OZ install would
+let Tron sources import OZ 4 while EVM keeps OZ 5 — but that is a refactor with its own
+full re-verification, not something to do in front of a mainnet upgrade.
 
 ## ⛔ Tron only. Never deploy this branch to an EVM chain.
 
