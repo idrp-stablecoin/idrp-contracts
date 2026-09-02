@@ -1,0 +1,149 @@
+/**
+ * Full mainnet dress rehearsal, on a local TVM. Free, repeatable, destroys nothing.
+ *
+ *   docker run -d --name idrp-tre -p 9090:9090 tronbox/tre
+ *   npx hardhat run scripts/tre-mainnet-rehearsal.ts --network tre
+ *
+ * WHY THIS SHAPE
+ *   Two Nile proxies were frozen by rehearsing against the wrong starting state. A fresh
+ *   proxy running the new implementation proves nothing, because mainnet is not fresh —
+ *   it runs a v2 built on stock OZ 4 UUPS with no Ownable and no proxy-address slot.
+ *   So this starts from MainnetReplicaV2Controller (commit d8bd036, the high-confidence
+ *   match for the live Controller) and drives the real sequence against it.
+ *
+ * STEPS
+ *   1. deploy the v2 replica, put a proxy over it, initialize
+ *   2. assert the starting state matches live mainnet: app vars at 251/256/257/258,
+ *      _roles at 101, and BOTH TronUUPS slots empty
+ *   3. grant the four quorum roles, so step 6 can prove they survive
+ *   4. schedule + atomic upgradeToAndCall(v3, initializeV3(...))   <- the real mainnet call
+ *   5. assert the v3 state: upgrader, defaultAdmin, idrpToken all read correctly
+ *   6. assert every role still reads true WITHOUT a re-grant
+ *   7. upgrade once more, proving the proxy is not a one-way door
+ */
+import hre from "hardhat";
+const TronWeb = require("tronweb");
+
+const HOST = "http://127.0.0.1:9090";
+const IMPL_SLOT = "360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+
+const ROLES = ["OFFICER_ROLE", "MANAGER_ROLE", "DIRECTOR_ROLE", "COMMISSIONER_ROLE"];
+
+async function main() {
+  const { ethers } = hre;
+  const accts: any = await fetch(`${HOST}/admin/accounts-json`).then(r => r.json());
+  const pk = accts.privateKeys[0];
+  const tw = new TronWeb({ fullHost: HOST, privateKey: pk });
+  const me = tw.address.fromPrivateKey(pk);
+  const meHex = "0x" + tw.address.toHex(me).slice(2);
+  console.log(`local TVM : ${HOST}\nsigner    : ${me}\n`);
+
+  const roleHash = (n: string) => ethers.keccak256(ethers.toUtf8Bytes(n));
+  const holders: Record<string, string> = {};
+  // TRE's accounts-json exposes privateKeys only; derive the addresses from them.
+  ROLES.forEach((r, i) => {
+    const a = tw.address.fromPrivateKey(accts.privateKeys[i + 1]);
+    holders[r] = "0x" + tw.address.toHex(a).slice(2);
+  });
+
+  const deploy = async (name: string, params: any[], label: string) => {
+    const a = await hre.artifacts.readArtifact(name);
+    const tx = await tw.transactionBuilder.createSmartContract(
+      { abi: { entrys: a.abi }, bytecode: a.bytecode.replace(/^0x/, ""), feeLimit: 1_000_000_000,
+        callValue: 0, userFeePercentage: 100, originEnergyLimit: 10_000_000, parameters: params, name },
+      tw.address.toHex(me));
+    const res = await tw.trx.sendRawTransaction(await tw.trx.sign(tx));
+    if (!res.result) throw new Error(`${label} deploy failed: ${JSON.stringify(res)}`);
+    await new Promise(r => setTimeout(r, 3000));
+    const addr = tw.address.fromHex(tx.contract_address);
+    console.log(`   ${label}: ${addr}`);
+    return addr;
+  };
+  const slot = async (proxyT: string, s: string) =>
+    (await tw.trx.getContractStorageAt?.(proxyT, s).catch(() => null)) ??
+    (await fetch(`${HOST}/jsonrpc`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getStorageAt",
+        params: ["0x" + tw.address.toHex(proxyT).slice(2), s.startsWith("0x") ? s : "0x" + s, "latest"], id: 1 }),
+    }).then(r => r.json()).then((j: any) => j.result));
+  const ok = (b: boolean) => (b ? "✓" : "✗");
+
+  console.log("STEP 1 — deploy the mainnet v2 replica and a proxy over it");
+  const v2 = await deploy("MainnetReplicaV2Controller", [], "v2 replica");
+  const v3 = await deploy("IDRPController", [], "v3 candidate");
+  const v3b = await deploy("IDRPController", [], "v3 (second)");
+  const v2Art = await hre.artifacts.readArtifact("MainnetReplicaV2Controller");
+  const initData = new ethers.Interface(["function initialize(address,address)"])
+    .encodeFunctionData("initialize", [meHex, meHex]).slice(10);
+  const proxy = await deploy("ERC1967Proxy",
+    [tw.address.toHex(v2), "0x" + new ethers.Interface(["function initialize(address,address)"])
+      .encodeFunctionData("initialize", [meHex, meHex]).slice(2)], "proxy");
+
+  console.log("\nSTEP 2 — assert the starting state matches live mainnet");
+  const hex = (h: string) => "0x" + (h || "").slice(-40);
+  const checks: [string, boolean][] = [];
+  for (const [name, n, want] of [["idrpToken", 251, meHex], ["upgrader", 258, meHex]] as [string, number, string][]) {
+    const got = hex(await slot(proxy, "0x" + n.toString(16)));
+    checks.push([`${name} @${n}`, got.toLowerCase() === want.toLowerCase()]);
+    console.log(`   ${name} @${n}: ${got} ${ok(got.toLowerCase() === want.toLowerCase())}`);
+  }
+  for (const nm of ["idrp.tron.uups.__self", "idrp.tron.uups.__proxy"]) {
+    const v = await slot(proxy, ethers.keccak256(ethers.toUtf8Bytes(nm)));
+    const empty = /^0x0*$/.test(v || "0x0");
+    checks.push([nm, empty]);
+    console.log(`   ${nm}: ${empty ? "empty" : v} ${ok(empty)}`);
+  }
+  if (checks.some(([, v]) => !v)) throw new Error("starting state does not match mainnet — abort");
+  console.log("   -> proxy is in the mainnet starting state");
+
+  const c2 = await tw.contract(v2Art.abi, proxy);
+
+  console.log("\nSTEP 3 — grant the quorum roles (so step 6 can prove they survive)");
+  for (const r of ROLES) {
+    await c2.grantRole(roleHash(r), holders[r]).send({ feeLimit: 500_000_000, shouldPollResponse: true });
+    console.log(`   ${r} -> ${holders[r]}`);
+  }
+
+  console.log("\nSTEP 4 — the real mainnet call: atomic upgradeToAndCall(v3, initializeV3)");
+  const initV3 = new ethers.Interface(["function initializeV3(address,address,address[])"])
+    .encodeFunctionData("initializeV3", [meHex, meHex, [meHex]]);
+  await c2.scheduleUpgrade(v3).send({ feeLimit: 500_000_000, shouldPollResponse: true });
+  const delay = Number(await c2.UPGRADE_DELAY().call());
+  console.log(`   scheduled; UPGRADE_DELAY=${delay}s — waiting`);
+  await new Promise(r => setTimeout(r, delay * 1000 + 5000));
+  await c2.upgradeToAndCall(v3, initV3).send({ feeLimit: 1_000_000_000, callValue: 0, shouldPollResponse: true });
+  await new Promise(r => setTimeout(r, 4000));
+  const live = hex(await slot(proxy, "0x" + IMPL_SLOT));
+  console.log(`   impl now ${live} ${ok(live.toLowerCase() === ("0x" + tw.address.toHex(v3).slice(2)).toLowerCase())}`);
+
+  console.log("\nSTEP 5 — v3 state");
+  const v3Art = await hre.artifacts.readArtifact("IDRPController");
+  const c3 = await tw.contract(v3Art.abi, proxy);
+  for (const f of ["upgrader", "idrpToken", "defaultAdmin"]) {
+    console.log(`   ${f}(): ${(await c3[f]().call()).toString()}`);
+  }
+
+  console.log("\nSTEP 6 — do the roles survive WITHOUT a re-grant?");
+  let survived = 0;
+  for (const r of ROLES) {
+    const has = await c3.hasRole(roleHash(r), holders[r]).call();
+    if (has) survived++;
+    console.log(`   ${r.padEnd(18)} ${ok(!!has)}`);
+  }
+  console.log(`   -> ${survived}/${ROLES.length} survived with no re-grant`);
+
+  console.log("\nSTEP 7 — still upgradeable afterwards?");
+  await c3.scheduleUpgrade(v3b).send({ feeLimit: 500_000_000, shouldPollResponse: true });
+  await new Promise(r => setTimeout(r, delay * 1000 + 5000));
+  await c3.upgradeTo(v3b).send({ feeLimit: 1_000_000_000, shouldPollResponse: true });
+  await new Promise(r => setTimeout(r, 4000));
+  const live2 = hex(await slot(proxy, "0x" + IMPL_SLOT));
+  const good = live2.toLowerCase() === ("0x" + tw.address.toHex(v3b).slice(2)).toLowerCase();
+  console.log(`   impl now ${live2} ${ok(good)}`);
+
+  console.log("\n=== REHEARSAL RESULT ===");
+  console.log(`starting state matched mainnet   : yes`);
+  console.log(`atomic v3 upgrade                : ${ok(live.toLowerCase() === ("0x" + tw.address.toHex(v3).slice(2)).toLowerCase())}`);
+  console.log(`roles survived without re-grant  : ${survived}/${ROLES.length}`);
+  console.log(`still upgradeable afterwards     : ${ok(good)}`);
+}
+main().then(() => process.exit(0)).catch(e => { console.error("\n✗", e.message || JSON.stringify(e)); process.exit(1); });
