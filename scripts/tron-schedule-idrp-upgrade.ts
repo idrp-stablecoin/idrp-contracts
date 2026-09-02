@@ -93,8 +93,22 @@ async function main() {
   const existing = await proxyContract.scheduledImplementation().call();
   const existingStr = existing.toString().toLowerCase();
   const isZero = /^(0x)?(41)?0{40}$/.test(existingStr);
+  // The contract itself allows replacement: scheduleUpgrade overwrites
+  // scheduledImplementation and resets upgradeScheduledAt unconditionally. This
+  // guard is a deliberate safety stop, not a contract limit. Prefer cancelling
+  // first (TARGET=token scripts/tron-cancel-upgrade.ts) so the cleared state is an
+  // auditable checkpoint; set REPLACE_PENDING=1 to overwrite in one call.
   if (!isZero) {
-    throw new Error(`A pending schedule already exists: ${existingStr}. Cancel first.`);
+    if (process.env.REPLACE_PENDING !== "1") {
+      throw new Error(
+        `A pending schedule already exists: ${existingStr}\n` +
+        `  Either cancel it first:\n` +
+        `    TARGET=token EXECUTE=1 npx hardhat run scripts/tron-cancel-upgrade.ts --network tron\n` +
+        `  or replace it in one call:\n` +
+        `    REPLACE_PENDING=1 IMPL=${newImpl} npx hardhat run scripts/tron-schedule-idrp-upgrade.ts --network tron`,
+      );
+    }
+    console.warn(`\n⚠ REPLACING pending schedule ${existingStr} — the 48h clock restarts from now.\n`);
   }
 
   console.log(`\nCalling scheduleUpgrade(${newImpl})...`);
