@@ -2,13 +2,13 @@
 // GENERATED FILE — DO NOT EDIT.  Regenerate with:
 //     npx hardhat run scripts/tvm/make-fixtures.ts
 //
-// Source: contracts/legacy/IDRPv2.sol
+// Source: contracts/legacy/IDRPv2.sol   ->   contract IDRPv2Tvm
 // The ONLY changes vs that source are:
 //   - UPGRADE_DELAY shortened to 60 seconds so a local TVM
 //     rehearsal can actually run (the real sources keep 48 hours)
 //   - relative imports rewritten one directory level up
 //   - the contract DECLARATION renamed with a "Tvm" suffix (declaration
-//     line only — string literals are untouched, so DOMAIN_SEPARATOR is unchanged)
+//     line only — string literals untouched, so DOMAIN_SEPARATOR is unchanged)
 // Generation fails if anything else would differ.
 // ─────────────────────────────────────────────────────────────────────────────
 // SPDX-License-Identifier: MIT
