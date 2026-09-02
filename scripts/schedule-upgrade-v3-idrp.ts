@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import hre from "hardhat";
+import { assertOz4TronOnly } from "./utils/assert-oz4-tron-only";
 
 /**
  * scripts/schedule-upgrade-v3-idrp.ts
@@ -16,6 +17,7 @@ import hre from "hardhat";
  */
 
 async function main() {
+  await assertOz4TronOnly(hre);
   const networkId = hre.network.config.chainId ?? 0;
   console.log(`Network: ${hre.network.name} (chainId ${networkId})\n`);
 

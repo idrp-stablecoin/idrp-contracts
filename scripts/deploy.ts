@@ -2,8 +2,10 @@ import fs from "fs";
 import path from "path";
 import hre from "hardhat";
 import { ADMIN_ADDRESS } from "./utils/constants";
+import { assertOz4TronOnly } from "./utils/assert-oz4-tron-only";
 
 async function main() {
+  await assertOz4TronOnly(hre);
   const name = "IDRP";
   const symbol = "IDRP";
   const networkId = hre.network.config.chainId ?? 8545;

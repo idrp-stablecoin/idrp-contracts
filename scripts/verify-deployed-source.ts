@@ -42,13 +42,23 @@ const TARGETS = [
     artifact: "contracts/legacy/IDRPControllerv2.sol:IDRPControllerv2" },
 ];
 
-async function rpc(method: string, params: unknown[]) {
-  const r = await fetch(`${HOST}/jsonrpc`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", method, params, id: 1 }),
-  }).then((x) => x.json());
-  if (r.error) throw new Error(`${method}: ${JSON.stringify(r.error)}`);
-  return r.result as string;
+/** TronGrid rate-limits and occasionally answers with neither result nor error.
+ *  Retry, and never hand back undefined — a caller doing `.replace()` on it fails
+ *  with a message that says nothing about the real cause. */
+async function rpc(method: string, params: unknown[]): Promise<string> {
+  let last: unknown;
+  for (let a = 0; a < 6; a++) {
+    try {
+      const r = await fetch(`${HOST}/jsonrpc`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", method, params, id: 1 }),
+      }).then((x) => x.json());
+      if (typeof r.result === "string") return r.result;
+      last = r.error ?? r;
+    } catch (e) { last = e; }
+    await new Promise((res) => setTimeout(res, 900 * (a + 1)));
+  }
+  throw new Error(`${method} failed after retries: ${JSON.stringify(last)}`);
 }
 
 /** Split runtime code into executable body and trailing CBOR metadata. */

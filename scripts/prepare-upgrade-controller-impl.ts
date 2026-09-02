@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import hre from "hardhat";
+import { assertOz4TronOnly } from "./utils/assert-oz4-tron-only";
 
 /**
  * Deploys ONLY a new IDRPController implementation contract — does NOT call
@@ -25,6 +26,7 @@ import hre from "hardhat";
  *       scheduleUpgrade(newImpl), wait UPGRADE_DELAY, upgradeToAndCall(newImpl, "0x").
  */
 async function main() {
+  await assertOz4TronOnly(hre);
   const networkId = hre.network.config.chainId ?? 8545;
   const deploymentDir = path.join(
     hre.config.paths.root || process.cwd(),
