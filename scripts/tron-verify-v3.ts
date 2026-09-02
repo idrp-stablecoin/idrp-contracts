@@ -129,6 +129,60 @@ async function main() {
     : "A TRONUUPS SLOT IS SET — future upgrades will revert. Investigate immediately."}`);
   if (!slotsClean) process.exit(1);
 
+  // --- the decisive "can this proxy still be upgraded?" check ---
+  //
+  // On mainnet you cannot prove upgradeability by doing another upgrade. But you
+  // can simulate one and read WHERE it reverts. upgradeTo() runs the UUPS
+  // onlyProxy gate BEFORE _authorizeUpgrade, so the revert reason says which:
+  //
+  //   "Upgrade not scheduled" / "Timelock not expired"
+  //        -> the proxy gate PASSED and execution reached the timelock logic.
+  //           The proxy is healthy. This is what we want to see.
+  //   "Function must be called through active proxy" / "...delegatecall"
+  //   or the TronUUPSUnauthorizedCallContext selector 0xbeb6ee1f
+  //        -> the proxy gate FAILED. The proxy is frozen; no upgrade can ever land.
+  //
+  // triggerconstantcontract is used rather than eth_call because TronGrid's
+  // eth_call discards the revert data and returns a bare "REVERT opcode executed".
+  // Nothing is broadcast — this is a constant call.
+  console.log(`\n  upgrade path (simulated — nothing is sent)`);
+  {
+    const upgraderHex = toAddr(await call(sel("upgrader()")));
+    const upgraderT = tw.address.fromHex("41" + upgraderHex.slice(2));
+    const r = await fetch(`${HOST}/wallet/triggerconstantcontract`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        owner_address: upgraderT,
+        contract_address: proxyT,
+        function_selector: "upgradeTo(address)",
+        parameter: new AbiCoder().encode(["address"], ["0x000000000000000000000000000000000000dEaD"]).slice(2),
+        visible: true,
+      }),
+    }).then((x) => x.json());
+
+    const cr: string = (r.constant_result ?? [])[0] ?? "";
+    let reason = "(no revert data)";
+    if (cr.startsWith("08c379a0")) {
+      reason = new AbiCoder().decode(["string"], "0x" + cr.slice(8))[0] as string;
+    } else if (cr) {
+      reason = "custom error 0x" + cr.slice(0, 8);
+    } else if (r.result?.result === true && !r.result?.message) {
+      reason = "(did not revert)";
+    }
+
+    const frozen = /active proxy|delegatecall/i.test(reason) || cr.startsWith("beb6ee1f");
+    const healthy = /Upgrade not scheduled|Timelock not expired/i.test(reason);
+    console.log(`    simulated as    ${upgraderT}`);
+    console.log(`    revert reason   ${JSON.stringify(reason)}`);
+    if (frozen) {
+      console.log(`    -> FROZEN: the UUPS proxy gate rejected the call. No upgrade can land. ✗`);
+      process.exit(1);
+    }
+    console.log(`    -> ${healthy
+      ? "reached the timelock check, so the UUPS proxy gate PASSED — still upgradeable ✓"
+      : "unexpected reason — the proxy gate did not obviously fail, but confirm this manually"}`);
+  }
+
   const sched = await call(sel("scheduledImplementation()"));
   if (!isRevert(sched)) {
     console.log(`\n  pending schedule        ${isZero(sched) ? "none ✓" : toAddr(sched) + "  <- still pending"}`);

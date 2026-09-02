@@ -139,19 +139,64 @@ async function main() {
   }
   console.log(`   -> ${survived}/${ROLES.length} survived with no re-grant`);
 
-  console.log("\nSTEP 7 — still upgradeable afterwards?");
+  // STEP 7 — the permanent-freeze check.
+  //
+  // "One more upgrade worked" is NOT the guarantee. The Nile Controller accepted
+  // the upgrade that killed it too; the freeze only appeared on the NEXT one. So
+  // check the TronUUPS slots are still empty AND that upgrades are repeatable —
+  // two more hops, not one.
+  console.log("\nSTEP 7 — still upgradeable afterwards, and permanently so?");
+
+  let slotsClean = true;
+  for (const nm of ["idrp.tron.uups.__self", "idrp.tron.uups.__proxy"]) {
+    const v = await slot(proxy, ethers.keccak256(ethers.toUtf8Bytes(nm)));
+    const empty = /^0x0*$/.test(v || "0x0");
+    if (!empty) slotsClean = false;
+    console.log(`   ${nm} after v3: ${empty ? "empty" : "SET " + v} ${ok(empty)}`);
+  }
+
   await c3.scheduleUpgrade(v3b).send({ feeLimit: 500_000_000, shouldPollResponse: true });
   await new Promise(r => setTimeout(r, delay * 1000 + 5000));
   await c3.upgradeTo(v3b).send({ feeLimit: 1_000_000_000, shouldPollResponse: true });
   await new Promise(r => setTimeout(r, 4000));
   const live2 = hex(await slot(proxy, "0x" + IMPL_SLOT));
-  const good = live2.toLowerCase() === ("0x" + tw.address.toHex(v3b).slice(2)).toLowerCase();
-  console.log(`   impl now ${live2} ${ok(good)}`);
+  const second = live2.toLowerCase() === ("0x" + tw.address.toHex(v3b).slice(2)).toLowerCase();
+  console.log(`   second upgrade -> ${live2} ${ok(second)}`);
+
+  // Third hop, back to the first v3 impl. Implementations are stateless, so this
+  // costs no extra deploy and proves the second upgrade was not a one-shot.
+  const c3b = await tw.contract(v3Art.abi, proxy);
+  await c3b.scheduleUpgrade(v3).send({ feeLimit: 500_000_000, shouldPollResponse: true });
+  await new Promise(r => setTimeout(r, delay * 1000 + 5000));
+  await c3b.upgradeTo(v3).send({ feeLimit: 1_000_000_000, shouldPollResponse: true });
+  await new Promise(r => setTimeout(r, 4000));
+  const live3 = hex(await slot(proxy, "0x" + IMPL_SLOT));
+  const third = live3.toLowerCase() === ("0x" + tw.address.toHex(v3).slice(2)).toLowerCase();
+  console.log(`   third upgrade  -> ${live3} ${ok(third)}`);
+
+  for (const nm of ["idrp.tron.uups.__self", "idrp.tron.uups.__proxy"]) {
+    const v = await slot(proxy, ethers.keccak256(ethers.toUtf8Bytes(nm)));
+    const empty = /^0x0*$/.test(v || "0x0");
+    if (!empty) slotsClean = false;
+    console.log(`   ${nm} after 3 upgrades: ${empty ? "empty" : "SET " + v} ${ok(empty)}`);
+  }
+
+  // Roles must still be intact after all the churn.
+  let survived2 = 0;
+  for (const r of ROLES) {
+    if (await c3b.hasRole(roleHash(r), holders[r]).call()) survived2++;
+  }
+  console.log(`   roles after three upgrades: ${survived2}/${ROLES.length} ${ok(survived2 === ROLES.length)}`);
+
+  const good = second && third && slotsClean && survived2 === ROLES.length;
 
   console.log("\n=== REHEARSAL RESULT ===");
   console.log(`starting state matched mainnet   : yes`);
   console.log(`atomic v3 upgrade                : ${ok(live.toLowerCase() === ("0x" + tw.address.toHex(v3).slice(2)).toLowerCase())}`);
   console.log(`roles survived without re-grant  : ${survived}/${ROLES.length}`);
+  console.log(`upgrades repeatable (2 more)     : ${ok(second && third)}`);
+  console.log(`TronUUPS slots still empty       : ${ok(slotsClean)}`);
+  console.log(`roles intact after all upgrades  : ${survived2}/${ROLES.length}`);
   console.log(`still upgradeable afterwards     : ${ok(good)}`);
 }
 main().then(() => process.exit(0)).catch(e => { console.error("\n✗", e.message || JSON.stringify(e)); process.exit(1); });

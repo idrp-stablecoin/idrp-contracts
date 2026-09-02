@@ -122,13 +122,49 @@ async function main() {
   const symAfter = (await t3.symbol().call()).toString();
   record("ERC20 state preserved", symAfter === sym, `symbol=${symAfter}`);
 
-  console.log("\n  A5 — still upgradeable afterwards");
+  // A5 — the permanent-freeze check.
+  //
+  // "One more upgrade worked" is NOT the guarantee we need. The Nile Controller
+  // also accepted the upgrade that killed it — the freeze only showed up on the
+  // NEXT one. So this asserts three things: the TronUUPS slots are still empty
+  // (nothing installed a storage-dependent proxy gate), and upgrades are
+  // REPEATABLE — two more hops, not one — with token state intact at the end.
+  console.log("\n  A5 — still upgradeable afterwards, and permanently so");
+
+  for (const n of PROXY_SLOT_NAMES) {
+    const v = await storage(proxy, ethers.keccak256(ethers.toUtf8Bytes(n)));
+    record(`${n} still empty after the v3 upgrade`, isEmpty(v),
+      "no storage-dependent proxy gate was installed");
+  }
+
   await t3.scheduleUpgrade(v3b).send({ feeLimit: 500_000_000, shouldPollResponse: true });
   await new Promise(r => setTimeout(r, delay * 1000 + 5000));
   await t3.upgradeTo(v3b).send({ feeLimit: 1_000_000_000, shouldPollResponse: true });
   await new Promise(r => setTimeout(r, 4000));
   const impl2 = asAddr(await storage(proxy, IMPL_SLOT));
   record("second upgrade succeeded", impl2.toLowerCase() === ("0x" + tw.address.toHex(v3b).slice(2)).toLowerCase(), impl2);
+
+  // Third hop, back to the first v3 implementation. Implementations are stateless,
+  // so reusing v3 costs nothing and proves the second upgrade was not a one-shot.
+  const t3b = await tw.contract(v3Art.abi, proxy);
+  await t3b.scheduleUpgrade(v3).send({ feeLimit: 500_000_000, shouldPollResponse: true });
+  await new Promise(r => setTimeout(r, delay * 1000 + 5000));
+  await t3b.upgradeTo(v3).send({ feeLimit: 1_000_000_000, shouldPollResponse: true });
+  await new Promise(r => setTimeout(r, 4000));
+  const impl3 = asAddr(await storage(proxy, IMPL_SLOT));
+  record("THIRD upgrade succeeded — upgrades are repeatable", 
+    impl3.toLowerCase() === ("0x" + tw.address.toHex(v3).slice(2)).toLowerCase(), impl3);
+
+  for (const n of PROXY_SLOT_NAMES) {
+    const v = await storage(proxy, ethers.keccak256(ethers.toUtf8Bytes(n)));
+    record(`${n} still empty after three upgrades`, isEmpty(v));
+  }
+
+  const dsEnd = (await t3b.DOMAIN_SEPARATOR().call()).toString();
+  record("DOMAIN_SEPARATOR still identical after three upgrades", dsEnd === dsBefore,
+    dsEnd === dsBefore ? "identical" : `${dsBefore.slice(0, 14)}… -> ${dsEnd.slice(0, 14)}…`);
+  const symEnd = (await t3b.symbol().call()).toString();
+  record("ERC20 state survived three upgrades", symEnd === sym, `symbol=${symEnd}`);
 
   // ──────────────────────── PART B — TronUUPS on real TVM ────────────────────────
   console.log("\n\nPART B — TronUUPSUpgradeable on TVM (the in-house variant)\n");
