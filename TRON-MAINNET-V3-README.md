@@ -6,8 +6,7 @@ This branch upgrades the Tron `IDRP` token and `IDRPController` from v2 to v3 wi
 **no role re-grant and no service outage**, by building v3 on **OpenZeppelin 4.9.6**
 so that not one storage slot moves.
 
-Commands to run: **[notes/incidents/MAINNET-DEPLOY-AND-SCHEDULE.md](../notes/incidents/MAINNET-DEPLOY-AND-SCHEDULE.md)**
-Why it is shaped this way: [notes/incidents/MAINNET-READY-RUNBOOK.md](../notes/incidents/MAINNET-READY-RUNBOOK.md)
+**Commands to run: [docs/upgrade/TRON-V3-MAINNET.md](docs/upgrade/TRON-V3-MAINNET.md)**
 
 ---
 
@@ -86,7 +85,7 @@ Re-runnable. The first two are read-only against mainnet.
 npx hardhat compile --network tron
 npx hardhat run scripts/verify-deployed-source.ts --network tron
 npx hardhat run scripts/verify-live-layout.ts     --network tron
-npx hardhat test test/upgrade/TronUpgradeRepeatability.ts
+npx hardhat test test/upgrade/TronUpgradeRepeatability.ts test/upgrade/UupsBaseLayout.ts
 
 docker run -d --name idrp-tre -p 9090:9090 tronbox/tre
 npx hardhat run scripts/tvm/make-fixtures.ts

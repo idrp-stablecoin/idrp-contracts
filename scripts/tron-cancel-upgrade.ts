@@ -44,6 +44,17 @@ const ABI = [
 
 const isZeroAddr = (s: string) => /^(0x)?(41)?0{40}$/.test(s.toLowerCase());
 
+/** TronGrid's free tier returns 429 under any burst. A read that fails transport is
+ *  not an answer — retry, then throw. Never let it look like a value. */
+async function read<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let last: unknown;
+  for (let a = 0; a < 6; a++) {
+    try { return await fn(); } catch (e) { last = e; }
+    await new Promise((r) => setTimeout(r, 1200 * (a + 1)));
+  }
+  throw new Error(`could not read ${label} after retries: ${(last as any)?.message ?? last}`);
+}
+
 async function main() {
   if (hre.network.name !== "tron") throw new Error(`Tron MAINNET only (got ${hre.network.name})`);
 
@@ -65,20 +76,20 @@ async function main() {
 
   const proxy = await tw.contract(ABI, proxyT);
 
-  const scheduled = (await proxy.scheduledImplementation().call()).toString();
+  const scheduled = (await read("scheduledImplementation()", () => proxy.scheduledImplementation().call())).toString();
   if (isZeroAddr(scheduled)) {
     console.log(`scheduledImplementation is already 0x0 — nothing to cancel.`);
     return;
   }
-  const at = Number(await proxy.upgradeScheduledAt().call());
-  const delay = Number(await proxy.UPGRADE_DELAY().call());
+  const at = Number(await read("upgradeScheduledAt()", () => proxy.upgradeScheduledAt().call()));
+  const delay = Number(await read("UPGRADE_DELAY()", () => proxy.UPGRADE_DELAY().call()));
   console.log(`Pending schedule:`);
   console.log(`  scheduledImplementation : ${scheduled}`);
   console.log(`  upgradeScheduledAt      : ${at}  (${new Date(at * 1000).toISOString()})`);
   console.log(`  executable after        : ${at + delay}  (${new Date((at + delay) * 1000).toISOString()})`);
   console.log(`  executable now          : ${Math.floor(Date.now() / 1000) >= at + delay ? "YES" : "no"}`);
 
-  const upgrader = (await proxy.upgrader().call()).toString().toLowerCase();
+  const upgrader = (await read("upgrader()", () => proxy.upgrader().call())).toString().toLowerCase();
   const upgraderHex = "0x" + upgrader.slice(-40);
   const meHex = ("0x" + tw.address.toHex(meT).slice(2)).toLowerCase();
   console.log(`\n  upgrader() : ${upgraderHex}`);
@@ -101,7 +112,7 @@ async function main() {
   console.log(`  ✓ tx: ${tx}`);
 
   await new Promise((r) => setTimeout(r, 5000));
-  const after = (await proxy.scheduledImplementation().call()).toString();
+  const after = (await read("scheduledImplementation()", () => proxy.scheduledImplementation().call())).toString();
   console.log(`\nPost-cancel scheduledImplementation: ${after}`);
   console.log(isZeroAddr(after) ? `  ✓ cleared` : `  ✗ STILL SET — investigate before continuing`);
   if (!isZeroAddr(after)) process.exit(1);
