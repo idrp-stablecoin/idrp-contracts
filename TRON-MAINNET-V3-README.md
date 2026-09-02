@@ -110,6 +110,10 @@ mainnet's real starting state. Token **25/25**, Controller green, TronUUPS suite
 
 ## Before scheduling
 
+0. **Fund the upgrader.** It pays for everything, has no staked energy, and holds ~266 TRX
+   against a need of ~900–1000 TRX (the two deploys alone are ~430 + ~330, scaled from the
+   real v2 deploy costs). Top it up to ~1,500 TRX first.
+
 1. **Cancel the two poisoned schedules.** Controller `41ecf9e211…96aa`, Token
    `0x66acb0ad…3c46`, both executable since July. The Token's is the dangerous one:
    the live implementation still exposes `upgradeTo`, which would succeed and brick

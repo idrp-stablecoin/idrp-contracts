@@ -56,6 +56,39 @@ TARGET=token      npx hardhat run scripts/tron-verify-v3.ts --network tron
 
 Keep that output. It is the baseline you compare against afterwards.
 
+### Funding — check before you begin
+
+Every script signs with `IDRP_DEPLOYER_PRIVATE_KEY_TRON`, and `schedule` / `execute` /
+`cancel` all require that key to be the upgrader. So the **upgrader account** pays for
+everything, including the two implementation deploys.
+
+Measured from the actual v2 deploy transactions, scaled by bytecode size, at the current
+100 SUN/energy:
+
+| | energy | cost |
+|---|---|---|
+| Controller v3 deploy | ~4.28 M | **~430 TRX** |
+| Token v3 deploy | ~3.32 M | **~330 TRX** |
+| 2 cancels + 2 schedules + 2 executes | — | ~100–200 TRX |
+| **total** | | **~900–1000 TRX** |
+
+*(For reference the real v2 deploys cost 324 TRX / 3,057,781 energy for the Controller and
+362 TRX / 3,406,419 energy for the Token.)*
+
+The account has **no staked energy**, so all of that is a TRX burn. Check the balance
+before starting:
+
+```bash
+curl -s -X POST https://api.trongrid.io/wallet/getaccount \
+  -H 'Content-Type: application/json' \
+  -d '{"address":"TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6","visible":true}' | grep -o '"balance":[0-9]*'
+```
+
+Divide by 1,000,000 for TRX. **Fund it to ~1,500 TRX before step 2** — a deploy that runs
+out mid-flight wastes the fee and the session. `feeLimit` is clamped to the chain maximum
+of 1000 TRX per transaction, so no single call can overspend, but the balance must be
+there.
+
 ---
 
 ## Step 1 — clear the two poisoned schedules
