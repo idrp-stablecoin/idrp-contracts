@@ -12,21 +12,42 @@ import {ERC1967UpgradeUpgradeable} from "@openzeppelin/contracts-upgradeable/pro
  *
  * @dev    WHY THIS EXISTS — storage layout, nothing else.
  *
- *         The Tron proxies were initialised with a UUPS variant that carries no trailing
- *         gap, so the contracts' own variables begin at slot 251 (Controller) and the
- *         token's at 504. Inheriting stock `UUPSUpgradeable` appends 50 reserved slots
- *         and pushes every variable 50 places too high, which silently makes the
- *         implementation read unrelated storage. Verified against Tron mainnet:
- *         Controller `idrpToken` at slot 251, `upgrader` at slot 258.
+ *         The deployed v2 implementations use stock OZ 4 `UUPSUpgradeable`, gap and
+ *         all. This base is NOT needed to match v2 as it stands; it is needed because
+ *         of what v3 ADDS.
+ *
+ *         The Controller's v3 introduces `AccessControlDefaultAdminRulesUpgradeable`,
+ *         which occupies 50 slots that v2 did not have. To keep the contract's own
+ *         variables where the live proxy has them, 50 slots must be given back
+ *         somewhere, and the trailing UUPS gap is the one dropped. It is a swap:
+ *         ACDAR takes 50, UUPS gives up 50, net zero.
+ *
+ *         Measured, by compiling both and reading the live proxy:
+ *
+ *           Controller  deployed v2                 idrpToken @ 251
+ *                       v3 on this base             idrpToken @ 251   <- matches
+ *                       v3 on stock UUPSUpgradeable idrpToken @ 301   <- 50 slots out
+ *
+ *         A 50-slot shift is not a compile error. The implementation would deploy,
+ *         upgrade, and then read every variable from the wrong place.
+ *
+ *         The token does not have the same forcing constraint: it removes
+ *         AccessControl+ERC165 and reserves those slots explicitly, so stock
+ *         `UUPSUpgradeable` also lands `frozen` on 504. It uses this base anyway, so
+ *         both contracts share one UUPS base — mixing them invites a later "cleanup"
+ *         that unifies the wrong way — and so the 50 reserved slots are an explicit,
+ *         resizable anchor rather than one owned by a dependency.
  *
  * @dev    WHY IT KEEPS OZ'S `immutable __self` — deliberately, and this is the important
  *         part.
  *
  *         An earlier in-house variant (`TronUUPSUpgradeable`) replaced the immutable with
- *         a storage slot, because in early 2026 TVM could not execute the immutable
- *         opcodes. **That is no longer true** — an OZ 5 implementation, whose `onlyProxy`
- *         depends entirely on `immutable __self`, was upgraded successfully on Tron Nile
- *         in Sept 2026. TVM executes immutables correctly.
+ *         a storage slot, because TVM was believed unable to execute the immutable
+ *         opcodes. That premise no longer holds. The live Tron mainnet implementations
+ *         are themselves stock OZ 4 UUPS builds, and their deployed bytecode carries
+ *         their own address in the five places the compiled artifact leaves as zero
+ *         placeholders — which is precisely an immutable, written by the constructor.
+ *         TVM executes them correctly.
  *
  *         The storage-slot approach carries a trap the immutable does not: the slot is
  *         written only from an initializer, so a proxy that never ran that initializer
