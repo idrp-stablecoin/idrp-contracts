@@ -32,6 +32,7 @@
  */
 import hre from "hardhat";
 const TronWeb = require("tronweb");
+import { toEvmAddress } from "./utils/tron-address";
 
 async function main() {
   if (hre.network.name !== "tron") {
@@ -94,9 +95,9 @@ async function main() {
   // Default controller: Tron mainnet Controller proxy from deployment/tron/mainnet.json
   const controllerT = process.env.IDRP_V3_CONTROLLER ?? "TSQFFuzLK7f3EVGenQyQpXrpoFuDsXEvbX";
   const upgraderT = process.env.IDRP_V3_UPGRADER ?? deployerT;
-  const adminHex = "0x" + tronWeb.address.toHex(adminT).slice(2);
-  const controllerHex = "0x" + tronWeb.address.toHex(controllerT).slice(2);
-  const upgraderHex = "0x" + tronWeb.address.toHex(upgraderT).slice(2);
+  const adminHex = toEvmAddress(tronWeb, adminT, "IDRP_V3_ADMIN");
+  const controllerHex = toEvmAddress(tronWeb, controllerT, "IDRP_V3_CONTROLLER");
+  const upgraderHex = toEvmAddress(tronWeb, upgraderT, "IDRP_V3_UPGRADER");
   console.log(`\ninitializeV3 args:`);
   console.log(`  _admin:      ${adminT} (${adminHex})`);
   console.log(`  _controller: ${controllerT} (${controllerHex})`);

@@ -28,6 +28,7 @@
  */
 import hre from "hardhat";
 const TronWeb = require("tronweb");
+import { toEvmAddress, toEvmAddressList } from "./utils/tron-address";
 
 async function main() {
   if (hre.network.name !== "tron") {
@@ -91,8 +92,9 @@ async function main() {
   if (!legacyDARRaw) {
     throw new Error(
       "CTRL_V3_LEGACY_DAR_HOLDERS is required.\n" +
-      "Run: npx hardhat run scripts/list-default-admin-holders.ts --network tron\n" +
-      "Pass the result as: CTRL_V3_LEGACY_DAR_HOLDERS=T...,T..."
+      "Run: npx hardhat run scripts/tron-list-default-admin-holders.ts --network tron\n" +
+      "Pass its output verbatim: CTRL_V3_LEGACY_DAR_HOLDERS=0x...,0x...\n" +
+      "(base58 T... is also accepted; a bare hex address WITHOUT 0x is rejected)"
     );
   }
   const legacyDARHoldersT = legacyDARRaw.split(",").map((s) => s.trim()).filter(Boolean);
@@ -100,10 +102,10 @@ async function main() {
     throw new Error("CTRL_V3_LEGACY_DAR_HOLDERS parsed to empty list.");
   }
 
-  const adminHex = "0x" + tronWeb.address.toHex(adminT).slice(2);
-  const upgraderHex = "0x" + tronWeb.address.toHex(upgraderT).slice(2);
-  const legacyDARHoldersHex = legacyDARHoldersT.map(
-    (t: string) => "0x" + tronWeb.address.toHex(t).slice(2)
+  const adminHex = toEvmAddress(tronWeb, adminT, "CTRL_V3_ADMIN");
+  const upgraderHex = toEvmAddress(tronWeb, upgraderT, "CTRL_V3_UPGRADER");
+  const legacyDARHoldersHex = toEvmAddressList(
+    tronWeb, legacyDARHoldersT.join(","), "CTRL_V3_LEGACY_DAR_HOLDERS",
   );
   console.log(`\ninitializeV3 args:`);
   console.log(`  _admin:                     ${adminT}`);
