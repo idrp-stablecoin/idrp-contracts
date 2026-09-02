@@ -263,7 +263,6 @@ contract IDRPControllerTvm is
         // Step 2: initialise ACDAR with the intended single admin.
         __AccessControlDefaultAdminRules_init(DEFAULT_ADMIN_DELAY, _admin);
 
-
         // Step 3: rotate upgrader if requested.
         if (_upgrader != upgrader) {
             address oldUpgrader = upgrader;
