@@ -142,6 +142,14 @@ const config: HardhatUserConfig = {
       tron: true,
       httpHeaders: TRON_HEADERS,
     },
+    // Local TVM (docker run -d -p 9090:9090 tronbox/tre). Free, disposable, and the
+    // only way to exercise TVM-specific behaviour — immutable opcodes above all —
+    // without spending testnet TRX. Key is a well-known TRE dev account, not a secret.
+    tre: {
+      url: "http://127.0.0.1:9090/jsonrpc",
+      accounts: ["7cdcc19e9253564859a70808680e2df0572f7d7c7a938bca0b06c9cdf2006573"],
+      tron: true,
+    },
     nile: {
       // Tron Nile testnet JSON-RPC endpoint
       url: "https://nile.trongrid.io/jsonrpc",
