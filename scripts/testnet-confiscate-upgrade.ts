@@ -7,6 +7,7 @@ import hre from "hardhat";
  *
  *   STEP=schedule  deploy the implementation and start the timelock
  *   STEP=execute   run upgradeToAndCall once the timelock has expired
+ *   STEP=verify    verify the deployed implementation on the block explorer
  *
  * Only the TOKEN changes. The Controller never referenced the confiscation
  * destination, so its deployed implementation stays as-is.
@@ -114,8 +115,8 @@ async function deployImplWithDelay(deployer: any, delaySeconds: number) {
 
 async function main() {
   const step = process.env.STEP;
-  if (step !== "schedule" && step !== "execute") {
-    throw new Error('set STEP=schedule or STEP=execute');
+  if (step !== "schedule" && step !== "execute" && step !== "verify") {
+    throw new Error("set STEP=schedule, STEP=execute or STEP=verify");
   }
 
   const chainId = hre.network.config.chainId;
@@ -147,6 +148,50 @@ async function main() {
   console.log(`live delay     ${liveDelay}s`);
   console.log(`depository     ${await token.depositoryWallet()}   <- new seizure destination`);
   console.log(`slot 9         ${await hre.ethers.provider.getStorage(proxy, 9)}`);
+
+  if (step === "verify") {
+    // Explorer verification matches SOURCE against DEPLOYED bytecode, so the
+    // 5-minute override has to be re-applied or the verify fails on a bytecode
+    // mismatch — which looks like a tooling problem, not a source problem, and
+    // is exactly what cost an afternoon last time. The delay is read from the
+    // deployment JSON rather than guessed.
+    const recorded = deployment.IDRPImplUpgradeDelay;
+    const target = deployment.IDRPImpl ?? currentImpl;
+    if (!recorded) {
+      throw new Error(
+        `chain-${chainId}.json has no IDRPImplUpgradeDelay — cannot know what source ` +
+          `the deployed implementation was built from. Do not guess.`
+      );
+    }
+    const delaySeconds = Number(recorded);
+    console.log(`\nVerifying ${target} with UPGRADE_DELAY=${delaySeconds}s...`);
+
+    const original = fs.readFileSync(IDRP_SOURCE, "utf8");
+    if (!original.includes(CANONICAL_DELAY_LINE)) {
+      throw new Error("contracts/IDRP.sol is not canonical — refusing to patch");
+    }
+    try {
+      if (delaySeconds !== 48 * 3600) {
+        fs.writeFileSync(
+          IDRP_SOURCE,
+          original.replace(
+            CANONICAL_DELAY_LINE,
+            `    uint256 public constant UPGRADE_DELAY = ${delaySeconds} seconds;`
+          )
+        );
+      }
+      await hre.run("compile", { force: true, quiet: true });
+      await hre.run("verify:verify", { address: target, constructorArguments: [] });
+      console.log("\nVerified.");
+    } finally {
+      fs.writeFileSync(IDRP_SOURCE, original);
+      if (fs.readFileSync(IDRP_SOURCE, "utf8") !== original) {
+        throw new Error("FAILED TO RESTORE contracts/IDRP.sol — fix by hand before committing");
+      }
+      console.log("contracts/IDRP.sol restored to canonical 48h");
+    }
+    return;
+  }
 
   if (step === "schedule") {
     const pending = await token.scheduledImplementation();
