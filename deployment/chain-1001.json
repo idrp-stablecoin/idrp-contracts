@@ -2,11 +2,9 @@
   "IDRP": "0x999f947F3c7C0cF64AE53571a7fda51ce7f66164",
   "IDRPController": "0x38f94bf4D2D4f4a8E9f35606071DA7A51E92D26A",
   "IDRPControllerv3ExecuteTxHash": "0xcb2789150044d8e8efbffcfe20e01b75610cf179787e317e55d0d18171816a2b",
-  "IDRPScheduledImpl": "0x7D5181770B7323E361B9AF987674f83B94ed984C",
-  "IDRPScheduledAt": "1788516424",
-  "IDRPExecutableAfter": "1788516724",
   "IDRPControllerScheduledImpl": "0xe81BbcCce9E37541597CE078A07A1d8d2077ea1d",
   "IDRPControllerScheduledAt": "1788228026",
   "IDRPControllerExecutableAfter": "1788400826",
-  "IDRPImplUpgradeDelay": "300"
+  "IDRPImplUpgradeDelay": "300",
+  "IDRPImpl": "0x7D5181770B7323E361B9AF987674f83B94ed984C"
 }

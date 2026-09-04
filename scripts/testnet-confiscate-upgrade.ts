@@ -156,7 +156,12 @@ async function main() {
     // is exactly what cost an afternoon last time. The delay is read from the
     // deployment JSON rather than guessed.
     const recorded = deployment.IDRPImplUpgradeDelay;
-    const target = deployment.IDRPImpl ?? currentImpl;
+    // Prefer the SCHEDULED implementation: verifying before the proxy points at
+    // it is the point — otherwise there is a window where the live token runs
+    // bytecode nobody can read on the explorer. Falls back to the executed impl,
+    // then to whatever the proxy currently runs.
+    const target =
+      deployment.IDRPScheduledImpl ?? deployment.IDRPImpl ?? currentImpl;
     if (!recorded) {
       throw new Error(
         `chain-${chainId}.json has no IDRPImplUpgradeDelay — cannot know what source ` +
