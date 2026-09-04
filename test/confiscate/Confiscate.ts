@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import rulesConfiscate from "../utils/rules.confiscate.json";
 import { deployIDRPControllerV3ForTests } from "../utils/utils";
 
@@ -14,11 +14,12 @@ import { deployIDRPControllerV3ForTests } from "../utils/utils";
  * with real signatures from ALL FOUR roles — Officer, Manager, Director,
  * Commissioner (test/utils/rules.confiscate.json: a single top tier covering
  * any amount, so `amount` cannot select a weaker requirement). The result is
- * two INDEPENDENT controls: the quorum authorises WHO gets seized and how
- * much; admin (+48h timelock) alone still controls WHERE it goes
- * (confiscationWallet, via scheduleConfiscationWallet/applyConfiscationWallet,
- * both still onlyAdmin and untouched by this change). Neither party can both
- * authorise and direct a seizure by itself.
+ * two controls that are no longer fully independent: the quorum authorises WHO
+ * gets seized and how much, while admin alone controls WHERE it goes, because
+ * the destination is now `depositoryWallet` and `setDepositoryWallet` is
+ * onlyAdmin and INSTANT. The separate destination slot and its 48h timelock
+ * were removed deliberately; what remains is that admin cannot authorise a
+ * seizure and the quorum cannot redirect one.
  *
  * Design invariants under test (unchanged from the admin-gated version — only
  * the AUTHORITY changed, not the seizure mechanics):
@@ -46,7 +47,6 @@ import { deployIDRPControllerV3ForTests } from "../utils/utils";
  */
 describe("Confiscate — confiscate(from, amount) via the Controller quorum", function () {
   const idrp6 = (whole: string) => hre.ethers.parseUnits(whole, 6);
-  const FORTY_EIGHT_HOURS = 48 * 60 * 60;
 
   const SEIZED_BALANCE = idrp6("4000000000"); // 4B IDRP
 
@@ -69,8 +69,8 @@ describe("Confiscate — confiscate(from, amount) via the Controller quorum", fu
    * Deploys IDRP + IDRPController wired production-style (idrp.controller ==
    * the real Controller proxy), grants all four quorum roles, seeds the
    * Confiscate quorum rule from test/utils/rules.confiscate.json, and funds
-   * `badActor` with SEIZED_BALANCE. Does NOT configure confiscationWallet and
-   * does NOT freeze anyone — see deployFixture/frozenFixture below.
+   * `badActor` with SEIZED_BALANCE. Leaves the depository pointed at
+   * `depository` and does NOT freeze anyone — see deployFixture/frozenFixture.
    */
   async function baseFixture() {
     const [admin, depository, seizedFunds, badActor, other, officer, manager, director, commissioner] =
@@ -198,12 +198,16 @@ describe("Confiscate — confiscate(from, amount) via the Controller quorum", fu
     };
   }
 
-  /** baseFixture + an applied confiscationWallet (admin's own 48h timelock). */
+  /**
+   * baseFixture + the depository moved to `seizedFunds`, which is therefore the
+   * seizure destination too. Moving it AFTER badActor is funded keeps
+   * `seizedFunds` at a zero starting balance, so `balanceOf(seizedFunds)` reads
+   * as "total seized" throughout this suite. `depository` keeps the leftover
+   * mint and is used below as an ordinary unfrozen counterparty.
+   */
   async function deployFixture() {
     const ctx = await baseFixture();
-    await ctx.idrp.connect(ctx.admin).scheduleConfiscationWallet(ctx.seizedFunds.address);
-    await time.increase(FORTY_EIGHT_HOURS);
-    await ctx.idrp.connect(ctx.admin).applyConfiscationWallet();
+    await ctx.idrp.connect(ctx.admin).setDepositoryWallet(ctx.seizedFunds.address);
     return ctx;
   }
 
@@ -402,13 +406,22 @@ describe("Confiscate — confiscate(from, amount) via the Controller quorum", fu
     ).to.be.revertedWithCustomError(idrp, "FrozenAccount");
   });
 
-  it("reverts when the confiscation wallet is unset", async function () {
-    // baseFixture (not deployFixture) — confiscationWallet is never scheduled.
-    const ctx = await loadFixture(baseFixture);
-    await ctx.freezeDirectly(ctx.badActor.address);
+  it("reverts when the depository wallet is unset", async function () {
+    // `depositoryWallet` can never be returned to address(0) — setDepositoryWallet
+    // rejects it — so this state exists only on a proxy that has never configured
+    // one. That is exactly the state a chain is in the moment this upgrade lands,
+    // which is what makes the guard worth pinning: confiscate must be inert, not
+    // burn to address(0), before an operator configures a depository.
+    const [admin, , , badActor] = await hre.ethers.getSigners();
+    const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
+    const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
+    await idrp.waitForDeployment();
+    await idrp.connect(admin).setController(admin.address);
+    await idrp.connect(admin).freeze(badActor.address);
+
     await expect(
-      ctx.executeConfiscate(ctx.badActor.address, SEIZED_BALANCE)
-    ).to.be.revertedWithCustomError(ctx.idrp, "ConfiscationWalletNotSet");
+      idrp.connect(admin).confiscate(badActor.address, 1n)
+    ).to.be.revertedWith("Depository wallet not set");
   });
 
   it("reverts on a zero amount", async function () {
@@ -439,16 +452,21 @@ describe("Confiscate — confiscate(from, amount) via the Controller quorum", fu
     ).to.be.revertedWithCustomError(idrp, "EnforcedPause");
   });
 
-  it("refuses to confiscate from the confiscation wallet itself", async function () {
+  it("refuses to confiscate from the depository itself", async function () {
     const { idrp, seizedFunds, badActor, executeConfiscate, freezeDirectly } = await frozenFixture();
     await executeConfiscate(badActor.address, SEIZED_BALANCE);
     await freezeDirectly(seizedFunds.address);
     // Must name seizedFunds's full balance (SEIZED_BALANCE) — anything less
     // now reverts at the Controller's full-balance guard before ever reaching
     // the token-level "from != destination" check this test is targeting.
+    //
+    // The token checks `from != destination` before anything else that could
+    // observe the destination's frozen state, which is what keeps this error
+    // reachable: confiscate requires frozen[from], so on a self-seizure the
+    // destination is frozen by construction.
     await expect(
       executeConfiscate(seizedFunds.address, SEIZED_BALANCE)
-    ).to.be.revertedWith("Cannot confiscate from the confiscation wallet");
+    ).to.be.revertedWith("Cannot confiscate from the depository");
   });
 
   it("re-enforces the freeze gate immediately after a confiscation", async function () {
@@ -486,7 +504,7 @@ describe("Confiscate — confiscate(from, amount) via the Controller quorum", fu
     expect(await idrp.balanceOf(seizedFunds.address)).to.equal(SEIZED_BALANCE);
   });
 
-  it("seizes to a SANCTIONED confiscation wallet — the bypass covers both legs, not just the sender", async function () {
+  it("seizes to a SANCTIONED depository — the bypass covers both legs, not just the sender", async function () {
     // _update's bypass skips the sanctions gate for both `from` and `to` while
     // _inConfiscation is set. This proves the destination leg is covered too,
     // so a future narrowing of the bypass to `from` only would fail here.
@@ -517,24 +535,33 @@ describe("Confiscate — confiscate(from, amount) via the Controller quorum", fu
     ).to.be.revertedWithCustomError(idrp, "SanctionedRecipient");
   });
 
-  it("ignores a scheduled-but-not-applied confiscation wallet, seizing to the current applied one instead", async function () {
-    // Correct today by construction (confiscate reads `confiscationWallet`,
-    // never `pendingConfiscationWallet`) — but nothing else in this suite
-    // pins that down. A refactor that read the pending slot instead would
-    // still pass all other tests silently. Also proves the destination
-    // genuinely cannot be steered: executeOperation's Confiscate branch does
-    // not even take a destination argument.
-    const { idrp, admin, seizedFunds, badActor, other, executeConfiscate } = await frozenFixture();
-    const newWallet = other;
-
-    await idrp.connect(admin).scheduleConfiscationWallet(newWallet.address);
-    // Deliberately no time.increase / applyConfiscationWallet — the change
-    // stays pending.
+  it("reads the destination live from depositoryWallet — moving the depository moves where the next seizure lands", async function () {
+    // Two things at once.
+    //
+    // The safe half: the destination is storage, read at call time, and is NOT
+    // a parameter of executeOperation's Confiscate branch — a caller, even a
+    // full honest quorum, cannot steer where funds go.
+    //
+    // The half worth staring at: admin CAN steer it, in one instant
+    // setDepositoryWallet call, because that setter has no timelock. That is
+    // precisely the property the removed 48h destination timelock used to
+    // prevent, so it is pinned here in the suite rather than left in a doc.
+    const { idrp, admin, depository, seizedFunds, badActor, other, executeConfiscate, freezeDirectly } =
+      await frozenFixture();
 
     await executeConfiscate(badActor.address, SEIZED_BALANCE);
-
     expect(await idrp.balanceOf(seizedFunds.address)).to.equal(SEIZED_BALANCE);
-    expect(await idrp.balanceOf(newWallet.address)).to.equal(0n);
+
+    // Fund and freeze a second target out of the seized pile, then move the
+    // depository to a different address entirely.
+    await idrp.connect(seizedFunds).transfer(other.address, SEIZED_BALANCE);
+    await freezeDirectly(other.address);
+    await idrp.connect(admin).setDepositoryWallet(depository.address);
+
+    await executeConfiscate(other.address, SEIZED_BALANCE);
+
+    expect(await idrp.balanceOf(depository.address)).to.equal(SEIZED_BALANCE);
+    expect(await idrp.balanceOf(seizedFunds.address)).to.equal(0n);
   });
 
   // ───────────────────────────────────────────────────────────────────────

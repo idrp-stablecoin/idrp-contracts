@@ -95,43 +95,43 @@ contract IDRP is
 
     // ─────────────────────────────────────────────────────────────────────────
     // Confiscation (seizure of a frozen account's balance)
-    // All four slots are APPENDED at the end of sequential storage — UUPS-safe
-    // for the six existing proxies, which zero-initialize them on upgrade.
+    //
+    // Seized funds go to `depositoryWallet`; there is no separate destination
+    // slot. The three `__deprecated_*` placeholders below are the retired
+    // destination slots, RESERVED rather than deleted.
+    //
+    // They cannot be deleted. A live proxy already holds a nonzero address in
+    // the first of them, and `_inConfiscation` is packed into that same slot at
+    // byte 20. Removing the address would slide the flag down to byte 0, where
+    // it would read that address's low byte as `true` — permanently disabling
+    // the freeze gate in `_update` for every transfer, with every test still
+    // green. Never reuse these slots; append new state strictly after them.
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// @notice Destination for confiscated funds. MUST NOT be the depository:
-    ///         seized funds are contested assets under legal process, while the
-    ///         depository backs circulating supply. Commingling them corrupts
-    ///         reserve attestation. Enforced in scheduleConfiscationWallet /
-    ///         applyConfiscationWallet / setDepositoryWallet.
-    /// @dev While address(0), `confiscate` reverts — the feature is inert until
-    ///      an operator deliberately configures a destination.
-    address public confiscationWallet;
+    /// @dev Retired: the standalone confiscation destination. Reserved to hold
+    ///      `_inConfiscation` at byte 20 of this slot — see the note above.
+    /// @custom:oz-renamed-from confiscationWallet
+    address private __deprecated_confiscationWallet;
 
     /// @dev Set for the duration of a `confiscate` call so `_update` skips the
     ///      freeze + sanctions gate. That bypass is the entire point: we are
     ///      moving funds out of an account those gates exist to immobilize, and
     ///      away from an address a sanctions list may well name.
     ///
-    ///      Packed into the same slot as `confiscationWallet` (20 + 1 bytes) on
-    ///      purpose — writing the flag touches an already-warm slot.
+    ///      Lives at byte 20 of the reserved slot above and MUST STAY THERE.
+    ///      Its position is load-bearing: see the storage note above.
     ///
     ///      NEVER expose a setter for this. It is set and cleared inside a
     ///      single external call and is not readable between transactions.
     bool private _inConfiscation;
 
-    /// @notice Pending confiscation-wallet change, awaiting the 48h timelock.
-    ///         Authority for `confiscate` is the Controller's EIP-712 quorum
-    ///         (see `onlyController` below), not `admin` — so admin no longer
-    ///         executes the seizure itself. The timelock remains: it is the
-    ///         compensating control that keeps "who authorises a seizure" and
-    ///         "where its proceeds go" as two independent parties, so neither
-    ///         the quorum nor admin can both authorise and redirect on its own.
-    address public pendingConfiscationWallet;
+    /// @dev Retired: pending half of the destination timelock. Reserved.
+    /// @custom:oz-renamed-from pendingConfiscationWallet
+    address private __deprecated_pendingConfiscationWallet;
 
-    /// @notice Timestamp `pendingConfiscationWallet` was scheduled at. The change
-    ///         becomes applicable at `confiscationWalletScheduledAt + UPGRADE_DELAY`.
-    uint256 public confiscationWalletScheduledAt;
+    /// @dev Retired: schedule timestamp of the destination timelock. Reserved.
+    /// @custom:oz-renamed-from confiscationWalletScheduledAt
+    uint256 private __deprecated_confiscationWalletScheduledAt;
 
     /// @dev Events
     event AccountFrozen(address indexed account);
@@ -162,21 +162,14 @@ contract IDRP is
         address indexed oldController,
         address indexed newController
     );
-    event ConfiscationWalletScheduled(
-        address indexed newWallet,
-        uint256 executableAfter
-    );
-    event ConfiscationWalletCancelled(
-        address indexed newWallet,
-        address indexed cancelledBy
-    );
-    event ConfiscationWalletUpdated(
-        address indexed oldWallet,
-        address indexed newWallet
-    );
     /// @notice Emitted on every seizure. This is the audit trail a regulator or a
     ///         disputing user reads — it must name the source, the destination
     ///         and the amount, and it must accompany exactly one Transfer event.
+    ///
+    ///         Load-bearing for attestation. Seized funds now land in the same
+    ///         wallet `mint` credits, so the depository's on-chain balance no
+    ///         longer distinguishes reserve from seizure. Summing this event is
+    ///         what splits them; nothing else does.
     event AssetsConfiscated(
         address indexed from,
         address indexed to,
@@ -191,7 +184,6 @@ contract IDRP is
     /// @dev Thrown by `confiscate` when the target isn't frozen — see that
     ///      function's NatSpec for why this precondition is hard.
     error NotFrozen();
-    error ConfiscationWalletNotSet();
     error ControllerNotSet();
     error SanctionedSender(address sender);
     error SanctionedRecipient(address recipient);
@@ -416,26 +408,35 @@ contract IDRP is
         emit AccountUnfrozen(account);
     }
 
-    /// @notice Seize a frozen account's balance into the confiscation wallet.
+    /// @notice Seize a frozen account's balance into the depository wallet.
     /// @param from   The frozen account to seize from.
     /// @param amount The amount to seize. Partial seizure is allowed.
     /// @dev Requires: onlyController quorum (Officer+Manager+Director+Commissioner
-    ///      for OperationType.Confiscate), whenNotPaused, confiscationWallet set,
+    ///      for OperationType.Confiscate), whenNotPaused, depositoryWallet set,
     ///      and frozen[from] as a hard precondition (freeze first, then seize;
-    ///      not auto-unfrozen after). Implemented as a transfer to the confiscation
-    ///      wallet, never a burn, so total supply is conserved and the seizure stays reversible.
+    ///      not auto-unfrozen after). Implemented as a transfer to the depository,
+    ///      never a burn, so total supply is conserved and the seizure stays reversible.
+    ///
+    ///      The destination is `depositoryWallet` — the same address `mint`
+    ///      credits — so it is NOT segregated on-chain and moves whenever
+    ///      `setDepositoryWallet` moves. That setter is `onlyAdmin` and instant,
+    ///      so admin alone chooses where a seizure lands; the quorum still
+    ///      decides whether one happens at all. Segregation is off-chain, via
+    ///      the `AssetsConfiscated` event.
     function confiscate(
         address from,
         uint256 amount
     ) external onlyController whenNotPaused {
-        address destination = confiscationWallet;
-        if (destination == address(0)) revert ConfiscationWalletNotSet();
+        address destination = depositoryWallet;
+        require(destination != address(0), "Depository wallet not set");
         if (!frozen[from]) revert NotFrozen();
         require(amount > 0, "Amount must be greater than zero");
-        require(
-            from != destination,
-            "Cannot confiscate from the confiscation wallet"
-        );
+        // No frozen-destination check here, deliberately: the pre-removal code
+        // had none either, and adding one would block a seizure exactly when it
+        // is most needed. If one is ever added it must go AFTER this line —
+        // confiscate requires frozen[from], so on a self-seizure the destination
+        // is frozen by construction and would mask this more specific error.
+        require(from != destination, "Cannot confiscate from the depository");
 
         // Bypass the freeze/sanctions gate in _update for this transfer only.
         _inConfiscation = true;
@@ -449,66 +450,19 @@ contract IDRP is
     /// @param wallet The address of the depository wallet
     /// @dev Rejects a no-op set to the current wallet so a no-op update cannot
     ///      silently emit a misleading event.
+    ///
+    ///      This setter now also chooses where `confiscate` sends seized funds.
+    ///      It stays instant and un-timelocked because `mint` needs it during
+    ///      bootstrap; the `address(this)` guard below is inherited from the
+    ///      retired destination setter, where it stopped funds being sent
+    ///      somewhere `withdrawToken` cannot recover them.
     function setDepositoryWallet(address wallet) external onlyAdmin {
         require(wallet != address(0), "Invalid wallet address");
         require(wallet != depositoryWallet, "Same wallet");
-        require(
-            wallet != confiscationWallet,
-            "Cannot be confiscation wallet"
-        );
+        require(wallet != address(this), "Cannot be the token contract");
         address oldWallet = depositoryWallet;
         depositoryWallet = wallet;
         emit DepositoryWalletUpdated(oldWallet, wallet);
-    }
-
-    /// @notice Schedule a change to the confiscation wallet. Starts the 48h
-    ///         timelock. Only `admin` may schedule.
-    /// @dev Unlike IDRPController.setQuorumRules, there is no instant first-set
-    ///      path. Confiscation has no bootstrap urgency — `confiscate` reverts
-    ///      while the destination is unset — so one always-delayed code path is
-    ///      both simpler and strictly safer.
-    function scheduleConfiscationWallet(address wallet) external onlyAdmin {
-        require(wallet != address(0), "Invalid wallet address");
-        require(wallet != confiscationWallet, "Same wallet");
-        require(wallet != depositoryWallet, "Cannot be depository wallet");
-        require(wallet != address(this), "Cannot be the token contract");
-        pendingConfiscationWallet = wallet;
-        confiscationWalletScheduledAt = block.timestamp;
-        emit ConfiscationWalletScheduled(
-            wallet,
-            block.timestamp + UPGRADE_DELAY
-        );
-    }
-
-    /// @notice Apply a scheduled confiscation-wallet change once the timelock
-    ///         has expired.
-    /// @dev The depository check is repeated here on purpose. The 48h window is
-    ///      long enough for `setDepositoryWallet` to move the depository onto the
-    ///      pending address; checking only at schedule time would let reserves
-    ///      and seized funds silently merge.
-    function applyConfiscationWallet() external onlyAdmin {
-        address pending = pendingConfiscationWallet;
-        require(pending != address(0), "No pending confiscation wallet");
-        require(
-            block.timestamp >= confiscationWalletScheduledAt + UPGRADE_DELAY,
-            "Timelock not expired"
-        );
-        require(pending != depositoryWallet, "Cannot be depository wallet");
-
-        address oldWallet = confiscationWallet;
-        confiscationWallet = pending;
-        pendingConfiscationWallet = address(0);
-        confiscationWalletScheduledAt = 0;
-        emit ConfiscationWalletUpdated(oldWallet, pending);
-    }
-
-    /// @notice Abort a pending confiscation-wallet change.
-    function cancelConfiscationWallet() external onlyAdmin {
-        address pending = pendingConfiscationWallet;
-        require(pending != address(0), "No pending confiscation wallet");
-        pendingConfiscationWallet = address(0);
-        confiscationWalletScheduledAt = 0;
-        emit ConfiscationWalletCancelled(pending, _msgSender());
     }
 
     /// @notice Point IDRP at a sanctions list (Chainalysis SanctionsList ABI).

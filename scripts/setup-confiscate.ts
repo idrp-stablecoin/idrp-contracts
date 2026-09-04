@@ -4,46 +4,39 @@ import { ethers } from "hardhat";
 import hre from "hardhat";
 
 /**
- * Post-upgrade setup for the Confiscate operation.
+ * Arms the Confiscate operation on a chain by seeding its quorum rules
+ * (OperationType 6) on the Controller.
  *
- *   1. Seeds the Confiscate quorum rules (OperationType 6) on the Controller.
- *   2. Schedules the token's confiscationWallet (48h timelock).
- *
- * Both steps are idempotent — re-running reports the existing state instead of
- * failing, so this is safe to run twice.
- *
- * Rules come from test/utils/rules.confiscate.json, which is the source of
- * truth in version control. Nothing on-chain keeps a deployed rule set in sync
- * with that file, so this script prints what it read and what is live.
+ * That is now the ONLY setup step. Seized funds go to `depositoryWallet`, which
+ * every live chain already has, so there is no destination to configure and no
+ * 48h wait. Seeding these rules is the single act that arms seizure — treat it
+ * with the weight that implies.
  *
  * Seeding is INSTANT: setQuorumRules requires quorumRules[op].length == 0, and
  * Confiscate is a new op type with no rules anywhere. Only a *change* to an
  * existing rule set goes through the schedule/apply timelock.
  *
- * Usage:
- *   CONFISCATION_WALLET=0x... npx hardhat run scripts/setup-confiscate.ts --network kairos
+ * Rules come from test/utils/rules.confiscate.json, the source of truth in
+ * version control. Nothing on-chain keeps a deployed rule set in sync with that
+ * file, so this script prints what it read and what is live.
  *
- *   # per-chain override, takes precedence over the generic var — useful when
- *   # one .env serves several networks:
- *   CONFISCATION_WALLET_1001=0x... npx hardhat run scripts/setup-confiscate.ts --network kairos
+ * The admin on the testnets and in production is a Safe, which has no local
+ * private key. When no configured signer holds DEFAULT_ADMIN_ROLE this script
+ * prints Safe-ready transaction parameters instead of failing.
+ *
+ * Usage:
+ *   npx hardhat run scripts/setup-confiscate.ts --network kairos
  *
  *   # mainnets additionally require ALLOW_MAINNET=1 (Rule 0: real on-chain
  *   # state — get explicit sign-off before running):
- *   CONFISCATION_WALLET=0x... ALLOW_MAINNET=1 npx hardhat run scripts/setup-confiscate.ts --network kaia
- *
- * Then, 48h after the schedule step:
- *   npx hardhat run scripts/apply-confiscation-wallet.ts --network kairos
+ *   ALLOW_MAINNET=1 npx hardhat run scripts/setup-confiscate.ts --network kaia
  *
  * Env:
- *   CONFISCATION_WALLET            destination for seized funds. Must not be
- *                                   the depository, token, or controller address.
- *   CONFISCATION_WALLET_<chainId>  per-chain override, checked before the
- *                                   generic var above (e.g. CONFISCATION_WALLET_1001).
- *   ALLOW_MAINNET=1                required ack to run against a mainnet chain
- *                                   id (1 / 56 / 137 / 8217).
+ *   ALLOW_MAINNET=1  required ack to run against a mainnet chain id (1 / 56 / 137 / 8217).
  */
 
 const CONFISCATE_OP = 6;
+const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
 
 /** Chain ids that hold real value — require ALLOW_MAINNET=1 (Rule 0). */
 const MAINNET_CHAIN_IDS = new Set([1, 56, 137, 8217]);
@@ -56,29 +49,6 @@ function assertAllowedNetwork(chainId: number, networkName: string): void {
         `Re-run with ALLOW_MAINNET=1 only after explicit sign-off (Rule 0).`,
     );
   }
-}
-
-/**
- * Destination for seized funds, read from the environment:
- *   CONFISCATION_WALLET_<chainId>  per-chain override, checked first
- *   CONFISCATION_WALLET            generic fallback used for every chain
- */
-function resolveConfiscationWallet(chainId: number): string {
-  const perChainVar = `CONFISCATION_WALLET_${chainId}`;
-  const perChainValue = process.env[perChainVar];
-  const destination = perChainValue || process.env.CONFISCATION_WALLET;
-  const source = perChainValue ? perChainVar : "CONFISCATION_WALLET";
-
-  if (!destination) {
-    throw new Error(
-      `No confiscation wallet configured for chain ${chainId}. Set ${perChainVar} ` +
-        `(preferred) or CONFISCATION_WALLET in your environment before running this script.`,
-    );
-  }
-  if (!ethers.isAddress(destination)) {
-    throw new Error(`${source}="${destination}" is not a valid address`);
-  }
-  return destination;
 }
 
 type RuleJson = {
@@ -101,54 +71,41 @@ async function main() {
 
   const tokenAddress: string = deployment.IDRP;
   const controllerAddress: string = deployment.IDRPController;
-  const destination = resolveConfiscationWallet(chainId);
-
-  const signers = await ethers.getSigners();
 
   const token = await ethers.getContractAt("IDRP", tokenAddress);
   const controller = await ethers.getContractAt("IDRPController", controllerAddress);
 
   // ── Show the target before writing anything ────────────────────────────────
   const onChainAdmin = await token.admin();
-  const onChainDepository = await token.depositoryWallet();
-
-  // Both steps below are admin-gated, and the admin key differs per network —
-  // resolve it from on-chain state rather than assuming a signer index.
-  const admin = signers.find(
-    (s) => s.address.toLowerCase() === onChainAdmin.toLowerCase(),
-  );
+  const depository = await token.depositoryWallet();
 
   console.log("network            ", hre.network.name, `(chainId ${chainId})`);
   console.log("token              ", tokenAddress);
   console.log("controller         ", controllerAddress);
-  console.log("signer             ", admin ? admin.address : "(none matched)");
   console.log("token.admin()      ", onChainAdmin);
-  console.log("depositoryWallet   ", onChainDepository);
-  console.log("confiscationWallet ", destination, "(to schedule)");
+  console.log("depositoryWallet   ", depository, "  <- seizure destination");
 
-  if (!admin) {
+  // The depository is where seized funds land. A misconfigured one is not a
+  // setup inconvenience, it is a permanent loss, so check it before arming.
+  if (depository === ethers.ZeroAddress) {
     throw new Error(
-      `None of the ${signers.length} configured signer(s) is token.admin() ` +
-        `(${onChainAdmin}) on ${hre.network.name}. Available: ` +
-        signers.map((s) => s.address).join(", "),
+      "depositoryWallet is unset — confiscate would revert. Set it before arming Confiscate.",
     );
   }
-  if (destination.toLowerCase() === onChainDepository.toLowerCase()) {
+  if (depository.toLowerCase() === tokenAddress.toLowerCase()) {
     throw new Error(
-      "confiscation wallet equals the depository — seized funds must never mix with reserves",
+      "depositoryWallet is the token contract — seized funds would be unrecoverable " +
+        "(withdrawToken() refuses token == address(this)).",
     );
   }
-  if (
-    destination.toLowerCase() === tokenAddress.toLowerCase() ||
-    destination.toLowerCase() === controllerAddress.toLowerCase()
-  ) {
-    throw new Error(
-      "confiscation wallet equals the token or controller address — funds sent there would be " +
-        "unrecoverable (withdrawToken() refuses token == address(this))",
-    );
+  if (depository.toLowerCase() === controllerAddress.toLowerCase()) {
+    throw new Error("depositoryWallet is the controller — seized funds would be stranded there.");
+  }
+  if (await token.frozen(depository)) {
+    console.warn("\nWARNING: the depository is FROZEN. Seizures would still land there but be immobilized.");
   }
 
-  // ── 1. Seed the Confiscate quorum rules ────────────────────────────────────
+  // ── Seed the Confiscate quorum rules ───────────────────────────────────────
   const rulesPath = path.join(__dirname, "../test/utils/rules.confiscate.json");
   const rules: RuleJson[] = JSON.parse(fs.readFileSync(rulesPath, "utf8"));
 
@@ -168,48 +125,57 @@ async function main() {
   }
 
   if (alreadySeeded) {
-    console.log("\n[1/2] Confiscate rules already seeded — skipping.");
-  } else {
-    console.log("\n[1/2] Seeding Confiscate quorum rules (instant, no timelock)...");
-    const tx = await controller.connect(admin).setQuorumRules(
-      CONFISCATE_OP,
-      rules.map((r) => ({
-        minAmount: BigInt(r.minAmount),
-        maxAmount: BigInt(r.maxAmount),
-        requiredRoles: r.requiredRoles,
-      })),
-    );
-    await tx.wait();
-    console.log("      seeded:", tx.hash);
+    const live = await controller.getQuorumRule(CONFISCATE_OP, 0);
+    console.log("\nConfiscate rules already seeded — nothing to do.");
+    console.log("live tier 0 requires", live.requiredRoles.length, "role(s)");
+    console.log("\nConfiscate is ARMED on this chain.");
+    return;
   }
+
+  const args = [
+    CONFISCATE_OP,
+    rules.map((r) => ({
+      minAmount: BigInt(r.minAmount),
+      maxAmount: BigInt(r.maxAmount),
+      requiredRoles: r.requiredRoles,
+    })),
+  ] as const;
+
+  const signers = await ethers.getSigners();
+  let sender: (typeof signers)[number] | undefined;
+  for (const s of signers) {
+    if (await controller.hasRole(DEFAULT_ADMIN_ROLE, s.address)) {
+      sender = s;
+      break;
+    }
+  }
+
+  if (!sender) {
+    // Expected on every network whose admin is a Safe. Emit the parameters to
+    // paste into the Safe transaction builder rather than failing.
+    const data = controller.interface.encodeFunctionData("setQuorumRules", args as any);
+    console.log("\nNo configured signer holds DEFAULT_ADMIN_ROLE on the Controller.");
+    console.log("Submit this from the admin Safe instead:\n");
+    console.log("  to      ", controllerAddress);
+    console.log("  value   ", "0");
+    console.log("  operation", "0 (CALL — not DelegateCall)");
+    console.log("  data    ", data);
+    console.log(
+      "\nSend it as a SINGLE transaction, not batched through MultiSend — a batched" +
+        "\ninner revert surfaces only as GS013 and hides which call failed.",
+    );
+    return;
+  }
+
+  console.log("\nSeeding Confiscate quorum rules (instant, no timelock)...");
+  console.log("signer             ", sender.address);
+  const tx = await controller.connect(sender).setQuorumRules(...(args as any));
+  await tx.wait();
+  console.log("seeded:", tx.hash);
 
   const live = await controller.getQuorumRule(CONFISCATE_OP, 0);
-  console.log("      live tier 0 requires", live.requiredRoles.length, "role(s)");
-
-  // ── 2. Schedule the confiscation wallet ────────────────────────────────────
-  const current = await token.confiscationWallet();
-  const pending = await token.pendingConfiscationWallet();
-
-  if (current.toLowerCase() === destination.toLowerCase()) {
-    console.log("\n[2/2] confiscationWallet already applied — nothing to do.");
-  } else if (pending.toLowerCase() === destination.toLowerCase()) {
-    const scheduledAt = await token.confiscationWalletScheduledAt();
-    const delay = await token.UPGRADE_DELAY();
-    console.log("\n[2/2] Already scheduled. Applicable after unix", (scheduledAt + delay).toString());
-  } else {
-    console.log("\n[2/2] Scheduling confiscationWallet (48h timelock)...");
-    const tx = await token.connect(admin).scheduleConfiscationWallet(destination);
-    await tx.wait();
-    const scheduledAt = await token.confiscationWalletScheduledAt();
-    const delay = await token.UPGRADE_DELAY();
-    console.log("      scheduled:", tx.hash);
-    console.log("      applicable after unix", (scheduledAt + delay).toString());
-  }
-
-  console.log(
-    "\nNext: after the timelock, run scripts/apply-confiscation-wallet.ts on this network.",
-  );
-  console.log("Until confiscationWallet is APPLIED, confiscate() reverts ConfiscationWalletNotSet.");
+  console.log("live tier 0 requires", live.requiredRoles.length, "role(s)");
+  console.log("\nConfiscate is ARMED on this chain. Seizures land in", depository);
 }
 
 main().catch((e) => {
