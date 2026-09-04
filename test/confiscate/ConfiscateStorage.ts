@@ -161,6 +161,34 @@ describe("Confiscate — storage layout after the destination wallet was removed
     ).to.be.revertedWithCustomError(idrp, "FrozenAccount");
   });
 
+  it("does not write into the reserved slots during a seizure", async function () {
+    // The invariant that keeps future upgrades safe. A seizure toggles the flag
+    // at byte 20 of slot 9 and must leave every other reserved byte exactly as
+    // it found it — otherwise a seizure would quietly rewrite state that a
+    // later version might append over.
+    const { idrp, admin, depository, alice, bob } = await frozenFixture();
+    const proxy = await idrp.getAddress();
+    const SLOT_10 = "0x000000000000000000000000000000000000000000000000000000000000dead";
+    const SLOT_11 = "0x00000000000000000000000000000000000000000000000000000000deadbeef";
+
+    await hre.network.provider.send("hardhat_setStorageAt", [proxy, "0x9", KAIROS_SLOT_9]);
+    await hre.network.provider.send("hardhat_setStorageAt", [proxy, "0xa", SLOT_10]);
+    await hre.network.provider.send("hardhat_setStorageAt", [proxy, "0xb", SLOT_11]);
+
+    await idrp.connect(admin).confiscate(alice.address, idrp6("1000"));
+    expect(await idrp.balanceOf(depository.address)).to.equal(idrp6("1000"));
+
+    // Byte 20 back to 0, bytes 0-19 untouched — i.e. the identical word.
+    expect(await hre.ethers.provider.getStorage(proxy, 9)).to.equal(KAIROS_SLOT_9);
+    expect(await hre.ethers.provider.getStorage(proxy, 10)).to.equal(SLOT_10);
+    expect(await hre.ethers.provider.getStorage(proxy, 11)).to.equal(SLOT_11);
+
+    // And the gate is sealed again on top of the still-dirty slot.
+    await expect(
+      idrp.connect(alice).transfer(bob.address, 1n)
+    ).to.be.revertedWithCustomError(idrp, "FrozenAccount");
+  });
+
   // ───────────────────────────────────────────────────────────────────────
   // Everything that was already there must still read correctly.
   // ───────────────────────────────────────────────────────────────────────

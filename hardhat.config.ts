@@ -30,6 +30,14 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
+      // EDR ships hardfork schedules only for well-known chains. Forking Kairos
+      // (test/confiscate/KairosForkNoDeadlock.ts) otherwise fails to EXECUTE any
+      // call with "No known hardfork for execution on historical block ...",
+      // even though raw storage reads work — which reads like a broken test
+      // rather than missing config. Inert unless a fork is actually started.
+      chains: {
+        1001: { hardforkHistory: { shanghai: 0 } },
+      },
     },
     holesky: {
       chainId: 17000,
