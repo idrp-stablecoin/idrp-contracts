@@ -12,7 +12,8 @@
   "IDRPControllerScheduledImpl": "0x42Cc36031dC5D4dE484aa26f93413EA9d6350030",
   "IDRPControllerScheduledAt": "1788228078",
   "IDRPControllerExecutableAfter": "1788228378",
-  "IDRPScheduledImpl": "0x4bC15AE4B6FB09603f27c05f12A78daE15A98f75",
-  "IDRPScheduledAt": "1788229618",
-  "IDRPExecutableAfter": "1788402418"
+  "IDRPScheduledImpl": "0xFEf9046637C3380F6408b25E449225b40e392c58",
+  "IDRPScheduledAt": "1788516446",
+  "IDRPExecutableAfter": "1788516746",
+  "IDRPImplUpgradeDelay": "300"
 }
