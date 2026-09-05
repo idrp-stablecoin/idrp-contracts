@@ -101,6 +101,31 @@ contract IDRP is
     ///         reverts `ControllerNotSet` — operational methods are inert.
     address public controller;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Confiscation (seizure of a frozen account's balance)
+    //
+    // Seized funds go to `depositoryWallet`. One slot, appended after
+    // `controller` — UUPS-safe for the live Tron proxies, which zero-initialize
+    // it on upgrade.
+    //
+    // IF YOU ARE COMPARING THIS WITH THE EVM SOURCE: that branch carries three
+    // `__deprecated_*` placeholders here. They exist solely because one EVM
+    // testnet deployed an earlier design that stored a separate confiscation
+    // wallet, and its slot still holds that address — a bool landing on those
+    // bytes would read `true` forever and disable the freeze gate. Tron never
+    // ran that design, so there is nothing to reserve. Do NOT copy them over.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// @dev Set for the duration of a `confiscate` call so
+    ///      `_beforeTokenTransfer` skips the freeze + sanctions gate. That
+    ///      bypass is the entire point: we are moving funds out of an account
+    ///      those gates exist to immobilize, and away from an address a
+    ///      sanctions list may well name.
+    ///
+    ///      NEVER expose a setter for this. It is set and cleared inside a
+    ///      single external call and is not readable between transactions.
+    bool private _inConfiscation;
+
     /// @dev Events
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
@@ -131,11 +156,28 @@ contract IDRP is
         address indexed newController
     );
 
+    /// @notice Emitted on every seizure. This is the audit trail a regulator or
+    ///         a disputing user reads — it must name the source, the destination
+    ///         and the amount, and it must accompany exactly one Transfer event.
+    ///
+    ///         Load-bearing for attestation. Seized funds land in the same wallet
+    ///         `mint` credits, so the depository's on-chain balance does not
+    ///         distinguish reserve from seizure. Summing this event is what
+    ///         splits them; nothing else does.
+    event AssetsConfiscated(
+        address indexed from,
+        address indexed to,
+        uint256 amount
+    );
+
     /// @dev Errors
     error FrozenAccount();
     error NotUpgrader();
     error NotAdmin();
     error NotController();
+    /// @dev Thrown by `confiscate` when the target isn't frozen — see that
+    ///      function's NatSpec for why this precondition is hard.
+    error NotFrozen();
     error ControllerNotSet();
     error SanctionedSender(address sender);
     error SanctionedRecipient(address recipient);
@@ -360,6 +402,47 @@ contract IDRP is
         emit AccountUnfrozen(account);
     }
 
+    /// @notice Seize a frozen account's balance into the depository wallet.
+    /// @param from   The frozen account to seize from.
+    /// @param amount The amount to seize. Partial seizure is allowed here; the
+    ///               Controller's quorum path forces all-or-nothing.
+    /// @dev Requires: onlyController quorum (Officer+Manager+Director+Commissioner
+    ///      for OperationType.Confiscate), whenNotPaused, depositoryWallet set,
+    ///      and frozen[from] as a hard precondition (freeze first, then seize;
+    ///      not auto-unfrozen after). Implemented as a transfer to the depository,
+    ///      never a burn, so total supply is conserved and the seizure stays
+    ///      reversible.
+    ///
+    ///      The destination is `depositoryWallet` — the same address `mint`
+    ///      credits — so it is NOT segregated on-chain and moves whenever
+    ///      `setDepositoryWallet` moves. That setter is `onlyAdmin` and instant,
+    ///      so admin alone chooses where a seizure lands; the quorum still
+    ///      decides whether one happens at all. Segregation is off-chain, via
+    ///      the `AssetsConfiscated` event.
+    function confiscate(
+        address from,
+        uint256 amount
+    ) external onlyController whenNotPaused {
+        address destination = depositoryWallet;
+        require(destination != address(0), "Depository wallet not set");
+        if (!frozen[from]) revert NotFrozen();
+        require(amount > 0, "Amount must be greater than zero");
+        // No frozen-destination check here, deliberately: it would block a
+        // seizure exactly when it is most needed, and the funds are already
+        // immobilized at the source. If one is ever added it must go AFTER this
+        // line — confiscate requires frozen[from], so on a self-seizure the
+        // destination is frozen by construction and would mask this error.
+        require(from != destination, "Cannot confiscate from the depository");
+
+        // Bypass the freeze/sanctions gate in _beforeTokenTransfer for this
+        // transfer only.
+        _inConfiscation = true;
+        _transfer(from, destination, amount);
+        _inConfiscation = false;
+
+        emit AssetsConfiscated(from, destination, amount);
+    }
+
     /// @notice Set the depository wallet address
     /// @param wallet The address of the depository wallet
     /// @dev Rejects a no-op set to the current wallet so a no-op update cannot
@@ -367,6 +450,10 @@ contract IDRP is
     function setDepositoryWallet(address wallet) external onlyAdmin {
         require(wallet != address(0), "Invalid wallet address");
         require(wallet != depositoryWallet, "Same wallet");
+        // This setter also chooses where `confiscate` sends seized funds. The
+        // token itself would be unrecoverable: withdrawToken refuses
+        // `token == address(this)`.
+        require(wallet != address(this), "Cannot be the token contract");
         address oldWallet = depositoryWallet;
         depositoryWallet = wallet;
         emit DepositoryWalletUpdated(oldWallet, wallet);
@@ -394,19 +481,36 @@ contract IDRP is
         uint256 value
     ) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
         // Freeze + sanctions checks only on regular transfers (not mint/burn).
+        //
+        // `_inConfiscation` is read INSIDE the frozen branch, not in this outer
+        // condition, so ordinary transfers between two unfrozen accounts — which
+        // is every normal transfer, forever — never touch its storage slot.
+        // `confiscate` hard-requires `frozen[from]`, so a seizure always lands in
+        // the frozen branch below and the flag is always checked there.
         if (from != address(0) && to != address(0)) {
-            if (frozen[from] || frozen[to]) revert FrozenAccount();
-            require(value > 0, "Transfer amount must be greater than zero");
+            if (frozen[from] || frozen[to]) {
+                // Only a confiscation may move value on a frozen account.
+                //
+                // `_inConfiscation` is set only inside `confiscate()`, for the
+                // duration of one internal _transfer, and cleared before that
+                // call returns. It is never true across transactions and has no
+                // setter. Skipping the revert is the entire point of a seizure:
+                // the funds are in an account the freeze gate exists to
+                // immobilize.
+                if (!_inConfiscation) revert FrozenAccount();
+            } else {
+                require(value > 0, "Transfer amount must be greater than zero");
 
-            // Sanctions check fires only when a list is wired. Cached locally
-            // so we pay one warm SLOAD instead of two when wired.
-            address list = sanctionsList;
-            if (list != address(0)) {
-                if (ISanctionsList(list).isSanctioned(from)) {
-                    revert SanctionedSender(from);
-                }
-                if (ISanctionsList(list).isSanctioned(to)) {
-                    revert SanctionedRecipient(to);
+                // Sanctions check fires only when a list is wired. Cached locally
+                // so we pay one warm SLOAD instead of two when wired.
+                address list = sanctionsList;
+                if (list != address(0)) {
+                    if (ISanctionsList(list).isSanctioned(from)) {
+                        revert SanctionedSender(from);
+                    }
+                    if (ISanctionsList(list).isSanctioned(to)) {
+                        revert SanctionedRecipient(to);
+                    }
                 }
             }
         }

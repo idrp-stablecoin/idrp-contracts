@@ -70,6 +70,14 @@ abstract contract TronGaplessUUPSUpgradeable is
     ERC1967UpgradeUpgradeable
 {
     /// @dev Address of this implementation, fixed in bytecode at construction.
+    ///
+    ///      The annotation is required, not decorative: without it the upgrades
+    ///      plugin refuses every deployProxy with "Variable `__self` is
+    ///      immutable and will be initialized on the implementation", which took
+    ///      the whole test suite on this branch down. OZ's own UUPSUpgradeable
+    ///      carries the identical annotation on the identical variable; it was
+    ///      simply lost when this Tron variant was copied from it.
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable state-variable-assignment
     address private immutable __self = address(this);
 
     /// @dev Reverts unless called through a delegatecall from an active proxy.

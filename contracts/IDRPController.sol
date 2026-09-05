@@ -22,6 +22,8 @@ interface IIDRP {
     function pause() external;
 
     function unpause() external;
+
+    function confiscate(address from, uint256 amount) external;
 }
 
 contract IDRPController is
@@ -62,7 +64,10 @@ contract IDRPController is
         Freeze,
         Unfreeze,
         Pause,
-        Unpause
+        Unpause,
+        /// @dev Appended LAST so every existing value keeps its number — any
+        ///      in-flight signature stays bound to the same operation.
+        Confiscate
     }
 
     // Quorum rule structure
@@ -273,7 +278,16 @@ contract IDRPController is
     // applyQuorumRules; cancelQuorumRules aborts a pending change.
 
     // Validates ranges are contiguous: start at 0, no gaps, end at type(uint256).max
-    function _validateQuorumRules(QuorumRule[] calldata rules) internal pure {
+    function _validateQuorumRules(
+        OperationType operationType,
+        QuorumRule[] calldata rules
+    ) internal pure {
+        // Seizure takes everyone or it does not happen. Enforced where rules are
+        // WRITTEN, so a multi-tier set can never reach storage and no cheap tier
+        // can ever be selected by naming a small amount.
+        if (operationType == OperationType.Confiscate) {
+            require(rules.length == 1, "Confiscate must be single-tier");
+        }
         require(rules.length > 0, "Rules cannot be empty");
 
         for (uint256 i = 0; i < rules.length; i++) {
@@ -318,7 +332,7 @@ contract IDRPController is
             quorumRules[operationType].length == 0,
             "Rules exist: use schedule"
         );
-        _validateQuorumRules(rules);
+        _validateQuorumRules(operationType, rules);
         _writeQuorumRules(operationType, rules);
     }
 
@@ -328,7 +342,7 @@ contract IDRPController is
         OperationType operationType,
         QuorumRule[] calldata rules
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _validateQuorumRules(rules);
+        _validateQuorumRules(operationType, rules);
 
         PendingQuorum storage pending = pendingQuorumRules[operationType];
         delete pending.rules;
@@ -432,7 +446,36 @@ contract IDRPController is
         }
 
         // Get the appropriate quorum rule for this operation and amount
-        QuorumRule memory rule = getQuorumRule(operationType, amount);
+        // Tier is chosen from the larger of the declared amount and the target's
+        // balance: callers may escalate, never de-escalate. Selecting it from
+        // `amount` alone is the quorum-tier-bypass finding — a caller naming a
+        // small amount lands in a cheap tier while the effect is the whole
+        // balance.
+        uint256 basis = amount;
+        if (
+            operationType == OperationType.Freeze ||
+            operationType == OperationType.Unfreeze
+        ) {
+            uint256 bal = IERC20(idrpToken).balanceOf(to);
+            if (bal > basis) basis = bal;
+        }
+
+        // Seizure: full role set regardless of amount, and all-or-nothing.
+        if (operationType == OperationType.Confiscate) {
+            // Runtime backstop. Unreachable through the public ABI because
+            // _validateQuorumRules rejects a multi-tier set at write time, but a
+            // single tier is what makes `amount` unable to select anything.
+            require(
+                quorumRules[OperationType.Confiscate].length == 1,
+                "Confiscate must be single-tier"
+            );
+            require(
+                amount >= IERC20(idrpToken).balanceOf(to),
+                "amount below target balance"
+            );
+        }
+
+        QuorumRule memory rule = getQuorumRule(operationType, basis);
 
         // Hash the operation data - using operationIdentifier instead of nonce
         bytes32 operationHash = getOperationHash(
@@ -466,6 +509,11 @@ contract IDRPController is
             IIDRP(idrpToken).pause();
         } else if (operationType == OperationType.Unpause) {
             IIDRP(idrpToken).unpause();
+        } else if (operationType == OperationType.Confiscate) {
+            // No destination argument: the token reads depositoryWallet from its
+            // own storage, so a quorum can decide WHETHER a seizure happens but
+            // never WHERE the funds go.
+            IIDRP(idrpToken).confiscate(to, amount);
         }
 
         emit OperationExecuted(operationType, to, amount, operationIdentifier);
