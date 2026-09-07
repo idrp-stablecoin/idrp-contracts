@@ -5,25 +5,21 @@ import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 /**
- * Storage layout for the confiscation feature, after the destination wallet and
- * its timelock were removed in favour of `depositoryWallet`.
+ * Storage layout after the retired confiscation-wallet slots were DELETED
+ * rather than reserved.
  *
- * WHY THIS FILE IS LOAD-BEARING
+ * WHAT THE FORK EXPERIMENT ESTABLISHED (test/confiscate/RemovalExperiment.ts,
+ * run against live Kairos):
  *
- * `confiscationWallet` (address) and `_inConfiscation` (bool) were PACKED into
- * one slot: address at bytes 0-19, flag at byte 20. Deleting the address would
- * slide the flag down to byte 0 of that same slot — and that slot is not empty
- * on a live chain. Kairos (chainId 1001) holds
+ *  - The bypass flag does NOT land on the retired address's low byte. With the
+ *    address gone, Solidity packs the bool into `controller`'s slot at byte 20,
+ *    and byte 20 of a 20-byte address is always zero. The freeze gate keeps
+ *    working. The earlier fear that it would read `0xcb` as `true` was wrong.
+ *  - The real hazard is the ORPHAN: slot 9 keeps holding the retired address,
+ *    unreferenced, so the next variable appended to this contract would read it
+ *    as an initial value. `initializeV4` scrubs it during the upgrade.
  *
- *     slot 9 = 0x…f1c508ce6b951475f204ae2d68527c6cf995c3cb
- *
- * whose low byte is 0xcb. The flag would read 0xcb as `true`, permanently, and
- * `_update`'s `if (!_inConfiscation) revert FrozenAccount();` would stop
- * reverting: every frozen account on that chain could transfer freely, and
- * every test in this repo would still pass.
- *
- * So the retired variables are RESERVED, not deleted, and the tests below
- * assert that against the real deployed bytes rather than against a story.
+ * These tests pin both halves so neither can regress silently.
  */
 describe("Confiscate — storage layout after the destination wallet was removed", function () {
   const idrp6 = (whole: string) => hre.ethers.parseUnits(whole, 6);
@@ -75,36 +71,80 @@ describe("Confiscate — storage layout after the destination wallet was removed
   // The layout itself.
   // ───────────────────────────────────────────────────────────────────────
 
-  it("keeps _inConfiscation at slot 9, byte 20 — the position the live chains assume", async function () {
-    const layout = compiledLayout();
-    const flag = layout.storage.find((v: any) => v.label === "_inConfiscation");
-    expect(flag, "_inConfiscation is gone from storage entirely").to.not.equal(undefined);
-    expect(flag.slot).to.equal("9");
-    expect(flag.offset).to.equal(20);
-  });
+  it("packs the bypass flag into byte 20 of controller's slot", async function () {
+    const layout = compiledLayout()
+    const flag = layout.storage.find((v: any) => v.label === "_inConfiscation")
+    const controller = layout.storage.find((v: any) => v.label === "controller")
+    expect(flag, "_inConfiscation is gone from storage entirely").to.not.equal(undefined)
+    expect(flag.slot).to.equal(controller.slot)
+    expect(controller.offset).to.equal(0)
+    expect(flag.offset).to.equal(20)
+  })
 
-  it("reserves the three retired slots rather than deleting them", async function () {
-    const layout = compiledLayout();
-    const at = (slot: string, offset: number) =>
-      layout.storage.find((v: any) => v.slot === slot && v.offset === offset);
+  it("declares no placeholders, and ends at slot 8", async function () {
+    const layout = compiledLayout()
+    for (const v of layout.storage) {
+      expect(v.label, `unexpected placeholder ${v.label}`).to.not.match(/^__deprecated_/)
+    }
+    const maxSlot = Math.max(...layout.storage.map((v: any) => Number(v.slot)))
+    expect(maxSlot, "the next appended variable must land on slot 9").to.equal(8)
+  })
 
-    // Same slot, same offset, same width as the variables they replaced.
-    expect(at("9", 0).label).to.equal("__deprecated_confiscationWallet");
-    expect(layout.types[at("9", 0).type].numberOfBytes).to.equal("20");
-    expect(at("10", 0).label).to.equal("__deprecated_pendingConfiscationWallet");
-    expect(layout.types[at("10", 0).type].numberOfBytes).to.equal("20");
-    expect(at("11", 0).label).to.equal("__deprecated_confiscationWalletScheduledAt");
-    expect(layout.types[at("11", 0).type].numberOfBytes).to.equal("32");
-  });
+  it("ignores the retired word entirely — it is no longer wired to anything", async function () {
+    // Kairos's real slot 9, loaded onto a test proxy. Nothing reads it now, so
+    // the freeze gate must be completely unaffected by its presence.
+    const { idrp, alice, bob } = await frozenFixture()
+    await hre.network.provider.send("hardhat_setStorageAt", [
+      await idrp.getAddress(),
+      "0x9",
+      KAIROS_SLOT_9,
+    ])
+    await expect(
+      idrp.connect(alice).transfer(bob.address, idrp6("1"))
+    ).to.be.revertedWithCustomError(idrp, "FrozenAccount")
+  })
 
-  it("appends nothing into the reserved range — slot 12 is the next free slot", async function () {
-    // The reserved slots hold stale values on chains that used the old feature.
-    // Anything placed there would silently read that stale data as its initial
-    // value, which is the whole failure mode this file exists to prevent.
-    const layout = compiledLayout();
-    const maxSlot = Math.max(...layout.storage.map((v: any) => Number(v.slot)));
-    expect(maxSlot).to.equal(11);
-  });
+  it("still detects a genuinely-set flag — so the test above is not vacuous", async function () {
+    // Byte 20 of CONTROLLER's slot is where the flag lives now. Set it and the
+    // gate must open, or the test above proves nothing.
+    const { idrp, admin, alice, bob } = await frozenFixture()
+    const proxy = await idrp.getAddress()
+    const slot8 = await hre.ethers.provider.getStorage(proxy, 8)
+    const bytes = slot8.slice(2).match(/../g)!          // bytes[0] most significant
+    bytes[31 - 20] = "01"                                 // flip the flag on
+    await hre.network.provider.send("hardhat_setStorageAt", [
+      proxy,
+      "0x8",
+      "0x" + bytes.join(""),
+    ])
+    expect(await idrp.controller(), "controller must survive the byte edit").to.equal(
+      admin.address,
+    )
+
+    await idrp.connect(alice).transfer(bob.address, idrp6("1"))
+    expect(await idrp.balanceOf(bob.address)).to.equal(idrp6("1"))
+  })
+
+  it("initializeV4 scrubs the retired slots so the next variable starts clean", async function () {
+    const { idrp, admin } = await frozenFixture()
+    const proxy = await idrp.getAddress()
+    for (const [slot, word] of [
+      ["0x9", KAIROS_SLOT_9],
+      ["0xa", "0x" + "0".repeat(60) + "dead"],
+      ["0xb", "0x" + "0".repeat(56) + "deadbeef"],
+    ] as const) {
+      await hre.network.provider.send("hardhat_setStorageAt", [proxy, slot, word])
+    }
+
+    await expect((idrp.connect(admin) as any).initializeV4()).to.emit(
+      idrp,
+      "RetiredConfiscationStorageCleared",
+    )
+
+    for (const slot of [9, 10, 11]) {
+      expect(await hre.ethers.provider.getStorage(proxy, slot)).to.equal(hre.ethers.ZeroHash)
+    }
+  })
 
   it("no longer exposes the retired getters", async function () {
     const { idrp } = await loadFixture(deployFixture);
@@ -114,79 +154,6 @@ describe("Confiscate — storage layout after the destination wallet was removed
     expect(names).to.not.include("confiscationWallet");
     expect(names).to.not.include("pendingConfiscationWallet");
     expect(names).to.not.include("confiscationWalletScheduledAt");
-  });
-
-  // ───────────────────────────────────────────────────────────────────────
-  // The regression itself, driven by real deployed bytes.
-  // ───────────────────────────────────────────────────────────────────────
-
-  it("keeps the freeze gate enforced against Kairos's real slot-9 value", async function () {
-    // THE test. Slot 9 is loaded with the exact word the Kairos proxy holds
-    // today. If the retired address were deleted instead of reserved, the flag
-    // would sit at byte 0 and read 0xcb — true — and this transfer would go
-    // through.
-    const { idrp, alice, bob } = await frozenFixture();
-    await hre.network.provider.send("hardhat_setStorageAt", [
-      await idrp.getAddress(),
-      "0x9",
-      KAIROS_SLOT_9,
-    ]);
-
-    await expect(
-      idrp.connect(alice).transfer(bob.address, idrp6("1"))
-    ).to.be.revertedWithCustomError(idrp, "FrozenAccount");
-  });
-
-  it("still detects a genuinely-set flag at byte 20 — so the test above is not vacuous", async function () {
-    // Same word, byte 20 flipped to 0x01. The gate must now open. Without this,
-    // the test above would pass even if `_update` had stopped reading the flag
-    // at all, and would be worth nothing.
-    const { idrp, alice, bob } = await frozenFixture();
-    await hre.network.provider.send("hardhat_setStorageAt", [
-      await idrp.getAddress(),
-      "0x9",
-      KAIROS_SLOT_9_FLAG_SET,
-    ]);
-
-    await idrp.connect(alice).transfer(bob.address, idrp6("1"));
-    expect(await idrp.balanceOf(bob.address)).to.equal(idrp6("1"));
-  });
-
-  it("leaves the flag clear on a fresh proxy", async function () {
-    const { idrp, alice, bob } = await frozenFixture();
-    const slot9 = await hre.ethers.provider.getStorage(await idrp.getAddress(), 9);
-    expect(slot9).to.equal(hre.ethers.ZeroHash);
-    await expect(
-      idrp.connect(alice).transfer(bob.address, idrp6("1"))
-    ).to.be.revertedWithCustomError(idrp, "FrozenAccount");
-  });
-
-  it("does not write into the reserved slots during a seizure", async function () {
-    // The invariant that keeps future upgrades safe. A seizure toggles the flag
-    // at byte 20 of slot 9 and must leave every other reserved byte exactly as
-    // it found it — otherwise a seizure would quietly rewrite state that a
-    // later version might append over.
-    const { idrp, admin, depository, alice, bob } = await frozenFixture();
-    const proxy = await idrp.getAddress();
-    const SLOT_10 = "0x000000000000000000000000000000000000000000000000000000000000dead";
-    const SLOT_11 = "0x00000000000000000000000000000000000000000000000000000000deadbeef";
-
-    await hre.network.provider.send("hardhat_setStorageAt", [proxy, "0x9", KAIROS_SLOT_9]);
-    await hre.network.provider.send("hardhat_setStorageAt", [proxy, "0xa", SLOT_10]);
-    await hre.network.provider.send("hardhat_setStorageAt", [proxy, "0xb", SLOT_11]);
-
-    await idrp.connect(admin).confiscate(alice.address, idrp6("1000"));
-    expect(await idrp.balanceOf(depository.address)).to.equal(idrp6("1000"));
-
-    // Byte 20 back to 0, bytes 0-19 untouched — i.e. the identical word.
-    expect(await hre.ethers.provider.getStorage(proxy, 9)).to.equal(KAIROS_SLOT_9);
-    expect(await hre.ethers.provider.getStorage(proxy, 10)).to.equal(SLOT_10);
-    expect(await hre.ethers.provider.getStorage(proxy, 11)).to.equal(SLOT_11);
-
-    // And the gate is sealed again on top of the still-dirty slot.
-    await expect(
-      idrp.connect(alice).transfer(bob.address, 1n)
-    ).to.be.revertedWithCustomError(idrp, "FrozenAccount");
   });
 
   // ───────────────────────────────────────────────────────────────────────

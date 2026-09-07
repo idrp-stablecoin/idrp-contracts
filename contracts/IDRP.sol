@@ -64,6 +64,16 @@ contract IDRP is
 
     // Upgrade timelock
     uint256 public constant UPGRADE_DELAY = 48 hours;
+
+    // Storage the retired confiscation-wallet design left behind. Declared
+    // storage now ends at slot 8, so these three are unreferenced — but on a
+    // chain that ran that design they are NOT empty, and the next variable
+    // anyone appends would land on slot 9 and read its leftover as an initial
+    // value. `initializeV4` scrubs them during the upgrade so that cannot
+    // happen. Asserted against the compiler's own layout in the test suite.
+    uint256 private constant _RETIRED_SLOT_DESTINATION = 9;
+    uint256 private constant _RETIRED_SLOT_PENDING = 10;
+    uint256 private constant _RETIRED_SLOT_SCHEDULED_AT = 11;
     uint256 public upgradeScheduledAt;
     address public scheduledImplementation;
 
@@ -96,44 +106,19 @@ contract IDRP is
     // ─────────────────────────────────────────────────────────────────────────
     // Confiscation (seizure of a frozen account's balance)
     //
-    // Seized funds go to `depositoryWallet`; there is no separate destination
-    // slot. The three `__deprecated_*` placeholders below are the retired
-    // destination slots, RESERVED rather than deleted.
-    //
-    // They cannot be deleted. A live proxy already holds a nonzero address in
-    // the first of them, and `_inConfiscation` is packed into that same slot at
-    // byte 20. Removing the address would slide the flag down to byte 0, where
-    // it would read that address's low byte as `true` — permanently disabling
-    // the freeze gate in `_update` for every transfer, with every test still
-    // green. Never reuse these slots; append new state strictly after them.
+    // EXPERIMENT BRANCH: the retired destination slots are DELETED here rather
+    // than reserved, to find out empirically what that does to a chain that
+    // already populated them. Do not merge without reading the fork results.
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// @dev Retired: the standalone confiscation destination. Reserved to hold
-    ///      `_inConfiscation` at byte 20 of this slot — see the note above.
-    /// @custom:oz-renamed-from confiscationWallet
-    address private __deprecated_confiscationWallet;
-
     /// @dev Set for the duration of a `confiscate` call so `_update` skips the
-    ///      freeze + sanctions gate. That bypass is the entire point: we are
-    ///      moving funds out of an account those gates exist to immobilize, and
-    ///      away from an address a sanctions list may well name.
-    ///
-    ///      Lives at byte 20 of the reserved slot above and MUST STAY THERE.
-    ///      Its position is load-bearing: see the storage note above.
-    ///
-    ///      NEVER expose a setter for this. It is set and cleared inside a
-    ///      single external call and is not readable between transactions.
+    ///      freeze + sanctions gate.
     bool private _inConfiscation;
 
-    /// @dev Retired: pending half of the destination timelock. Reserved.
-    /// @custom:oz-renamed-from pendingConfiscationWallet
-    address private __deprecated_pendingConfiscationWallet;
-
-    /// @dev Retired: schedule timestamp of the destination timelock. Reserved.
-    /// @custom:oz-renamed-from confiscationWalletScheduledAt
-    uint256 private __deprecated_confiscationWalletScheduledAt;
-
     /// @dev Events
+    /// @notice Emitted once per chain when the retired confiscation-wallet
+    ///         slots are scrubbed, so the migration is auditable on-chain.
+    event RetiredConfiscationStorageCleared();
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
     event MaxSupplyUpdated(uint256 oldMaxSupply, uint256 newMaxSupply);
@@ -254,6 +239,29 @@ contract IDRP is
         emit AdminUpdated(address(0), _admin);
         emit ControllerUpdated(address(0), _controller);
         emit UpgraderUpdated(oldUpgrader, _upgrader);
+    }
+
+    /// @notice Scrubs the storage the retired confiscation-wallet design left
+    ///         behind, so no future variable inherits it.
+    /// @dev MUST be called as the `data` of `upgradeToAndCall` when moving a
+    ///      chain onto this implementation. Calling it is not required for the
+    ///      freeze gate to work — the bypass flag repacks into `controller`'s
+    ///      slot, whose byte 20 is zero for any 20-byte address, verified on a
+    ///      Kairos fork. It is required so that the NEXT variable appended to
+    ///      this contract starts at zero instead of reading a retired address.
+    ///
+    ///      Chains that never ran the retired design are unaffected: these slots
+    ///      are already zero there and the call is a no-op.
+    ///
+    ///      Deliberately no-argument and idempotent-by-reinitializer, so it
+    ///      cannot be pointed at any other slot.
+    function initializeV4() external reinitializer(4) onlyUpgrader {
+        assembly {
+            sstore(_RETIRED_SLOT_DESTINATION, 0)
+            sstore(_RETIRED_SLOT_PENDING, 0)
+            sstore(_RETIRED_SLOT_SCHEDULED_AT, 0)
+        }
+        emit RetiredConfiscationStorageCleared();
     }
 
     /// @notice Rotate the single upgrader address. Only `admin` (Safe) may rotate.
