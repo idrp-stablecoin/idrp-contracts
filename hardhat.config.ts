@@ -36,7 +36,12 @@ const config: HardhatUserConfig = {
       // even though raw storage reads work — which reads like a broken test
       // rather than missing config. Inert unless a fork is actually started.
       chains: {
-        1001: { hardforkHistory: { shanghai: 0 } },
+        // EDR ships hardfork schedules only for well-known chains. Without an
+        // entry, forking these fails to EXECUTE any call with "No known hardfork
+        // for execution on historical block ..." even though raw storage reads
+        // work — which reads like a broken test rather than missing config.
+        1001: { hardforkHistory: { shanghai: 0 } },   // Kairos
+        84532: { hardforkHistory: { shanghai: 0 } },  // Base Sepolia
       },
     },
     holesky: {
