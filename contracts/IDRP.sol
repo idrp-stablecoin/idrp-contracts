@@ -106,9 +106,16 @@ contract IDRP is
     // ─────────────────────────────────────────────────────────────────────────
     // Confiscation (seizure of a frozen account's balance)
     //
-    // EXPERIMENT BRANCH: the retired destination slots are DELETED here rather
-    // than reserved, to find out empirically what that does to a chain that
-    // already populated them. Do not merge without reading the fork results.
+    // Seized funds go to `depositoryWallet`. There is no separate destination
+    // slot and no reserved placeholder for one, because no chain this source
+    // targets ever stored one: the four EVM mainnets and Sepolia have never had
+    // confiscate at all, so slots 9-11 are zero there.
+    //
+    // Two testnet proxies DID run an earlier variant that reserved those slots
+    // with `__deprecated_*` placeholders. They cannot be upgraded onto this
+    // layout — OZ rejects the deletion — and they are not meant to be; they were
+    // replaced with fresh proxies. `test/confiscate/UpgradePaths.ts` asserts
+    // every path, including that negative one.
     // ─────────────────────────────────────────────────────────────────────────
 
     /// @dev Set for the duration of a `confiscate` call so `_update` skips the
@@ -241,8 +248,19 @@ contract IDRP is
         emit UpgraderUpdated(oldUpgrader, _upgrader);
     }
 
-    /// @notice Scrubs the storage the retired confiscation-wallet design left
+    /// @notice Scrubs the storage an earlier confiscation-wallet design left
     ///         behind, so no future variable inherits it.
+    ///
+    /// @dev ⚠️ CALL THIS AS THE `data` OF EVERY `upgradeToAndCall` ONTO THIS
+    ///      IMPLEMENTATION, including on chains where it is a no-op.
+    ///
+    ///      On a chain that never ran the retired design the slots are already
+    ///      zero and this changes nothing — but calling it CONSUMES
+    ///      `reinitializer(4)`, which is the point. Left un-called, this function
+    ///      stays live forever; and slots 9-11 are FREE on this layout, so the
+    ///      first future feature to append state would claim slot 9 and a later
+    ///      call here would zero it. Consuming the reinitializer during the
+    ///      upgrade closes that path permanently.
     /// @dev MUST be called as the `data` of `upgradeToAndCall` when moving a
     ///      chain onto this implementation. Calling it is not required for the
     ///      freeze gate to work — the bypass flag repacks into `controller`'s
