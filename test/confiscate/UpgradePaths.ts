@@ -59,6 +59,32 @@ describe("Confiscate — upgrade paths into the placeholder-free layout", functi
     expect(message).to.match(/Deleted `__deprecated_/);
   });
 
+  it("does NOT brick a placeholder proxy's future upgrades — a new feature still lands", async function () {
+    // The question that actually matters for the two testnet proxies left on the
+    // placeholder variant: can they still take the NEXT upgrade?
+    //
+    // Yes. A future feature appends at slot 12, after the three reserved slots,
+    // and validates normally. Verified against the live Kairos and Base Sepolia
+    // proxies too (2026-09-09). Staying on the placeholder variant costs three
+    // slots; it does not close the door on anything.
+    const From = await hre.ethers.getContractFactory("IDRPWithRetiredSlots");
+    const To = await hre.ethers.getContractFactory("IDRPPlaceholderPlusFeature");
+    await hre.upgrades.validateUpgrade(From, To, {
+      kind: "uups",
+      // Properties of the probe mock, not of the layout under test.
+      unsafeAllow: ["missing-initializer", "missing-initializer-call"],
+    });
+  });
+
+  it("does NOT brick a clean proxy's future upgrades either", async function () {
+    const From = await hre.ethers.getContractFactory("IDRP");
+    const To = await hre.ethers.getContractFactory("IDRPCleanPlusFeature");
+    await hre.upgrades.validateUpgrade(From, To, {
+      kind: "uups",
+      unsafeAllow: ["missing-initializer", "missing-initializer-call"],
+    });
+  });
+
   it("keeps the bypass flag on a byte that every deployed controller leaves clear", async function () {
     // The flag packs into `controller`'s slot at byte 20. That is only safe
     // because `controller` is a 20-byte address, so byte 20 is zero — verified
