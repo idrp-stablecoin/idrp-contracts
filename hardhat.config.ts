@@ -52,7 +52,13 @@ const config: HardhatUserConfig = {
     },
     sepolia: {
       chainId: 11155111,
-      url: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+      // SEPOLIA_RPC_URL overrides the Alchemy default. Useful when the Alchemy
+      // host is unreachable from the environment you are in — Node's dns.lookup
+      // returns ENOTFOUND while dns.resolve4 succeeds, which looks like a broken
+      // RPC rather than a blocked host.
+      url:
+        process.env.SEPOLIA_RPC_URL ??
+        `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
     },
     polygon: {
