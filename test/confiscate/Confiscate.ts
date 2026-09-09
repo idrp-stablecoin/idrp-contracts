@@ -453,7 +453,7 @@ describe("Confiscate — confiscate(from, amount) via the Controller quorum", fu
     // OZ 4.9.6 Pausable reverts with a string; OZ 5 uses EnforcedPause.
     await expect(
       executeConfiscate(badActor.address, SEIZED_BALANCE)
-    ).to.be.revertedWith("Pausable: paused");
+    ).to.be.revertedWith(/(ERC20Pausable: token transfer while paused|Pausable: paused)/);
   });
 
   it("refuses to confiscate from the depository itself", async function () {

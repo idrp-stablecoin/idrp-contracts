@@ -1,6 +1,7 @@
 import hre from "hardhat"
 import { expect } from "chai"
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers"
+import { upgradeTronProxy } from "../../utils/tron-upgrade"
 
 /**
  * [V3-2] no-access-control v3 migration — the dual-DEFAULT_ADMIN_ROLE-holder fix.
@@ -75,10 +76,7 @@ describe("[V3-2] Controller — DEFAULT_ADMIN_ROLE dual-holder revocation", func
     )
 
     const V3Factory = await hre.ethers.getContractFactory("IDRPController")
-    const ctrlV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const ctrlV3 = await upgradeTronProxy(proxyAddr, "IDRPController")
     await ctrlV3.waitForDeployment()
 
     // upgrader on v2 is adminMain (set in fixture initialize).
@@ -107,10 +105,7 @@ describe("[V3-2] Controller — DEFAULT_ADMIN_ROLE dual-holder revocation", func
       await loadFixture(v2WithDualAdminFixture)
 
     const V3Factory = await hre.ethers.getContractFactory("IDRPController")
-    const ctrlV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const ctrlV3 = await upgradeTronProxy(proxyAddr, "IDRPController")
     await ctrlV3.waitForDeployment()
     await ctrlV3
       .connect(adminMain)
@@ -123,7 +118,7 @@ describe("[V3-2] Controller — DEFAULT_ADMIN_ROLE dual-holder revocation", func
     // setUpgrader is gated by onlyRole(DEFAULT_ADMIN_ROLE) — should revert.
     await expect(
       ctrlV3.connect(adminSecondary).setUpgrader(user.address)
-    ).to.be.revertedWithCustomError(ctrlV3, "AccessControlUnauthorizedAccount")
+    ).to.be.revertedWith(/AccessControl: account .* is missing role/)
   })
 
   it("rejects initializeV3 from a non-upgrader (frontrun protection)", async function () {
@@ -131,10 +126,7 @@ describe("[V3-2] Controller — DEFAULT_ADMIN_ROLE dual-holder revocation", func
       await loadFixture(v2WithDualAdminFixture)
 
     const V3Factory = await hre.ethers.getContractFactory("IDRPController")
-    const ctrlV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const ctrlV3 = await upgradeTronProxy(proxyAddr, "IDRPController")
     await ctrlV3.waitForDeployment()
 
     // adminSecondary is NOT the upgrader.
@@ -154,10 +146,7 @@ describe("[V3-2] Controller — DEFAULT_ADMIN_ROLE dual-holder revocation", func
     )
 
     const V3Factory = await hre.ethers.getContractFactory("IDRPController")
-    const ctrlV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const ctrlV3 = await upgradeTronProxy(proxyAddr, "IDRPController")
     await ctrlV3.waitForDeployment()
     await ctrlV3
       .connect(adminMain)
@@ -170,12 +159,12 @@ describe("[V3-2] Controller — DEFAULT_ADMIN_ROLE dual-holder revocation", func
     // ACDAR enforces the two-step rotation flow.
     await expect(
       ctrlV3.connect(adminMain).revokeRole(DEFAULT_ADMIN_ROLE, adminMain.address)
-    ).to.be.revertedWithCustomError(ctrlV3, "AccessControlEnforcedDefaultAdminRules")
+    ).to.be.revertedWith(/AccessControl: can't (directly (grant|revoke) default admin role|violate default admin rules)/)
 
     // grantRole(DEFAULT_ADMIN_ROLE, anyone) also reverts.
     await expect(
       ctrlV3.connect(adminMain).grantRole(DEFAULT_ADMIN_ROLE, adminSecondary.address)
-    ).to.be.revertedWithCustomError(ctrlV3, "AccessControlEnforcedDefaultAdminRules")
+    ).to.be.revertedWith(/AccessControl: can't (directly (grant|revoke) default admin role|violate default admin rules)/)
   })
 
   it("admin retains the ability to grant signer roles (OFFICER, MANAGER, etc.)", async function () {
@@ -183,10 +172,7 @@ describe("[V3-2] Controller — DEFAULT_ADMIN_ROLE dual-holder revocation", func
       await loadFixture(v2WithDualAdminFixture)
 
     const V3Factory = await hre.ethers.getContractFactory("IDRPController")
-    const ctrlV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const ctrlV3 = await upgradeTronProxy(proxyAddr, "IDRPController")
     await ctrlV3.waitForDeployment()
     await ctrlV3
       .connect(adminMain)
@@ -204,7 +190,7 @@ describe("[V3-2] Controller — DEFAULT_ADMIN_ROLE dual-holder revocation", func
     // Non-admin cannot.
     await expect(
       ctrlV3.connect(user).grantRole(OFFICER_ROLE, adminSecondary.address)
-    ).to.be.revertedWithCustomError(ctrlV3, "AccessControlUnauthorizedAccount")
+    ).to.be.revertedWith(/AccessControl: account .* is missing role/)
   })
 
   it("preserves v2 sequential storage across the upgrade", async function () {
@@ -223,10 +209,7 @@ describe("[V3-2] Controller — DEFAULT_ADMIN_ROLE dual-holder revocation", func
     const expectedScheduledAt = await ctrlV2.upgradeScheduledAt()
 
     const V3Factory = await hre.ethers.getContractFactory("IDRPController")
-    const ctrlV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const ctrlV3 = await upgradeTronProxy(proxyAddr, "IDRPController")
     await ctrlV3.waitForDeployment()
 
     // Before initializeV3 runs, storage carries over.

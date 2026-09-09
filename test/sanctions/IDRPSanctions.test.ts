@@ -238,10 +238,7 @@ describe("IDRP — sanctions enforcement", function () {
     it("pause still blocks transfers", async function () {
       const { idrp, superAdmin, alice, bob } = await loadFixture(deployFixture);
       await idrp.connect(superAdmin).pause();
-      await expect(idrp.connect(alice).transfer(bob.address, 1n)).to.be.revertedWithCustomError(
-        idrp,
-        "EnforcedPause"
-      );
+      await expect(idrp.connect(alice).transfer(bob.address, 1n)).to.be.revertedWith(/(ERC20Pausable: token transfer while paused|Pausable: paused)/);
     });
 
     it("decimals still 6", async function () {

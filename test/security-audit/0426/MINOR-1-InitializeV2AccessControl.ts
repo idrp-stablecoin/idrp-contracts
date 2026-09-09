@@ -60,10 +60,7 @@ describe("[0426 MINOR-1] IDRP.initializeV2 access control", function () {
     // legitimate post-upgrade migration tx with their own _upgrader value.
     await expect(
       idrp.connect(attacker).initializeV2(newUpgrader.address, [])
-    ).to.be.revertedWithCustomError(
-      idrp,
-      "AccessControlUnauthorizedAccount"
-    );
+    ).to.be.revertedWith(/AccessControl: account .* is missing role/);
   });
 
   it("Should succeed when called by DEFAULT_ADMIN_ROLE", async function () {
@@ -97,7 +94,7 @@ describe("[0426 MINOR-1] IDRP.initializeV2 access control", function () {
 
     await expect(
       idrp.connect(superAdmin).initializeV2(newUpgrader.address, [])
-    ).to.be.revertedWithCustomError(idrp, "InvalidInitialization");
+    ).to.be.revertedWith("Initializable: contract is already initialized");
   });
 
   it("Should revert if attacker calls AFTER admin has already migrated", async function () {

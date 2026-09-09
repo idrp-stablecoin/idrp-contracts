@@ -1,6 +1,7 @@
 import hre from "hardhat"
 import { expect } from "chai"
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers"
+import { upgradeTronProxy } from "../../utils/tron-upgrade"
 
 /**
  * [V3-3] no-access-control v3 migration — IDRP historical-replay paths.
@@ -54,10 +55,7 @@ describe("[V3-3] IDRP — historical-replay paths to v3", function () {
 
       // Skip v2 entirely — upgrade straight to v3.
       const V3Factory = await hre.ethers.getContractFactory("IDRP")
-      const idrpV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-        kind: "uups",
-        unsafeAllow: ["missing-initializer-call"],
-      })
+      const idrpV3 = await upgradeTronProxy(proxyAddr, "IDRP")
       await idrpV3.waitForDeployment()
 
       // v1 storage survives.
@@ -97,10 +95,7 @@ describe("[V3-3] IDRP — historical-replay paths to v3", function () {
 
       // Step 1: v1 → legacy v2.
       const LegacyV2Factory = await hre.ethers.getContractFactory("IDRPv2")
-      const idrpV2 = await hre.upgrades.upgradeProxy(proxyAddr, LegacyV2Factory, {
-        kind: "uups",
-        unsafeAllow: ["missing-initializer-call"],
-      })
+      const idrpV2 = await upgradeTronProxy(proxyAddr, "IDRPv2")
       await idrpV2.waitForDeployment()
 
       // v1 granted UPGRADER_ROLE to the superAdmin (= admin in this fixture);
@@ -147,10 +142,7 @@ describe("[V3-3] IDRP — historical-replay paths to v3", function () {
         await loadFixture(freshV1Fixture)
 
       const LegacyV2Factory = await hre.ethers.getContractFactory("IDRPv2")
-      const idrpV2 = await hre.upgrades.upgradeProxy(proxyAddr, LegacyV2Factory, {
-        kind: "uups",
-        unsafeAllow: ["missing-initializer-call"],
-      })
+      const idrpV2 = await upgradeTronProxy(proxyAddr, "IDRPv2")
       await idrpV2.waitForDeployment()
       await idrpV2.connect(admin).initializeV2(admin.address, [admin.address])
 

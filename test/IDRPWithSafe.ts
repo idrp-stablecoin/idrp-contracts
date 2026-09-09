@@ -153,10 +153,7 @@ describe("IDRP & IDRPController with real Safe wallet", function () {
     const OFFICER_ROLE = await controller.OFFICER_ROLE();
     await expect(
       controller.connect(owner1).grantRole(OFFICER_ROLE, officer.address)
-    ).to.be.revertedWithCustomError(
-      controller,
-      "AccessControlUnauthorizedAccount"
-    );
+    ).to.be.revertedWith(/AccessControl: account .* is missing role/);
 
     // 4. Grant via Safe.execTransaction succeeds.
     const grantCalldata = controller.interface.encodeFunctionData("grantRole", [
@@ -180,10 +177,7 @@ describe("IDRP & IDRPController with real Safe wallet", function () {
     const newAdminCandidate = officer.address; // arbitrary; just for the test
     await expect(
       controller.connect(owner1).beginDefaultAdminTransfer(newAdminCandidate)
-    ).to.be.revertedWithCustomError(
-      controller,
-      "AccessControlUnauthorizedAccount"
-    );
+    ).to.be.revertedWith(/AccessControl: account .* is missing role/);
     const beginCalldata = controller.interface.encodeFunctionData(
       "beginDefaultAdminTransfer",
       [newAdminCandidate]

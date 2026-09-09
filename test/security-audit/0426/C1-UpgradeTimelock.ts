@@ -5,6 +5,12 @@ import {
   time,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
+// OZ 4.9.6 note: `upgradeToAndCall(impl, "0x")` ALWAYS reverts on this lineage —
+// it passes forceCall=true, so it delegatecalls the implementation with empty
+// calldata and hits a fallback that does not exist. `upgradeTo(impl)` is the
+// correct call for a no-data upgrade here. OZ 5 skips the call when data is
+// empty, which is why the EVM branch's scripts can use upgradeToAndCall.
+
 describe("[C-1] Upgrade Without Multisig/Timelock", function () {
   async function deployFixture() {
     const [owner, other] = await hre.ethers.getSigners();
@@ -121,7 +127,7 @@ describe("[C-1] Upgrade Without Multisig/Timelock", function () {
         await controller.getAddress()
       );
       await expect(
-        proxy.connect(owner).upgradeToAndCall(newImplAddr, "0x")
+        proxy.connect(owner).upgradeTo(newImplAddr)
       ).to.be.revertedWith("Upgrade not scheduled");
     });
 
@@ -138,7 +144,7 @@ describe("[C-1] Upgrade Without Multisig/Timelock", function () {
         await controller.getAddress()
       );
       await expect(
-        proxy.connect(owner).upgradeToAndCall(newImplAddr, "0x")
+        proxy.connect(owner).upgradeTo(newImplAddr)
       ).to.be.revertedWith("Timelock not expired");
     });
 
@@ -157,7 +163,7 @@ describe("[C-1] Upgrade Without Multisig/Timelock", function () {
         "IDRPController",
         await controller.getAddress()
       );
-      await expect(proxy.connect(owner).upgradeToAndCall(newImplAddr, "0x")).to
+      await expect(proxy.connect(owner).upgradeTo(newImplAddr)).to
         .not.be.reverted;
 
       // State should be reset
@@ -186,7 +192,7 @@ describe("[C-1] Upgrade Without Multisig/Timelock", function () {
         await controller.getAddress()
       );
       await expect(
-        proxy.connect(owner).upgradeToAndCall(newImplAddr, "0x")
+        proxy.connect(owner).upgradeTo(newImplAddr)
       ).to.be.revertedWith("Upgrade not scheduled");
     });
 

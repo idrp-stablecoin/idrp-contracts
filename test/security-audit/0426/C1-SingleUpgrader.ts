@@ -5,6 +5,12 @@ import {
   time,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
+// OZ 4.9.6 note: `upgradeToAndCall(impl, "0x")` ALWAYS reverts on this lineage —
+// it passes forceCall=true, so it delegatecalls the implementation with empty
+// calldata and hits a fallback that does not exist. `upgradeTo(impl)` is the
+// correct call for a no-data upgrade here. OZ 5 skips the call when data is
+// empty, which is why the EVM branch's scripts can use upgradeToAndCall.
+
 /**
  * [C-1] IDRP upgrade flow.
  *
@@ -177,14 +183,14 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
       await time.increase(UPGRADE_DELAY + 1);
 
       await expect(
-        idrp.connect(superAdmin).upgradeToAndCall(newImplAddr, "0x")
+        idrp.connect(superAdmin).upgradeTo(newImplAddr)
       ).to.be.revertedWithCustomError(idrp, "NotUpgrader");
     });
 
     it("Should revert if upgrade is not scheduled", async function () {
       const { idrp, newImplAddr, superAdmin } = await loadFixture(deployFixture);
       await expect(
-        idrp.connect(superAdmin).upgradeToAndCall(newImplAddr, "0x")
+        idrp.connect(superAdmin).upgradeTo(newImplAddr)
       ).to.be.revertedWith("Upgrade not scheduled");
     });
 
@@ -194,7 +200,7 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
       await idrp.connect(superAdmin).scheduleUpgrade(newImplAddr);
 
       await expect(
-        idrp.connect(superAdmin).upgradeToAndCall(newImplAddr, "0x")
+        idrp.connect(superAdmin).upgradeTo(newImplAddr)
       ).to.be.revertedWith("Timelock not expired");
     });
 
@@ -205,7 +211,7 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
       await time.increase(UPGRADE_DELAY + 1);
 
       await expect(
-        idrp.connect(superAdmin).upgradeToAndCall(newImplAddr, "0x")
+        idrp.connect(superAdmin).upgradeTo(newImplAddr)
       ).to.not.be.reverted;
 
       expect(await idrp.scheduledImplementation()).to.equal(
@@ -240,7 +246,7 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
       await time.increase(UPGRADE_DELAY + 1);
 
       await expect(
-        idrp.connect(superAdmin).upgradeToAndCall(newImplAddr, "0x")
+        idrp.connect(superAdmin).upgradeTo(newImplAddr)
       ).to.be.revertedWith("Upgrade not scheduled");
     });
 
@@ -253,7 +259,7 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
       await time.increase(UPGRADE_DELAY + 1);
 
       await expect(
-        idrp.connect(newUpgrader).upgradeToAndCall(newImplAddr, "0x")
+        idrp.connect(newUpgrader).upgradeTo(newImplAddr)
       ).to.not.be.reverted;
     });
   });

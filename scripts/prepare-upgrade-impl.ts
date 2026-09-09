@@ -22,7 +22,10 @@ import { assertOz4TronOnly } from "./utils/assert-oz4-tron-only";
  *     where initializeV2Calldata is the ABI-encoded call to
  *     initializeV2(_upgrader, legacyHolders).
  *   - v2 → v2+ (timelocked):
- *       scheduleUpgrade(newImpl), wait UPGRADE_DELAY, upgradeToAndCall(newImpl, "0x").
+ *       scheduleUpgrade(newImpl), wait UPGRADE_DELAY, upgradeTo(newImpl).
+ *       NOT upgradeToAndCall(newImpl, "0x") — on OZ 4.9.6 that passes
+ *       forceCall=true and delegatecalls the impl with empty calldata, which
+ *       reverts "Address: low-level delegate call failed".
  */
 async function main() {
   await assertOz4TronOnly(hre);
@@ -73,7 +76,7 @@ async function main() {
     `\nv1 → v2:  upgradeToAndCall(${implAddress}, <initializeV2 calldata>)`
   );
   console.log(
-    `v2 → v2+: scheduleUpgrade(${implAddress}), wait UPGRADE_DELAY, then upgradeToAndCall(${implAddress}, 0x)`
+    `v2 → v2+: scheduleUpgrade(${implAddress}), wait UPGRADE_DELAY, then upgradeTo(${implAddress})`
   );
 }
 

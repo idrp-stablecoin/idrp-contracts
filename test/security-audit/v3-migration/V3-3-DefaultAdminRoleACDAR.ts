@@ -78,7 +78,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
 
       await expect(
         ctrl.connect(admin).grantRole(DEFAULT_ADMIN_ROLE, newAdmin.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlEnforcedDefaultAdminRules")
+      ).to.be.revertedWith(/AccessControl: can't (directly (grant|revoke) default admin role|violate default admin rules)/)
 
       // Sanity: no holder was added.
       expect(await ctrl.hasRole(DEFAULT_ADMIN_ROLE, newAdmin.address)).to.equal(false)
@@ -90,7 +90,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
 
       await expect(
         ctrl.connect(admin).revokeRole(DEFAULT_ADMIN_ROLE, admin.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlEnforcedDefaultAdminRules")
+      ).to.be.revertedWith(/AccessControl: can't (directly (grant|revoke) default admin role|violate default admin rules)/)
 
       // Admin still holds it.
       expect(await ctrl.defaultAdmin()).to.equal(admin.address)
@@ -102,7 +102,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
 
       await expect(
         ctrl.connect(admin).revokeRole(DEFAULT_ADMIN_ROLE, newAdmin.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlEnforcedDefaultAdminRules")
+      ).to.be.revertedWith(/AccessControl: can't (directly (grant|revoke) default admin role|violate default admin rules)/)
     })
 
     it("renounceRole(DEFAULT_ADMIN_ROLE, self) without scheduled transfer reverts", async function () {
@@ -111,7 +111,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
       // No pendingDefaultAdmin set, no schedule, no delay elapsed → revert.
       await expect(
         ctrl.connect(admin).renounceRole(DEFAULT_ADMIN_ROLE, admin.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlEnforcedDefaultAdminDelay")
+      ).to.be.revertedWith(/AccessControl: (transfer delay not passed|only can renounce in two delayed steps)/)
 
       expect(await ctrl.defaultAdmin()).to.equal(admin.address)
     })
@@ -134,7 +134,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
       // Step 2: try to accept before delay → revert.
       await expect(
         ctrl.connect(newAdmin).acceptDefaultAdminTransfer()
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlEnforcedDefaultAdminDelay")
+      ).to.be.revertedWith(/AccessControl: (transfer delay not passed|only can renounce in two delayed steps)/)
 
       // Wait the full delay.
       await time.increase(DELAY + 1)
@@ -153,7 +153,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
 
       await expect(
         ctrl.connect(attacker).beginDefaultAdminTransfer(newAdmin.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
     })
 
     it("only the pending admin can accept the transfer", async function () {
@@ -164,7 +164,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
 
       await expect(
         ctrl.connect(attacker).acceptDefaultAdminTransfer()
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlInvalidDefaultAdmin")
+      ).to.be.revertedWith(/AccessControl: (pending admin must accept|0 default admin)/)
 
       // newAdmin still has not accepted; admin is still the holder.
       expect(await ctrl.defaultAdmin()).to.equal(admin.address)
@@ -185,7 +185,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
       await time.increase(DELAY + 1)
       await expect(
         ctrl.connect(newAdmin).acceptDefaultAdminTransfer()
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlInvalidDefaultAdmin")
+      ).to.be.revertedWith(/AccessControl: (pending admin must accept|0 default admin)/)
 
       expect(await ctrl.defaultAdmin()).to.equal(admin.address)
     })
@@ -201,7 +201,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
       // Before delay elapses, renounce reverts.
       await expect(
         ctrl.connect(admin).renounceRole(DEFAULT_ADMIN_ROLE, admin.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlEnforcedDefaultAdminDelay")
+      ).to.be.revertedWith(/AccessControl: (transfer delay not passed|only can renounce in two delayed steps)/)
 
       // After delay, renounce succeeds. From this point on, NO address holds
       // DEFAULT_ADMIN_ROLE — this is intentional and well-defined behavior, but
@@ -230,7 +230,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
       const { ctrl, admin, attacker } = await rotatedFixture()
       await expect(
         ctrl.connect(admin).setUpgrader(attacker.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
     })
 
     it("old admin cannot setQuorumRules", async function () {
@@ -245,7 +245,7 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
       }
       await expect(
         ctrl.connect(admin).setQuorumRules(OperationType_Mint, [rule])
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
     })
 
     it("old admin cannot scheduleQuorumRules / applyQuorumRules / cancelQuorumRules", async function () {
@@ -264,13 +264,13 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
 
       await expect(
         ctrl.connect(admin).scheduleQuorumRules(OperationType_Mint, [rule])
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
       await expect(
         ctrl.connect(admin).applyQuorumRules(OperationType_Mint)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
       await expect(
         ctrl.connect(admin).cancelQuorumRules(OperationType_Mint)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
     })
 
     it("old admin cannot grant or revoke signer roles", async function () {
@@ -279,17 +279,17 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
 
       await expect(
         ctrl.connect(admin).grantRole(officerRole, signerCandidate.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
       await expect(
         ctrl.connect(admin).revokeRole(officerRole, signerCandidate.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
     })
 
     it("old admin cannot start another rotation", async function () {
       const { ctrl, admin, attacker } = await rotatedFixture()
       await expect(
         ctrl.connect(admin).beginDefaultAdminTransfer(attacker.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
     })
 
     it("the new admin can do everything the old admin used to", async function () {
@@ -325,16 +325,16 @@ describe("[V3-3] DEFAULT_ADMIN_ROLE — ACDAR steady-state invariants", function
       // role state in legacy storage.
       await expect(
         ctrl.connect(randomLegacy).setUpgrader(attacker.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
       await expect(
         ctrl.connect(randomLegacy).setQuorumRules(OperationType_Mint, [rule])
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
       await expect(
         ctrl.connect(randomLegacy).grantRole(officerRole, attacker.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
       await expect(
         ctrl.connect(randomLegacy).beginDefaultAdminTransfer(attacker.address)
-      ).to.be.revertedWithCustomError(ctrl, "AccessControlUnauthorizedAccount")
+      ).to.be.revertedWith(/AccessControl: account .* is missing role/)
     })
   })
 })

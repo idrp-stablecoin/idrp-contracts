@@ -1,6 +1,7 @@
 import hre from "hardhat"
 import { expect } from "chai"
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers"
+import { upgradeTronProxy } from "../../utils/tron-upgrade"
 
 /**
  * [V3-1] no-access-control v3 migration — IDRP v2 → v3 storage preservation.
@@ -69,10 +70,7 @@ describe("[V3-1] IDRP — v2 → v3 storage preservation", function () {
 
     // Run the actual upgrade — this is where OZ's storage check runs.
     const V3Factory = await hre.ethers.getContractFactory("IDRP")
-    const idrpV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const idrpV3 = await upgradeTronProxy(proxyAddr, "IDRP")
     await idrpV3.waitForDeployment()
 
     // Sanity: same proxy address.
@@ -99,10 +97,7 @@ describe("[V3-1] IDRP — v2 → v3 storage preservation", function () {
       await loadFixture(v2ProxyFixture)
 
     const V3Factory = await hre.ethers.getContractFactory("IDRP")
-    const idrpV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const idrpV3 = await upgradeTronProxy(proxyAddr, "IDRP")
     await idrpV3.waitForDeployment()
 
     // upgrader on v2 was set to `admin` during fixture init.
@@ -128,10 +123,7 @@ describe("[V3-1] IDRP — v2 → v3 storage preservation", function () {
       await loadFixture(v2ProxyFixture)
 
     const V3Factory = await hre.ethers.getContractFactory("IDRP")
-    const idrpV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const idrpV3 = await upgradeTronProxy(proxyAddr, "IDRP")
     await idrpV3.waitForDeployment()
 
     // `user` is not the upgrader.
@@ -147,10 +139,7 @@ describe("[V3-1] IDRP — v2 → v3 storage preservation", function () {
       await loadFixture(v2ProxyFixture)
 
     const V3Factory = await hre.ethers.getContractFactory("IDRP")
-    const idrpV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const idrpV3 = await upgradeTronProxy(proxyAddr, "IDRP")
     await idrpV3.waitForDeployment()
 
     await idrpV3
@@ -162,7 +151,7 @@ describe("[V3-1] IDRP — v2 → v3 storage preservation", function () {
       idrpV3
         .connect(upgraderEOA)
         .initializeV3(admin.address, controllerEOA.address, upgraderEOA.address)
-    ).to.be.revertedWithCustomError(idrpV3, "InvalidInitialization")
+    ).to.be.revertedWith("Initializable: contract is already initialized")
   })
 
   it("operational methods (mint/freeze) work via `controller` after migration", async function () {
@@ -170,10 +159,7 @@ describe("[V3-1] IDRP — v2 → v3 storage preservation", function () {
       await loadFixture(v2ProxyFixture)
 
     const V3Factory = await hre.ethers.getContractFactory("IDRP")
-    const idrpV3 = await hre.upgrades.upgradeProxy(proxyAddr, V3Factory, {
-      kind: "uups",
-      unsafeAllow: ["missing-initializer-call"],
-    })
+    const idrpV3 = await upgradeTronProxy(proxyAddr, "IDRP")
     await idrpV3.waitForDeployment()
     await idrpV3
       .connect(admin)

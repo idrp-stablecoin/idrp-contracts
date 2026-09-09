@@ -69,7 +69,7 @@ describe("SanctionsList — Chainalysis clone (functional)", function () {
       const { list, attacker, alice } = await loadFixture(deployFixture);
       await expect(
         list.connect(attacker).addToSanctionsList([alice.address])
-      ).to.be.revertedWithCustomError(list, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 
@@ -102,7 +102,7 @@ describe("SanctionsList — Chainalysis clone (functional)", function () {
       await list.connect(owner).addToSanctionsList([alice.address]);
       await expect(
         list.connect(attacker).removeFromSanctionsList([alice.address])
-      ).to.be.revertedWithCustomError(list, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 
@@ -138,7 +138,7 @@ describe("SanctionsList — Chainalysis clone (functional)", function () {
       // Old owner can't.
       await expect(
         list.connect(owner).addToSanctionsList([bob.address])
-      ).to.be.revertedWithCustomError(list, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("renounceOwnership works — list becomes append-only-by-nobody", async function () {
@@ -147,7 +147,7 @@ describe("SanctionsList — Chainalysis clone (functional)", function () {
       expect(await list.owner()).to.equal(hre.ethers.ZeroAddress);
       await expect(
         list.connect(owner).addToSanctionsList([alice.address])
-      ).to.be.revertedWithCustomError(list, "OwnableUnauthorizedAccount");
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 
