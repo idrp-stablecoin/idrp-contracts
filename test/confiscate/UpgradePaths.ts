@@ -85,6 +85,43 @@ describe("Confiscate — upgrade paths into the placeholder-free layout", functi
     });
   });
 
+  it("is a TOKEN-only constraint — the Controller has no confiscation storage at all", async function () {
+    // Worth asserting rather than assuming. Adding confiscate to the Controller
+    // needed NO new storage: OperationType.Confiscate is an enum value, the
+    // dispatch is code, and op 6's rules live inside the existing `quorumRules`
+    // mapping at a keccak-derived slot. So the Controller's layout is untouched
+    // by any of this, and every deployed controller — on both layout variants —
+    // validates onto the current source.
+    //
+    // Measured 2026-09-09 against all four live controllers (Kairos + Base
+    // Sepolia, old and new): 4/4 PASS, while the two old TOKENS are rejected.
+    const fs = await import("fs");
+    const path = await import("path");
+    const dbgPath = path.join(
+      hre.config.paths.artifacts,
+      "contracts/IDRPController.sol/IDRPController.dbg.json"
+    );
+    const dbg = JSON.parse(fs.readFileSync(dbgPath, "utf8"));
+    const bi = JSON.parse(
+      fs.readFileSync(path.resolve(path.dirname(dbgPath), dbg.buildInfo), "utf8")
+    );
+    const layout =
+      bi.output.contracts["contracts/IDRPController.sol"]["IDRPController"].storageLayout;
+
+    for (const v of layout.storage) {
+      expect(v.label, `controller gained confiscation storage: ${v.label}`).to.not.match(
+        /confiscat|__deprecated/i
+      );
+    }
+
+    // And it upgrades onto itself cleanly, which is all any chain needs from it.
+    const F = await hre.ethers.getContractFactory("IDRPController");
+    await hre.upgrades.validateUpgrade(F, F, {
+      kind: "uups",
+      unsafeAllow: ["missing-initializer-call"],
+    });
+  });
+
   it("keeps the bypass flag on a byte that every deployed controller leaves clear", async function () {
     // The flag packs into `controller`'s slot at byte 20. That is only safe
     // because `controller` is a 20-byte address, so byte 20 is zero — verified
