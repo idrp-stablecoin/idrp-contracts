@@ -19,6 +19,7 @@ describe("Confiscate — _beforeTokenTransfer bypass flag scoping", function () 
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
     await idrp.connect(admin).setDepositoryWallet(depository.address);
+    await idrp.connect(admin).setConfiscationWallet(depository.address);
 
     // Wire admin as controller so we can mint/freeze directly in tests.
     await idrp.connect(admin).setController(admin.address);

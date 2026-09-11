@@ -36,6 +36,7 @@ describe("Confiscate — storage layout on the Tron/OZ4 lineage", function () {
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
     await idrp.connect(admin).setDepositoryWallet(depository.address);
+    await idrp.connect(admin).setConfiscationWallet(depository.address);
     return { idrp, IDRPFactory, admin, depository, alice, bob };
   }
 

@@ -126,11 +126,34 @@ contract IDRP is
     ///      single external call and is not readable between transactions.
     bool private _inConfiscation;
 
+    /// @notice Where `confiscate` sends seized funds.
+    /// @dev Deliberately separate from `depositoryWallet`: the depository backs
+    ///      circulating supply and is covered by reserve attestation, while seized
+    ///      funds are third-party custody pending legal direction. Keeping them in
+    ///      one wallet forces every attestation to net seizures out and makes any
+    ///      confiscation dispute reach into the reserve account.
+    ///
+    ///      DECLARED LAST ON PURPOSE. Appending is what keeps every live slot where
+    ///      it already is; inserting this next to `depositoryWallet`, where it reads
+    ///      better, would shift `maxSupply` and everything after it on eight
+    ///      deployed proxies. Verified against the compiler's storageLayout, and the
+    ///      word this lands on reads zero on every proxy.
+    ///
+    ///      Its setter is NOT timelocked — see
+    ///      docs/design/confiscation-wallet-no-timelock.md.
+    address public confiscationWallet;
+
     /// @dev Events
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
     event MaxSupplyUpdated(uint256 oldMaxSupply, uint256 newMaxSupply);
     event DepositoryWalletUpdated(
+        address indexed oldWallet,
+        address indexed newWallet
+    );
+    /// @dev The only external signal that the seizure destination moved. There is no
+    ///      timelock to watch, so monitoring must alert on this event.
+    event ConfiscationWalletUpdated(
         address indexed oldWallet,
         address indexed newWallet
     );
@@ -423,8 +446,8 @@ contract IDRP is
         address from,
         uint256 amount
     ) external onlyController whenNotPaused {
-        address destination = depositoryWallet;
-        require(destination != address(0), "Depository wallet not set");
+        address destination = confiscationWallet;
+        require(destination != address(0), "Confiscation wallet not set");
         if (!frozen[from]) revert NotFrozen();
         require(amount > 0, "Amount must be greater than zero");
         // No frozen-destination check here, deliberately: it would block a
@@ -432,7 +455,7 @@ contract IDRP is
         // immobilized at the source. If one is ever added it must go AFTER this
         // line — confiscate requires frozen[from], so on a self-seizure the
         // destination is frozen by construction and would mask this error.
-        require(from != destination, "Cannot confiscate from the depository");
+        require(from != destination, "Cannot confiscate from the destination");
 
         // Bypass the freeze/sanctions gate in _beforeTokenTransfer for this
         // transfer only.
@@ -450,13 +473,33 @@ contract IDRP is
     function setDepositoryWallet(address wallet) external onlyAdmin {
         require(wallet != address(0), "Invalid wallet address");
         require(wallet != depositoryWallet, "Same wallet");
-        // This setter also chooses where `confiscate` sends seized funds. The
-        // token itself would be unrecoverable: withdrawToken refuses
+        // The token itself would be unrecoverable: withdrawToken refuses
         // `token == address(this)`.
         require(wallet != address(this), "Cannot be the token contract");
         address oldWallet = depositoryWallet;
         depositoryWallet = wallet;
         emit DepositoryWalletUpdated(oldWallet, wallet);
+    }
+
+    /// @notice Set the wallet that `confiscate` sends seized funds to.
+    /// @dev NOT behind the 48h timelock — by design, and for the same reason
+    ///      `setSanctionsList` is not. This address routes a seizure; it cannot
+    ///      authorise one, because `confiscate` is `onlyController` and the Confiscate
+    ///      quorum is pinned to a single tier requiring all four roles. If these keys
+    ///      are ever compromised the right response is to repoint in one transaction,
+    ///      whereas a 48h delay would mean two days of paying approved seizures into a
+    ///      wallet known to be compromised. Full argument, including the mainnet
+    ///      `admin` custody precondition that this relies on:
+    ///      docs/design/confiscation-wallet-no-timelock.md
+    function setConfiscationWallet(address wallet) external onlyAdmin {
+        require(wallet != address(0), "Invalid wallet address");
+        require(wallet != confiscationWallet, "Same wallet");
+        // Seizing into the token would strand the funds: withdrawToken refuses
+        // `token == address(this)`.
+        require(wallet != address(this), "Cannot be the token contract");
+        address oldWallet = confiscationWallet;
+        confiscationWallet = wallet;
+        emit ConfiscationWalletUpdated(oldWallet, wallet);
     }
 
     /// @notice Point IDRP at a sanctions list (Chainalysis SanctionsList ABI).

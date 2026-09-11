@@ -110,10 +110,23 @@ describe("TRON battle test — layout, upgrade paths, and future headroom", func
     }
   });
 
-  it("token: confiscate added NO new slot — the flag packs into controller's", function () {
+  it("token: the confiscation flag packs into controller's slot; only the destination takes a new one", function () {
     const l = layoutOf("IDRP.sol", "IDRP");
+    // _inConfiscation must stay packed at 512:20. That is the freeze-gate flag, and a
+    // live proxy holds `controller` in the low 20 bytes of that same word, so the flag
+    // moving is what would silently open the gate.
+    const flag = l.storage.find((x: any) => x.label === "_inConfiscation");
+    expect(Number(flag.slot), "_inConfiscation left controller's slot").to.equal(512);
+    expect(Number(flag.offset), "_inConfiscation changed offset").to.equal(20);
+    // confiscationWallet is the one variable the feature is allowed to add, and it must
+    // APPEND rather than displace anything. 513 reads zero on Tron and Nile (measured
+    // 2026-09-12), which is what makes appending there safe.
+    const dest = l.storage.find((x: any) => x.label === "confiscationWallet");
+    expect(dest, "confiscationWallet is GONE").to.not.equal(undefined);
+    expect(Number(dest.slot), "confiscationWallet must append at 513").to.equal(513);
+    expect(Number(dest.offset), "confiscationWallet must start a fresh word").to.equal(0);
     const max = Math.max(...l.storage.map((v: any) => Number(v.slot)));
-    expect(max, "confiscate consumed a slot of its own; it should pack at 512:20").to.equal(512);
+    expect(max, "something landed past confiscationWallet").to.equal(513);
     for (const v of l.storage) {
       expect(v.label, `unexpected placeholder on the Tron lineage: ${v.label}`).to.not.match(/^__deprecated_/);
     }
@@ -221,6 +234,13 @@ describe("TRON battle test — layout, upgrade paths, and future headroom", func
       V3.interface.encodeFunctionData("initializeV3", [deployer.address, deployer.address, deployer.address]))).wait();
 
     const v3: any = await hre.ethers.getContractAt("IDRP", addr);
+    // A migrated proxy always arrives with confiscationWallet unset: it lands on slot
+    // 513, which was zero before the upgrade, and v2 had no setter for it. So the first
+    // seizure after any upgrade requires this call — assert the unset state first so the
+    // requirement is visible rather than implied.
+    expect(await v3.confiscationWallet(), "a migrated proxy must arrive with no destination")
+      .to.equal(hre.ethers.ZeroAddress);
+    await (await v3.setConfiscationWallet(deployer.address)).wait();
     await (await v3.freeze(holder.address)).wait();
     await expect(v3.connect(holder).transfer(other.address, 1n)).to.be.revertedWithCustomError(v3, "FrozenAccount");
 
@@ -239,11 +259,11 @@ describe("TRON battle test — layout, upgrade paths, and future headroom", func
   // 3. Headroom for the NEXT feature.
   // ─────────────────────────────────────────────────────────────────────────
 
-  it("token: a future feature appends at slot 513, onto untouched storage", async function () {
+  it("token: a future feature appends at slot 514, onto untouched storage", async function () {
     const l = layoutOf("contracts/mocks/IDRPTronNextFeature.sol".replace("contracts/", ""), "IDRPTronNextFeature");
     const v = l.storage.find((x: any) => x.label === "someFutureWallet");
     expect(v, "probe variable missing").to.not.equal(undefined);
-    expect(Number(v.slot), "a future token variable must land on 513").to.equal(513);
+    expect(Number(v.slot), "a future token variable must land on 514").to.equal(514);
   });
 
   it("controller: a future feature appends at slot 260, onto untouched storage", function () {

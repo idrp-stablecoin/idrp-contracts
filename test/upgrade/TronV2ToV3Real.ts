@@ -94,6 +94,11 @@ describe("Tron lineage — v2 -> v3 upgrade, measured rather than validated", fu
     expect(await v3.balanceOf(other.address)).to.equal(1n);
 
     // And confiscate — the feature this branch adds — works on the migrated proxy.
+    // The destination has to be set here rather than in the v2 fixture: v2 has no
+    // setConfiscationWallet, and confiscationWallet lands on a slot that was zero
+    // before the upgrade, so a migrated proxy always arrives with it unset. Pointing
+    // it at the existing depository keeps the balance assertions below unchanged.
+    await (await v3.setConfiscationWallet(before.depository)).wait();
     await (await v3.freeze(holder.address)).wait();
     const depBefore = await v3.balanceOf(before.depository);
     const seized = await v3.balanceOf(holder.address);
