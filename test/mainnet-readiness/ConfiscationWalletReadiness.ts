@@ -195,4 +195,83 @@ describe("MERGE GATE — confiscationWallet is the seizure destination", functio
       expect((idrp as any).interface.hasFunction(fn), `${fn} disappeared`).to.equal(true);
     }
   });
+
+  // ── the actual mainnet upgrade path, checked by OZ's own validator ───────────
+  describe("upgrade safety from what is deployed today", function () {
+    /**
+     * Skips rather than passes where a legacy factory does not exist on this branch.
+     * A silently-skipped check is visible in the reporter; a silently-passing one is not.
+     */
+    async function factoryOrSkip(ctx: Mocha.Context, name: string) {
+      try { return await hre.ethers.getContractFactory(name); }
+      catch { ctx.skip(); }
+    }
+
+    it("checks this build against what mainnet runs TODAY", async function () {
+      // The two lineages start from different implementations AND have different
+      // expected verdicts, so both are stated explicitly. A single "it validates"
+      // assertion would either be wrong on Tron or have to be weakened to nothing.
+      //
+      //   EVM  — from IDRPv3NoConfiscate (live on all four EVM mainnets): must PASS.
+      //   Tron — from IDRPv2 (live on the Tron mainnet token): OZ REJECTS it, because
+      //          v2 -> v3 drops the AccessControl `_roles` and ERC165 `__gap` NAMES.
+      //          Their space is kept, as `__legacyAccessControlGap` — a 100-slot
+      //          reservation asserted exactly in test/upgrade/TronBattleTest.ts. OZ has
+      //          no annotation for "deleted the name, kept the space", so it refuses on
+      //          principle. That is a tool limitation, not a verdict about the chain,
+      //          and the chain is covered independently: TronBattleTest drives a REAL
+      //          v2 -> v3 upgrade plus a second hop and asserts every value survives,
+      //          DOMAIN_SEPARATOR included. Measured beats validated here.
+      let From: any, which = "";
+      for (const name of ["IDRPv3NoConfiscate", "IDRPv2"]) {
+        try { From = await hre.ethers.getContractFactory(name); which = name; break; } catch { /* next */ }
+      }
+      if (!From) this.skip();
+      const To = await hre.ethers.getContractFactory("IDRP");
+      const run = () => hre.upgrades.validateUpgrade(From, To, {
+        kind: "uups",
+        unsafeAllow: ["missing-initializer-call"],   // no layout waiver, deliberately
+      });
+
+      if (which === "IDRPv3NoConfiscate") {
+        await run();   // must pass outright — this is the EVM mainnet upgrade path
+        return;
+      }
+      // Tron: assert the rejection is the KNOWN one and nothing new has crept in.
+      let msg = "";
+      try { await run(); } catch (e: any) { msg = e.message; }
+      expect(msg, "OZ accepted the Tron path — the legacy reservation may have changed").to.not.equal("");
+      expect(msg, "rejected for a reason other than the known deleted legacy names")
+        .to.match(/Deleted `_roles`|Deleted `__gap`/);
+      expect(msg, "a NEW deletion appeared beyond the known legacy names")
+        .to.not.match(/Deleted `(depositoryWallet|maxSupply|upgrader|sanctionsList|admin|controller|frozen)`/);
+    });
+
+    it("is still un-validatable from the PLACEHOLDER lineage — expected, and already behind us", async function () {
+      // Pinned as a rejection rather than quietly dropped, because the reason matters.
+      // OZ has no annotation that expresses a storage DELETION, so it refuses every
+      // placeholder -> clean transition regardless of whether the chain is safe. That
+      // is a tool limitation, not a verdict about the chain.
+      //
+      // It does not block anything here: Base Sepolia and Kairos already made that
+      // jump in place, so both now run the CLEAN layout, and the clean -> this-build
+      // path is the one exercised above and by test/confiscate/UpgradeSafety.ts
+      // (a real upgrade through the timelock, with the retired slots dirtied first).
+      //
+      // If this ever starts PASSING, the placeholders came back — find out why.
+      const From = await factoryOrSkip(this, "IDRPWithRetiredSlots");
+      const To = await hre.ethers.getContractFactory("IDRP");
+      let rejected = false;
+      try {
+        await hre.upgrades.validateUpgrade(From as any, To, {
+          kind: "uups",
+          unsafeAllow: ["missing-initializer-call"],
+        });
+      } catch (e: any) {
+        rejected = true;
+        expect(e.message, "rejected for an unexpected reason").to.match(/Deleted `__deprecated_/);
+      }
+      expect(rejected, "OZ accepted a storage deletion — the placeholders are back").to.equal(true);
+    });
+  });
 });
