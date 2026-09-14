@@ -11,7 +11,7 @@
  *
  * initializeV3 args (defaults; override via env vars):
  *   _admin       — IDRP_V3_ADMIN, default TXCxw9 (current upgrader)
- *   _controller  — IDRPController proxy on Nile (TWTjirsqPT6DGC63RMSAHGtb2NdzauiJWy)
+ *   _controller  — IDRPController proxy on Nile (TM7gUYY1vRGdfkX5QP3rio9eq7sQv2Ccbr)
  *   _upgrader    — IDRP_V3_UPGRADER, default TXCxw9 (current upgrader)
  *
  * Usage:
@@ -70,7 +70,11 @@ async function main() {
 
   // initializeV3 args
   const adminT = process.env.IDRP_V3_ADMIN ?? deployerT;
-  const controllerT = process.env.IDRP_V3_CONTROLLER ?? "TWTjirsqPT6DGC63RMSAHGtb2NdzauiJWy";
+  // The REPLACEMENT Controller. The old one, TWTjirsqPT6DGC63RMSAHGtb2NdzauiJWy, is
+  // permanently un-upgradeable (its TronUUPS _PROXY_SLOT is zero) and was abandoned on
+  // 2026-09-11 — wiring the token to it would point every quorum operation at a dead
+  // contract. It used to be this default; do not put it back.
+  const controllerT = process.env.IDRP_V3_CONTROLLER ?? "TM7gUYY1vRGdfkX5QP3rio9eq7sQv2Ccbr";
   const upgraderT = process.env.IDRP_V3_UPGRADER ?? deployerT;
   const adminHex = "0x" + tronWeb.address.toHex(adminT).slice(2);
   const controllerHex = "0x" + tronWeb.address.toHex(controllerT).slice(2);
