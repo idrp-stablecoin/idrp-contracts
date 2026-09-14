@@ -3,8 +3,9 @@ import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 /**
- * The seizure destination is `depositoryWallet`. There is no separate
- * confiscation wallet and no destination timelock — both were removed.
+ * The seizure destination is `confiscationWallet`, and there is no destination
+ * timelock. The dedicated wallet came back on 2026-09-09; the timelock did not —
+ * see docs/design/confiscation-wallet-no-timelock.md.
  *
  * This file is what replaced the old destination-timelock suite, and it exists
  * to pin the consequences of that removal rather than let them live only in a
@@ -13,9 +14,9 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
  *  - The retired entry points are GONE from the ABI and unreachable on-chain,
  *    not merely unused. A selector that still dispatched would be a live
  *    admin-only write into slots the contract no longer validates.
- *  - `setDepositoryWallet` inherited the `address(this)` guard from the retired
- *    destination setter. Losing it would let admin point seizures — and mints —
- *    at the token itself, where `withdrawToken` refuses to recover them.
+ *  - Both wallet setters carry the `address(this)` guard. Losing it would let admin
+ *    point mints, or seizures, at the token itself, where `withdrawToken` refuses
+ *    to recover them.
  *  - Where seized funds land is now admin's instant call. That is the security
  *    cost of the change, and it is asserted here so nobody rediscovers it by
  *    accident.
@@ -40,7 +41,8 @@ describe("Confiscate — the depository IS the destination", function () {
     "scheduleConfiscationWallet(address)",
     "applyConfiscationWallet()",
     "cancelConfiscationWallet()",
-    "confiscationWallet()",
+    // NOTE: confiscationWallet() is deliberately NOT here any more — the dedicated
+    // destination was restored on 2026-09-09. Only its TIMELOCK stayed retired.
     "pendingConfiscationWallet()",
     "confiscationWalletScheduledAt()",
   ];
@@ -76,6 +78,8 @@ describe("Confiscate — the depository IS the destination", function () {
       .map((f) => (f as any).name);
     expect(declared).to.not.include("_inConfiscation");
     expect(declared).to.not.include("__deprecated_confiscationWallet");
+    // the restored destination is a plain public getter, not a placeholder
+    expect(declared).to.include("confiscationWallet");
   });
 
   // ───────────────────────────────────────────────────────────────────────
@@ -121,18 +125,18 @@ describe("Confiscate — the depository IS the destination", function () {
     // timelock is ever reintroduced, this test is what will fail and force the
     // decision to be made explicitly.
     const { idrp, admin, other } = await loadFixture(deployFixture);
-    await idrp.connect(admin).setDepositoryWallet(other.address);
-    expect(await idrp.depositoryWallet()).to.equal(other.address);
+    await idrp.connect(admin).setConfiscationWallet(other.address);
+    expect(await idrp.confiscationWallet()).to.equal(other.address);
   });
 
-  it("sends a seizure to whatever the depository is at call time", async function () {
+  it("sends a seizure to whatever the confiscation wallet is at call time", async function () {
     const { idrp, admin, depository, other, badActor } = await loadFixture(deployFixture);
     await idrp.connect(admin).setController(admin.address);
     await idrp.connect(admin).mint(idrp6("1000"));
     await idrp.connect(depository).transfer(badActor.address, idrp6("1000"));
     await idrp.connect(admin).freeze(badActor.address);
 
-    await idrp.connect(admin).setDepositoryWallet(other.address);
+    await idrp.connect(admin).setConfiscationWallet(other.address);
     await expect(idrp.connect(admin).confiscate(badActor.address, idrp6("1000")))
       .to.emit(idrp, "AssetsConfiscated")
       .withArgs(badActor.address, other.address, idrp6("1000"));

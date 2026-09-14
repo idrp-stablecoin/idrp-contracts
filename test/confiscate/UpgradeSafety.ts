@@ -51,6 +51,7 @@ describe("Confiscate — upgrade safety", function () {
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
     await idrp.connect(admin).setDepositoryWallet(depository.address);
+    await idrp.connect(admin).setConfiscationWallet(depository.address);
     await idrp.connect(admin).setController(admin.address);
     await idrp.connect(admin).mint(idrp6("1000"));
 
@@ -69,6 +70,11 @@ describe("Confiscate — upgrade safety", function () {
     // freeze gate still reverts. If the retired variables had been deleted
     // rather than reserved, `_inConfiscation` would sit at byte 0, read 0xcb as
     // true, and this transfer would succeed.
+    //
+    // Slot 9 is `confiscationWallet` again, so this test now carries a second
+    // job: a proxy upgraded onto that layout INHERITS the old design's
+    // destination address as its seizure destination. That is why initializeV4
+    // clears it — asserted below, both before and after.
     const [admin, depository, alice, bob] = await hre.ethers.getSigners();
     const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
 
@@ -76,6 +82,7 @@ describe("Confiscate — upgrade safety", function () {
     await idrp.waitForDeployment();
     const proxyAddress = await idrp.getAddress();
     await idrp.connect(admin).setDepositoryWallet(depository.address);
+    await idrp.connect(admin).setConfiscationWallet(depository.address);
     await idrp.connect(admin).setController(admin.address);
     await idrp.connect(admin).mint(idrp6("1000"));
     await idrp.connect(depository).transfer(alice.address, idrp6("1000"));
@@ -104,15 +111,32 @@ describe("Confiscate — upgrade safety", function () {
       upgraded.connect(alice).transfer(bob.address, idrp6("1"))
     ).to.be.revertedWithCustomError(upgraded, "FrozenAccount");
 
-    // And a seizure still works, landing in the depository.
+    // THE INHERITANCE. Before initializeV4 runs, the stale word IS the live
+    // destination — a seizure now would pay into the retired design's wallet.
+    expect(
+      (await upgraded.confiscationWallet()).toLowerCase(),
+      "the upgraded proxy should still be carrying the stale destination here"
+    ).to.equal("0x" + KAIROS_SLOT_9.slice(26));
+
+    // initializeV4 clears it through the variable, so the proxy lands in the
+    // documented starting state: no destination, seizures revert until chosen.
+    await upgraded.connect(admin).initializeV4();
+    expect(
+      await upgraded.confiscationWallet(),
+      "initializeV4 must clear the inherited destination"
+    ).to.equal(hre.ethers.ZeroAddress);
+    expect(await hre.ethers.provider.getStorage(proxyAddress, 9)).to.equal(hre.ethers.ZeroHash);
+    await expect(
+      upgraded.connect(admin).confiscate(alice.address, idrp6("1000"))
+    ).to.be.revertedWith("Confiscation wallet not set");
+
+    // Choose one, and a seizure works normally.
+    await upgraded.connect(admin).setConfiscationWallet(depository.address);
     await upgraded.connect(admin).confiscate(alice.address, idrp6("1000"));
     expect(await upgraded.balanceOf(depository.address)).to.equal(idrp6("1000"));
     expect(await upgraded.balanceOf(alice.address)).to.equal(0n);
 
-    // Gate re-sealed after the seizure, with the dirty slot still dirty.
-    expect(
-      await hre.ethers.provider.getStorage(proxyAddress, 9)
-    ).to.equal(KAIROS_SLOT_9);
+    // Gate re-sealed after the seizure.
     await expect(
       upgraded.connect(alice).transfer(bob.address, 1n)
     ).to.be.revertedWithCustomError(upgraded, "FrozenAccount");
@@ -134,6 +158,7 @@ describe("Confiscate — upgrade safety", function () {
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
     await idrp.connect(admin).setDepositoryWallet(depository.address);
+    await idrp.connect(admin).setConfiscationWallet(depository.address);
     await idrp.connect(admin).setController(admin.address);
     await idrp.connect(admin).mint(idrp6("1000"));
     await idrp.connect(depository).transfer(badActor.address, idrp6("1000"));

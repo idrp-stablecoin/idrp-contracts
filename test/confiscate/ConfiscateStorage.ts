@@ -41,6 +41,7 @@ describe("Confiscate — storage layout after the destination wallet was removed
     const idrp = await hre.upgrades.deployProxy(IDRPFactory, [admin.address]);
     await idrp.waitForDeployment();
     await idrp.connect(admin).setDepositoryWallet(depository.address);
+    await idrp.connect(admin).setConfiscationWallet(depository.address);
     return { idrp, IDRPFactory, admin, depository, alice, bob };
   }
 
@@ -81,13 +82,16 @@ describe("Confiscate — storage layout after the destination wallet was removed
     expect(flag.offset).to.equal(20)
   })
 
-  it("declares no placeholders, and ends at slot 8", async function () {
+  it("declares no placeholders, and ends at slot 9 — the restored destination", async function () {
     const layout = compiledLayout()
     for (const v of layout.storage) {
       expect(v.label, `unexpected placeholder ${v.label}`).to.not.match(/^__deprecated_/)
     }
     const maxSlot = Math.max(...layout.storage.map((v: any) => Number(v.slot)))
-    expect(maxSlot, "the next appended variable must land on slot 9").to.equal(8)
+    // Slot 9 is `confiscationWallet` again — the retired destination slot, reused
+    // deliberately after it was scrubbed. The next appended variable lands on 10,
+    // which `initializeV4` still clears, so it too starts from zero.
+    expect(maxSlot, "the next appended variable must land on slot 10").to.equal(9)
   })
 
   it("ignores the retired word entirely — it is no longer wired to anything", async function () {
@@ -151,7 +155,10 @@ describe("Confiscate — storage layout after the destination wallet was removed
     const names = idrp.interface.fragments
       .filter((f) => f.type === "function")
       .map((f) => (f as any).name);
-    expect(names).to.not.include("confiscationWallet");
+    // `confiscationWallet` is BACK, deliberately — the 2026-09-09 decision restored a
+    // dedicated seizure destination. What must stay gone is its TIMELOCK, so assert
+    // the variable exists and the pending/scheduled halves do not.
+    expect(names, "the dedicated destination should exist again").to.include("confiscationWallet");
     expect(names).to.not.include("pendingConfiscationWallet");
     expect(names).to.not.include("confiscationWalletScheduledAt");
   });
