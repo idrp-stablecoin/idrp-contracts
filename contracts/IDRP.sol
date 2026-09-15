@@ -65,17 +65,6 @@ contract IDRP is
     // Upgrade timelock
     uint256 public constant UPGRADE_DELAY = 48 hours;
 
-    // Storage the retired confiscation-wallet design left behind. Declared
-    // storage now ends at slot 8, so these three are unreferenced — but on a
-    // chain that ran that design they are NOT empty, and a variable appended onto
-    // one would read its leftover as an initial value. `initializeV4` scrubs them
-    // during the upgrade so that cannot happen. Asserted against the compiler's own
-    // layout in the test suite.
-    // NOTE: slot 9 is NOT in this list any more. It is `confiscationWallet` —
-    // declared storage was extended onto it deliberately. Scrubbing it with a raw
-    // sstore would silently wipe a live destination.
-    uint256 private constant _RETIRED_SLOT_PENDING = 10;
-    uint256 private constant _RETIRED_SLOT_SCHEDULED_AT = 11;
     uint256 public upgradeScheduledAt;
     address public scheduledImplementation;
 
@@ -124,29 +113,13 @@ contract IDRP is
     ///      freeze + sanctions gate.
     bool private _inConfiscation;
 
-    /// @notice Where `confiscate` sends seized funds.
-    /// @dev Deliberately separate from `depositoryWallet`: the depository backs
-    ///      circulating supply and is covered by reserve attestation, while seized
-    ///      funds are third-party custody pending legal direction. One wallet forces
-    ///      every attestation to net seizures out and drags the reserve account into
-    ///      any confiscation dispute.
-    ///
-    ///      DECLARED LAST ON PURPOSE — appending is what keeps every live slot where
-    ///      it is. This lands on slot 9, the slot the retired design used for its own
-    ///      destination. That reuse is intentional and measured: slot 9 reads zero on
-    ///      all four EVM mainnets and both EVM testnets (2026-09-12), because the
-    ///      chains that ran the retired design were scrubbed by `initializeV4`. It is
-    ///      no longer a retired slot, so `initializeV4` must NOT blind-write it —
-    ///      see the comment there.
-    ///
-    ///      Its setter is NOT timelocked — see
-    ///      docs/design/confiscation-wallet-no-timelock.md.
+    /// @notice Where `confiscate` sends seized funds. Kept separate from
+    ///         `depositoryWallet` so seized funds never mix with the reserve that
+    ///         backs circulating supply.
+    /// @dev Declared last so that adding it moves no existing slot.
     address public confiscationWallet;
 
     /// @dev Events
-    /// @notice Emitted once per chain when the retired confiscation-wallet
-    ///         slots are scrubbed, so the migration is auditable on-chain.
-    event RetiredConfiscationStorageCleared();
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
     event MaxSupplyUpdated(uint256 oldMaxSupply, uint256 newMaxSupply);
@@ -273,46 +246,6 @@ contract IDRP is
         emit AdminUpdated(address(0), _admin);
         emit ControllerUpdated(address(0), _controller);
         emit UpgraderUpdated(oldUpgrader, _upgrader);
-    }
-
-    /// @notice Scrubs the storage an earlier confiscation-wallet design left
-    ///         behind, so no future variable inherits it.
-    ///
-    /// @dev ⚠️ CALL THIS AS THE `data` OF EVERY `upgradeToAndCall` ONTO THIS
-    ///      IMPLEMENTATION, including on chains where it is a no-op.
-    ///
-    ///      On a chain that never ran the retired design the slots are already
-    ///      zero and this changes nothing — but calling it CONSUMES
-    ///      `reinitializer(4)`, which is the point. Left un-called, this function
-    ///      stays live forever; and slots 9-11 are FREE on this layout, so the
-    ///      first future feature to append state would claim slot 9 and a later
-    ///      call here would zero it. Consuming the reinitializer during the
-    ///      upgrade closes that path permanently.
-    /// @dev MUST be called as the `data` of `upgradeToAndCall` when moving a
-    ///      chain onto this implementation. Calling it is not required for the
-    ///      freeze gate to work — the bypass flag repacks into `controller`'s
-    ///      slot, whose byte 20 is zero for any 20-byte address, verified on a
-    ///      Kairos fork. It is required so that the NEXT variable appended to
-    ///      this contract starts at zero instead of reading a retired address.
-    ///
-    ///      Chains that never ran the retired design are unaffected: these slots
-    ///      are already zero there and the call is a no-op.
-    ///
-    ///      Deliberately no-argument and idempotent-by-reinitializer, so it
-    ///      cannot be pointed at any other slot.
-    function initializeV4() external reinitializer(4) onlyUpgrader {
-        // Slot 9 now holds `confiscationWallet`, so it is cleared through the
-        // variable rather than with a raw sstore. On a chain that ran the retired
-        // design that slot still holds ITS destination address, and inheriting a
-        // seizure destination silently is exactly the failure worth preventing.
-        // Clearing it here also gives every migrated proxy the same, documented
-        // starting state: no destination, and seizures revert until one is chosen.
-        confiscationWallet = address(0);
-        assembly {
-            sstore(_RETIRED_SLOT_PENDING, 0)
-            sstore(_RETIRED_SLOT_SCHEDULED_AT, 0)
-        }
-        emit RetiredConfiscationStorageCleared();
     }
 
     /// @notice Rotate the single upgrader address. Only `admin` (Safe) may rotate.
@@ -525,15 +458,8 @@ contract IDRP is
     }
 
     /// @notice Set the wallet that `confiscate` sends seized funds to.
-    /// @dev NOT behind the 48h timelock — by design, and for the same reason
-    ///      `setSanctionsList` is not. This address routes a seizure; it cannot
-    ///      authorise one, because `confiscate` is `onlyController` and the Confiscate
-    ///      quorum is pinned to a single tier requiring all four roles. If these keys
-    ///      are ever compromised the right response is to repoint in one transaction,
-    ///      whereas a 48h delay would mean two days of paying approved seizures into a
-    ///      wallet known to be compromised. Full argument, including the mainnet
-    ///      `admin` custody precondition it relies on:
-    ///      docs/design/confiscation-wallet-no-timelock.md
+    /// @dev No timelock, by design: this routes a seizure but cannot authorise one,
+    ///      and a compromised destination has to be replaceable in one transaction.
     function setConfiscationWallet(address wallet) external onlyAdmin {
         require(wallet != address(0), "Invalid wallet address");
         require(wallet != confiscationWallet, "Same wallet");

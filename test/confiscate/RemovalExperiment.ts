@@ -8,6 +8,11 @@ import { expect } from "chai";
  * Run against real Kairos state, because the answer turned out not to be what
  * reasoning predicted.
  *
+ * The scrub half of this experiment is gone: initializeV4 was removed once every
+ * live proxy was confirmed to read zero at slots 9-11. What remains is the part
+ * that still describes today's contract — that deleting the retired variables
+ * repacks the freeze flag safely.
+ *
  * THE PREDICTION THAT WAS WRONG: that `_inConfiscation` would slide to byte 0 of
  * slot 9, read the retired address's low byte `0xcb` as `true`, and disable the
  * freeze gate. It does not. Solidity packs in declaration order, so with the
@@ -135,129 +140,4 @@ describe("EXPERIMENT: deleting the retired slots, against real Kairos state", fu
     expect(await idrp.frozen(alice.address)).to.equal(true);
   });
 
-  it("WITHOUT initializeV4: slot 9 stays orphaned and the NEXT variable inherits it", async function () {
-    // This is the real cost of deleting rather than reserving. Nothing reads
-    // slot 9 any more, so it keeps the retired address forever, and the first
-    // storage variable anyone appends lands exactly there.
-    expect(await hre.ethers.provider.getStorage(IDRP_PROXY, 9)).to.equal(LIVE_SLOT_9);
-
-    await upgradeTo("IDRPNextVarProbeMock");
-    const probe = await hre.ethers.getContractAt("IDRPNextVarProbeMock", IDRP_PROXY);
-    const inherited = await probe.nextFeatureSlot();
-    console.log(`    a newly appended address variable reads: ${inherited}`);
-
-    expect(
-      inherited,
-      "the next appended variable did NOT inherit the orphan — re-check the layout"
-    ).to.equal(RETIRED_DESTINATION);
-  });
-
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // The same chain, migrated properly.
-  // ─────────────────────────────────────────────────────────────────────────
-
-  it("WITH initializeV4: the orphan is scrubbed and the next variable starts clean", async function () {
-    // Re-fork so this starts from live Kairos again, not from what the previous
-    // test left behind.
-    const rpcUrl = process.env.KAIROS_FORK_RPC_URL!;
-    const probeProvider = new hre.ethers.JsonRpcProvider(rpcUrl);
-    const blockNumber = (await probeProvider.getBlockNumber()) - 5;
-    probeProvider.destroy();
-    await hre.network.provider.request({
-      method: "hardhat_reset",
-      params: [{ forking: { jsonRpcUrl: rpcUrl, blockNumber } }],
-    });
-    await hre.network.provider.send("hardhat_setBalance", [
-      UPGRADER,
-      "0x" + (10n ** 20n).toString(16),
-    ]);
-    await hre.network.provider.send("hardhat_impersonateAccount", [UPGRADER]);
-
-    // Sanity: back on the dirty state.
-    expect(await hre.ethers.provider.getStorage(IDRP_PROXY, 9)).to.equal(LIVE_SLOT_9);
-
-    // Upgrade straight to the probe, calling initializeV4 as the upgrade's own
-    // data so the scrub is ATOMIC with the implementation swap — there is no
-    // block in which new code runs over un-scrubbed storage.
-    const upgrader = await hre.ethers.getImpersonatedSigner(UPGRADER);
-    const idrp = (await hre.ethers.getContractAt("IDRP", IDRP_PROXY)).connect(upgrader) as any;
-    const Factory = await hre.ethers.getContractFactory("IDRPNextVarProbeMock", upgrader);
-    const impl = await Factory.deploy();
-    await impl.waitForDeployment();
-    const addr = await impl.getAddress();
-
-    await (await idrp.scheduleUpgrade(addr)).wait();
-    await hre.network.provider.send("evm_increaseTime", [
-      Number(await idrp.UPGRADE_DELAY()) + 1,
-    ]);
-    await hre.network.provider.send("evm_mine");
-
-    const initData = Factory.interface.encodeFunctionData("initializeV4", []);
-    await (await idrp.upgradeToAndCall(addr, initData)).wait();
-
-    // The retired slots are gone.
-    expect(await hre.ethers.provider.getStorage(IDRP_PROXY, 9)).to.equal(hre.ethers.ZeroHash);
-    expect(await hre.ethers.provider.getStorage(IDRP_PROXY, 10)).to.equal(hre.ethers.ZeroHash);
-    expect(await hre.ethers.provider.getStorage(IDRP_PROXY, 11)).to.equal(hre.ethers.ZeroHash);
-
-    // The next appended variable now starts at zero instead of inheriting.
-    const probe = await hre.ethers.getContractAt("IDRPNextVarProbeMock", IDRP_PROXY);
-    expect(await probe.nextFeatureSlot()).to.equal(hre.ethers.ZeroAddress);
-
-    // Nothing else moved, and the freeze gate still holds over scrubbed slots.
-    const live = await hre.ethers.getContractAt("IDRP", IDRP_PROXY);
-    expect(await live.controller()).to.equal(controllerAddress);
-    const depository = await live.depositoryWallet();
-    expect(depository).to.not.equal(hre.ethers.ZeroAddress);
-
-    const [, , alice, bob] = await hre.ethers.getSigners();
-    for (const a of [depository, controllerAddress]) {
-      await hre.network.provider.send("hardhat_setBalance", [a, "0x" + (10n ** 20n).toString(16)]);
-    }
-    const dep = await hre.ethers.getImpersonatedSigner(depository);
-    await (await live.connect(dep).transfer(alice.address, 1_000_000n)).wait();
-    const ctrl = await hre.ethers.getImpersonatedSigner(controllerAddress);
-    await (await live.connect(ctrl).freeze(alice.address)).wait();
-    await expect(
-      live.connect(alice).transfer(bob.address, 1n)
-    ).to.be.revertedWithCustomError(live, "FrozenAccount");
-  });
-
-  it("cannot be replayed by anyone once the upgrade has run it", async function () {
-    // Note the modifier order: `reinitializer(4)` runs BEFORE `onlyUpgrader`, so
-    // once the migration has happened EVERY caller — upgrader included — is
-    // turned away by InvalidInitialization rather than by the role check. That
-    // is the stronger guarantee of the two, and it is why the scrub cannot be
-    // re-run to zero a slot some future feature is legitimately using.
-    const idrp = await hre.ethers.getContractAt("IDRPNextVarProbeMock", IDRP_PROXY);
-    const [outsider] = await hre.ethers.getSigners();
-    const upgrader = await hre.ethers.getImpersonatedSigner(UPGRADER);
-
-    for (const who of [outsider, upgrader]) {
-      await expect(
-        (idrp.connect(who) as any).initializeV4()
-      ).to.be.revertedWithCustomError(idrp, "InvalidInitialization");
-    }
-  });
-
-  it("gates initializeV4 on the upgrader on a chain that has not migrated yet", async function () {
-    // The role check, exercised where it is actually reachable: a fresh proxy
-    // where reinitializer(4) has not yet consumed its slot.
-    const [deployer, outsider] = await hre.ethers.getSigners();
-    const Factory = await hre.ethers.getContractFactory("IDRP");
-    const fresh = await hre.upgrades.deployProxy(Factory, [deployer.address], {
-      unsafeAllow: ["missing-initializer-call"],
-    });
-    await fresh.waitForDeployment();
-
-    await expect(
-      (fresh.connect(outsider) as any).initializeV4()
-    ).to.be.revertedWithCustomError(fresh, "NotUpgrader");
-
-    // And the upgrader may run it — a no-op here, since these slots are already
-    // zero on a chain that never ran the retired design.
-    await expect((fresh.connect(deployer) as any).initializeV4())
-      .to.emit(fresh, "RetiredConfiscationStorageCleared");
-  });
 });

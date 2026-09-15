@@ -17,7 +17,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
  *    working. The earlier fear that it would read `0xcb` as `true` was wrong.
  *  - The real hazard is the ORPHAN: slot 9 keeps holding the retired address,
  *    unreferenced, so the next variable appended to this contract would read it
- *    as an initial value. `initializeV4` scrubs it during the upgrade.
+ *    as an initial value. Every live proxy reads zero there, checked on-chain.
  *
  * These tests pin both halves so neither can regress silently.
  */
@@ -89,8 +89,8 @@ describe("Confiscate — storage layout after the destination wallet was removed
     }
     const maxSlot = Math.max(...layout.storage.map((v: any) => Number(v.slot)))
     // Slot 9 is `confiscationWallet` again — the retired destination slot, reused
-    // deliberately after it was scrubbed. The next appended variable lands on 10,
-    // which `initializeV4` still clears, so it too starts from zero.
+    // deliberately after every chain was confirmed zero there. The next appended
+    // variable lands on 10, which also reads zero on all six live proxies.
     expect(maxSlot, "the next appended variable must land on slot 10").to.equal(9)
   })
 
@@ -127,27 +127,6 @@ describe("Confiscate — storage layout after the destination wallet was removed
 
     await idrp.connect(alice).transfer(bob.address, idrp6("1"))
     expect(await idrp.balanceOf(bob.address)).to.equal(idrp6("1"))
-  })
-
-  it("initializeV4 scrubs the retired slots so the next variable starts clean", async function () {
-    const { idrp, admin } = await frozenFixture()
-    const proxy = await idrp.getAddress()
-    for (const [slot, word] of [
-      ["0x9", KAIROS_SLOT_9],
-      ["0xa", "0x" + "0".repeat(60) + "dead"],
-      ["0xb", "0x" + "0".repeat(56) + "deadbeef"],
-    ] as const) {
-      await hre.network.provider.send("hardhat_setStorageAt", [proxy, slot, word])
-    }
-
-    await expect((idrp.connect(admin) as any).initializeV4()).to.emit(
-      idrp,
-      "RetiredConfiscationStorageCleared",
-    )
-
-    for (const slot of [9, 10, 11]) {
-      expect(await hre.ethers.provider.getStorage(proxy, slot)).to.equal(hre.ethers.ZeroHash)
-    }
   })
 
   it("no longer exposes the retired getters", async function () {

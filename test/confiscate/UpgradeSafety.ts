@@ -71,10 +71,11 @@ describe("Confiscate — upgrade safety", function () {
     // rather than reserved, `_inConfiscation` would sit at byte 0, read 0xcb as
     // true, and this transfer would succeed.
     //
-    // Slot 9 is `confiscationWallet` again, so this test now carries a second
-    // job: a proxy upgraded onto that layout INHERITS the old design's
-    // destination address as its seizure destination. That is why initializeV4
-    // clears it — asserted below, both before and after.
+    // Slot 9 is `confiscationWallet` again, so this test carries a second job:
+    // it shows that a proxy upgraded with that word dirty INHERITS the old
+    // design's address as its seizure destination. No real chain is in that
+    // state — all six EVM proxies read zero there — which is why the scrubber
+    // was removed and a post-upgrade check replaced it.
     const [admin, depository, alice, bob] = await hre.ethers.getSigners();
     const IDRPFactory = await hre.ethers.getContractFactory("IDRP");
 
@@ -111,26 +112,18 @@ describe("Confiscate — upgrade safety", function () {
       upgraded.connect(alice).transfer(bob.address, idrp6("1"))
     ).to.be.revertedWithCustomError(upgraded, "FrozenAccount");
 
-    // THE INHERITANCE. Before initializeV4 runs, the stale word IS the live
-    // destination — a seizure now would pay into the retired design's wallet.
+    // THE INHERITANCE, stated plainly. Slot 9 is `confiscationWallet`, so a proxy
+    // upgraded with that word dirty carries the retired design's address as its live
+    // seizure destination. There is no on-chain scrubber any more — initializeV4 was
+    // removed because every real chain already reads zero here — so the protection is
+    // the post-upgrade check instead: confiscationWallet() MUST read zero, and if it
+    // does not, the chain was not in the state the upgrade assumed.
     expect(
       (await upgraded.confiscationWallet()).toLowerCase(),
-      "the upgraded proxy should still be carrying the stale destination here"
+      "a dirty slot 9 is inherited as the destination — this is what the post-upgrade check catches"
     ).to.equal("0x" + KAIROS_SLOT_9.slice(26));
 
-    // initializeV4 clears it through the variable, so the proxy lands in the
-    // documented starting state: no destination, seizures revert until chosen.
-    await upgraded.connect(admin).initializeV4();
-    expect(
-      await upgraded.confiscationWallet(),
-      "initializeV4 must clear the inherited destination"
-    ).to.equal(hre.ethers.ZeroAddress);
-    expect(await hre.ethers.provider.getStorage(proxyAddress, 9)).to.equal(hre.ethers.ZeroHash);
-    await expect(
-      upgraded.connect(admin).confiscate(alice.address, idrp6("1000"))
-    ).to.be.revertedWith("Confiscation wallet not set");
-
-    // Choose one, and a seizure works normally.
+    // Admin can correct it in one transaction; there is no timelock on the destination.
     await upgraded.connect(admin).setConfiscationWallet(depository.address);
     await upgraded.connect(admin).confiscate(alice.address, idrp6("1000"));
     expect(await upgraded.balanceOf(depository.address)).to.equal(idrp6("1000"));

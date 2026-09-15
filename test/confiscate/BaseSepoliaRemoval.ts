@@ -7,7 +7,7 @@ import { expect } from "chai";
  * Base Sepolia ran the placeholder variant but never applied a confiscation
  * wallet, so slots 9-11 are zero there. Kairos applied one, so its slot 9 holds
  * `0x…f1c508ce…c3cb`. That difference is the whole question: it decides whether
- * the removal needs `initializeV4` to scrub an orphan, or nothing at all.
+ * the removal needs an on-chain scrub, or nothing at all. It needed nothing.
  *
  * Run against the live OLD proxy on a fork, upgrading it the way a real upgrade
  * would — plain factory + upgradeToAndCall, which is how this repo's deploy
@@ -56,7 +56,7 @@ describe("Base Sepolia OLD token — removing the retired slots from a CLEAN pro
     });
   });
 
-  async function upgradeTo(name: string, withInitV4: boolean) {
+  async function upgradeTo(name: string) {
     const upgrader = await hre.ethers.getImpersonatedSigner(UPGRADER);
     const idrp = (await hre.ethers.getContractAt("IDRP", TOKEN)).connect(upgrader) as any;
     const Factory = await hre.ethers.getContractFactory(name, upgrader);
@@ -66,7 +66,7 @@ describe("Base Sepolia OLD token — removing the retired slots from a CLEAN pro
     await (await idrp.scheduleUpgrade(addr)).wait();
     await hre.network.provider.send("evm_increaseTime", [Number(await idrp.UPGRADE_DELAY()) + 1]);
     await hre.network.provider.send("evm_mine");
-    const data = withInitV4 ? Factory.interface.encodeFunctionData("initializeV4", []) : "0x";
+    const data = "0x";   // initializeV4 was removed; there is nothing to scrub
     await (await idrp.upgradeToAndCall(addr, data)).wait();
     return addr;
   }
@@ -86,11 +86,11 @@ describe("Base Sepolia OLD token — removing the retired slots from a CLEAN pro
     expect(await idrp.totalSupply()).to.be.greaterThan(0n);
   });
 
-  it("removes the slots with NO initializeV4 and keeps the freeze gate enforced", async function () {
+  it("removes the slots with no scrub at all and keeps the freeze gate enforced", async function () {
     // Deliberately passing "0x" — no scrub. On this chain there is nothing to
     // scrub, which is exactly the claim being tested.
     const supplyBefore = await (await hre.ethers.getContractAt("IDRP", TOKEN)).totalSupply();
-    await upgradeTo("IDRP", false);
+    await upgradeTo("IDRP");
 
     const idrp = await hre.ethers.getContractAt("IDRP", TOKEN);
     const [, , alice, bob] = await hre.ethers.getSigners();
@@ -123,7 +123,7 @@ describe("Base Sepolia OLD token — removing the retired slots from a CLEAN pro
     // THE difference between the two chains. On Kairos this same probe reads back
     // 0xF1c508CE…C3CB; here it must read zero, because nothing was ever written
     // to slot 9. That is why Base Sepolia needs no scrub and Kairos does.
-    await upgradeTo("IDRPNextVarProbeMock", false);
+    await upgradeTo("IDRPNextVarProbeMock");
     const probe = await hre.ethers.getContractAt("IDRPNextVarProbeMock", TOKEN);
     const inherited = await probe.nextFeatureSlot();
     console.log(`    newly appended address variable reads: ${inherited}`);
