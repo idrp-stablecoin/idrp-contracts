@@ -130,8 +130,7 @@ contract IDRPControllerTronUups is
     mapping(OperationType => PendingQuorum) private pendingQuorumRules;
 
     // v3 admin lives in ACDAR's ERC-7201 namespace (no sequential slot).
-    // Initialised by `initializeV3` with revoke-then-init ordering — see
-    // docs/design/no-defaultadmin-leftbehind.md §3.
+    // Initialised by `initializeV3`, revoking legacy holders before init.
     // Initial admin transfer delay (passed to ACDAR's __init):
     uint48 public constant DEFAULT_ADMIN_DELAY = 48 hours;
 
@@ -231,8 +230,8 @@ contract IDRPControllerTronUups is
     }
 
     /// @notice One-time migration to the v3 (ACDAR) authority model.
-    /// @dev Order is critical and pins the safety property documented in
-    ///      docs/design/no-defaultadmin-leftbehind.md §3:
+    /// @dev Order is critical, and pins this safety property: no legacy
+    ///      DEFAULT_ADMIN_ROLE holder survives the migration.
     ///        1. Revoke EVERY legacy DEFAULT_ADMIN_ROLE holder via the
     ///           inherited AccessControl machinery, BEFORE ACDAR is initialised.
     ///           At this point ACDAR's `defaultAdmin()` slot is still zero, so

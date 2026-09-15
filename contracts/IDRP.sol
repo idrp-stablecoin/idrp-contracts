@@ -126,21 +126,10 @@ contract IDRP is
     ///      single external call and is not readable between transactions.
     bool private _inConfiscation;
 
-    /// @notice Where `confiscate` sends seized funds.
-    /// @dev Deliberately separate from `depositoryWallet`: the depository backs
-    ///      circulating supply and is covered by reserve attestation, while seized
-    ///      funds are third-party custody pending legal direction. Keeping them in
-    ///      one wallet forces every attestation to net seizures out and makes any
-    ///      confiscation dispute reach into the reserve account.
-    ///
-    ///      DECLARED LAST ON PURPOSE. Appending is what keeps every live slot where
-    ///      it already is; inserting this next to `depositoryWallet`, where it reads
-    ///      better, would shift `maxSupply` and everything after it on eight
-    ///      deployed proxies. Verified against the compiler's storageLayout, and the
-    ///      word this lands on reads zero on every proxy.
-    ///
-    ///      Its setter is NOT timelocked — see
-    ///      docs/design/confiscation-wallet-no-timelock.md.
+    /// @notice Where `confiscate` sends seized funds. Kept separate from
+    ///         `depositoryWallet` so seized funds never mix with the reserve that
+    ///         backs circulating supply.
+    /// @dev Declared last so that adding it moves no existing slot.
     address public confiscationWallet;
 
     /// @dev Events
@@ -482,15 +471,8 @@ contract IDRP is
     }
 
     /// @notice Set the wallet that `confiscate` sends seized funds to.
-    /// @dev NOT behind the 48h timelock — by design, and for the same reason
-    ///      `setSanctionsList` is not. This address routes a seizure; it cannot
-    ///      authorise one, because `confiscate` is `onlyController` and the Confiscate
-    ///      quorum is pinned to a single tier requiring all four roles. If these keys
-    ///      are ever compromised the right response is to repoint in one transaction,
-    ///      whereas a 48h delay would mean two days of paying approved seizures into a
-    ///      wallet known to be compromised. Full argument, including the mainnet
-    ///      `admin` custody precondition that this relies on:
-    ///      docs/design/confiscation-wallet-no-timelock.md
+    /// @dev No timelock, by design: this routes a seizure but cannot authorise one,
+    ///      and a compromised destination has to be replaceable in one transaction.
     function setConfiscationWallet(address wallet) external onlyAdmin {
         require(wallet != address(0), "Invalid wallet address");
         require(wallet != confiscationWallet, "Same wallet");
