@@ -75,7 +75,14 @@ contract IDRPController is
     // Mapping of operation types to their quorum rules
     mapping(OperationType => QuorumRule[]) public quorumRules;
 
-    // Mapping to track used signatures
+    // Spent-once records. Two kinds of key live here, and both mean "this must
+    // never execute again":
+    //   1. an EIP-712 digest  — that exact approval has been submitted;
+    //   2. keccak256(bytes(operationIdentifier)) — that operation has run.
+    // The second is what stops a re-opened request from executing twice: a new
+    // deadline produces a new digest, so key 1 alone never sees it. The digest
+    // is a hash over a domain-separated struct and the identifier key is a hash
+    // of a short string, so the two key spaces cannot practically collide.
     mapping(bytes32 => bool) public usedSignatures;
 
     // Domain separator for EIP-712
@@ -431,6 +438,15 @@ contract IDRPController is
             require(to != address(0), "Invalid target address");
         }
 
+        // One execution per identifier, whatever the deadline or the parameters
+        // signed alongside it. A reset re-opens the same identifier with a new
+        // deadline, which is legitimate until the operation has actually run.
+        bytes32 operationIdKey = keccak256(bytes(operationIdentifier));
+        require(
+            !usedSignatures[operationIdKey],
+            "Operation identifier already used"
+        );
+
         // Get the appropriate quorum rule for this operation and amount
         QuorumRule memory rule = getQuorumRule(operationType, amount);
 
@@ -452,6 +468,7 @@ contract IDRPController is
 
         // Mark operation hash as used to prevent replay
         usedSignatures[operationHash] = true;
+        usedSignatures[operationIdKey] = true;
 
         // Execute the operation
         if (operationType == OperationType.Mint) {
@@ -545,6 +562,15 @@ contract IDRPController is
         }
 
         revert("No matching quorum rule found");
+    }
+
+    // Has this identifier already executed? The dashboard calls this before it
+    // re-opens a signature request, so signers are never asked to approve an
+    // operation that has already run.
+    function isOperationIdentifierUsed(
+        string calldata operationIdentifier
+    ) external view returns (bool) {
+        return usedSignatures[keccak256(bytes(operationIdentifier))];
     }
 
     // Helper to get the EIP-712 hash for an operation - updated to use operationIdentifier
