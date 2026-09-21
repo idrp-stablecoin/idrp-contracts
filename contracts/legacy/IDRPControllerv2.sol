@@ -425,8 +425,11 @@ contract IDRPControllerv2 is
         revert("No matching quorum rule found");
     }
 
-    // Has this operation already executed? One call, both records, in the order
-    // they became authoritative.
+    /// @notice Whether this operation has executed, under either replay key.
+    /// @dev    Two keys exist: the identifier, used from this version on, and
+    ///         the EIP-712 digest, used by everything that ran before it. A
+    ///         caller holding the executeOperation arguments can ask once
+    ///         rather than rebuild the digest itself.
     function isOperationExecuted(
         address to,
         uint8 operationType,
@@ -434,9 +437,9 @@ contract IDRPControllerv2 is
         string calldata operationIdentifier,
         uint256 deadline
     ) external view returns (bool) {
-        // 1. Current scheme: the identifier, consumed once whatever the deadline.
+        // current key
         if (usedSignatures[keccak256(bytes(operationIdentifier))]) return true;
-        // 2. Previous scheme: the digest of the exact approval that was signed.
+        // pre-upgrade key
         return
             usedSignatures[
                 getOperationHash(
