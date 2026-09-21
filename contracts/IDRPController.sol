@@ -576,6 +576,30 @@ contract IDRPController is
         return usedSignatures[keccak256(bytes(operationIdentifier))];
     }
 
+    // Has this operation already executed? One call, both records, in the order
+    // they became authoritative.
+    function isOperationExecuted(
+        address to,
+        uint8 operationType,
+        uint256 amount,
+        string calldata operationIdentifier,
+        uint256 deadline
+    ) external view returns (bool) {
+        // 1. Current scheme: the identifier, consumed once whatever the deadline.
+        if (usedSignatures[keccak256(bytes(operationIdentifier))]) return true;
+        // 2. Previous scheme: the digest of the exact approval that was signed.
+        return
+            usedSignatures[
+                getOperationHash(
+                    to,
+                    operationType,
+                    amount,
+                    operationIdentifier,
+                    deadline
+                )
+            ];
+    }
+
     // Helper to get the EIP-712 hash for an operation - updated to use operationIdentifier
     function getOperationHash(
         address to,

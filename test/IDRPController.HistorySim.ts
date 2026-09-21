@@ -240,6 +240,82 @@ describe("IDRPController - pre/post upgrade history simulation", function () {
     ).to.deep.equal({ executed: true, via: "identifier" });
   });
 
+  it("isOperationExecuted answers for both records in one call", async function () {
+    const { controller, officer, domain, types } = await loadFixture(
+      deployFixture
+    );
+
+    const amount = hre.ethers.parseUnits("1000", 6);
+    const deadline = BigInt((await time.latest()) + 3600);
+    const args = [
+      hre.ethers.ZeroAddress,
+      OperationType.Mint,
+      amount,
+      "",
+      deadline,
+    ] as const;
+
+    // An old record: only the digest is set, as the previous scheme left it.
+    const legacyId = "legacy-only-digest";
+    const digest = await controller.getOperationHash(
+      hre.ethers.ZeroAddress,
+      OperationType.Mint,
+      amount,
+      legacyId,
+      deadline
+    );
+    await markUsedPreUpgrade(controller, digest);
+    expect(await controller.isOperationIdentifierUsed(legacyId)).to.equal(false);
+    expect(
+      await controller.isOperationExecuted(
+        args[0],
+        args[1],
+        args[2],
+        legacyId,
+        args[4]
+      )
+    ).to.equal(true);
+
+    // A current record: only the identifier is set.
+    const currentId = "current-only-identifier";
+    await controller.executeOperation(
+      OperationType.Mint,
+      hre.ethers.ZeroAddress,
+      amount,
+      currentId,
+      deadline,
+      [
+        await officer.signTypedData(domain, types, {
+          to: hre.ethers.ZeroAddress,
+          operationType: OperationType.Mint,
+          amount,
+          operationIdentifier: currentId,
+          deadline,
+        }),
+      ]
+    );
+    expect(
+      await controller.isOperationExecuted(
+        args[0],
+        args[1],
+        args[2],
+        currentId,
+        args[4]
+      )
+    ).to.equal(true);
+
+    // And false for an operation that never ran.
+    expect(
+      await controller.isOperationExecuted(
+        args[0],
+        args[1],
+        args[2],
+        "never-ran",
+        args[4]
+      )
+    ).to.equal(false);
+  });
+
   it("uniqueness is by identifier alone, not by the arguments beside it", async function () {
     const { controller, officer, domain, types } = await loadFixture(
       deployFixture
