@@ -397,29 +397,21 @@ describe("IDRPController - identifier guard edges", function () {
     expect(await controller.isOperationIdentifierUsed("op-42")).to.equal(true);
   });
 
-  it("accepts an empty identifier — and then burns it forever", async function () {
+  it("refuses an empty identifier outright", async function () {
     const { controller, officer, sign } = await loadFixture(deployFixture);
 
     const deadline = (await time.latest()) + 3600;
-    const op = (operationIdentifier: string) => ({
+    const op = {
       to: hre.ethers.ZeroAddress,
       operationType: OperationType.Mint,
       amount: MILLION,
-      operationIdentifier,
+      operationIdentifier: "",
       deadline,
-    });
+    };
 
-    await controller.executeOperation(
-      OperationType.Mint,
-      hre.ethers.ZeroAddress,
-      MILLION,
-      "",
-      deadline,
-      [await sign(officer, op(""))]
-    );
-
-    // Nothing rejects an empty identifier, so the FIRST caller to send one
-    // consumes it for good and every later empty-identifier operation fails.
+    // An empty identifier identifies nothing, and one execution would consume
+    // keccak("") for good — every later empty-identifier operation would then
+    // revert. Polygon carries two such executions from before this guard.
     await expect(
       controller.executeOperation(
         OperationType.Mint,
@@ -427,9 +419,11 @@ describe("IDRPController - identifier guard edges", function () {
         MILLION,
         "",
         deadline,
-        [await sign(officer, op(""))]
+        [await sign(officer, op)]
       )
-    ).to.be.revertedWith("Operation identifier already used");
+    ).to.be.revertedWith("Operation identifier required");
+
+    expect(await controller.isOperationIdentifierUsed("")).to.equal(false);
   });
 
   // ── What the contract cannot see ─────────────────────────────────────────
