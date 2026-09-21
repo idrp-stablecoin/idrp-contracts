@@ -149,7 +149,7 @@ describe("IDRPController - Operation Tests", function () {
           secondOperation.deadline,
           [signatureForSecond]
         )
-      ).to.be.revertedWith("Operation hash already used");
+      ).to.be.revertedWith("Operation identifier already used");
     });
   });
 });

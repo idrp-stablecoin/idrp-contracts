@@ -160,7 +160,7 @@ describe("[0526 SC-04] IDRPController.executeOperation — signature replay", fu
       controller
         .connect(officer)
         .executeOperation(op.operationType, op.to, op.amount, op.operationIdentifier, op.deadline, [officerSig])
-    ).to.be.revertedWith("Operation hash already used");
+    ).to.be.revertedWith("Operation identifier already used");
 
     // And no second mint happened.
     expect(await idrp.balanceOf(depository.address)).to.equal(amount);
@@ -191,7 +191,7 @@ describe("[0526 SC-04] IDRPController.executeOperation — signature replay", fu
       controller
         .connect(officer)
         .executeOperation(op.operationType, op.to, op.amount, op.operationIdentifier, op.deadline, [sig2])
-    ).to.be.revertedWith("Operation hash already used");
+    ).to.be.revertedWith("Operation identifier already used");
 
     expect(await idrp.balanceOf(depository.address)).to.equal(amount);
   });
@@ -315,6 +315,6 @@ describe("[0526 SC-04] IDRPController.executeOperation — signature replay", fu
       controller
         .connect(officer)
         .executeOperation(op.operationType, op.to, op.amount, op.operationIdentifier, op.deadline, sigs)
-    ).to.be.revertedWith("Operation hash already used");
+    ).to.be.revertedWith("Operation identifier already used");
   });
 });
