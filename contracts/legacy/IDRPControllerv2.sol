@@ -69,7 +69,7 @@ contract IDRPControllerv2 is
     bytes32 public constant COMMISSIONER_ROLE = keccak256("COMMISSIONER_ROLE");
 
     address public idrpToken;
-    // @dev Deprecated: nonce is no longer used. Replay protection is via usedSignatures[operationHash].
+    // @dev Deprecated: nonce is no longer used. Replay protection is by operation identifier.
     uint256 public nonce;
 
     // Operation types
@@ -93,6 +93,14 @@ contract IDRPControllerv2 is
     mapping(OperationType => QuorumRule[]) public quorumRules;
 
     // Mapping to track used signatures
+    // Executed-once records, keyed by keccak256(bytes(operationIdentifier)).
+    //
+    // A proxy that predates this version also holds EIP-712 digests here,
+    // written by the previous scheme, and those entries are kept: they are the
+    // only on-chain proof that an earlier operation ran. Nothing adds a digest
+    // any more. A digest covers the deadline, so re-signing one identifier under
+    // a later deadline produced a key that had never been seen — which is the
+    // hole the identifier key closes.
     mapping(bytes32 => bool) public usedSignatures;
 
     // Domain separator for EIP-712
@@ -292,6 +300,15 @@ contract IDRPControllerv2 is
             require(to != address(0), "Invalid target address");
         }
 
+        // One execution per identifier, whatever the deadline or the parameters
+        // signed alongside it. Re-opening a request keeps the identifier, which
+        // is legitimate until the operation has actually run.
+        bytes32 operationIdKey = keccak256(bytes(operationIdentifier));
+        require(
+            !usedSignatures[operationIdKey],
+            "Operation identifier already used"
+        );
+
         // Get the appropriate quorum rule for this operation and amount
         QuorumRule memory rule = getQuorumRule(operationType, amount);
 
@@ -311,8 +328,10 @@ contract IDRPControllerv2 is
             verifySignatures(operationHash, rule.requiredRoles, signatures);
         }
 
-        // Mark operation hash as used to prevent replay
-        usedSignatures[operationHash] = true;
+        // Mark the operation as executed. The identifier is the whole key: the
+        // digest is not recorded any more, because a repeated digest implies a
+        // repeated identifier, which the check above has already refused.
+        usedSignatures[operationIdKey] = true;
 
         // Execute the operation
         if (operationType == OperationType.Mint) {
@@ -338,8 +357,6 @@ contract IDRPControllerv2 is
         bytes32 operationHash,
         bytes[] calldata signatures
     ) internal view {
-        require(!usedSignatures[operationHash], "Operation hash already used");
-
         bool hasOfficer = false;
         bool hasManager = false;
         bool hasDirector = false;
@@ -440,8 +457,6 @@ contract IDRPControllerv2 is
         bytes32[] memory requiredRoles,
         bytes[] calldata signatures
     ) internal view {
-        require(!usedSignatures[operationHash], "Operation hash already used");
-
         address[] memory usedSigners = new address[](requiredRoles.length);
         uint256 usedCount = 0;
 
