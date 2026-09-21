@@ -111,6 +111,42 @@ describe("IDRPController - operationIdentifier replay", function () {
     expect(await idrp.balanceOf(depository.address)).to.equal(amount);
   });
 
+  // The digest check used to sit inside signature verification. It is gone, so
+  // this pins the case it covered: an identical resubmission, same deadline and
+  // same signatures, still cannot execute twice.
+  it("rejects a byte-identical resubmission", async function () {
+    const { controller, officer, domain, types } = await loadFixture(
+      deployFixture
+    );
+
+    const identifier = "identical-resubmission";
+    const amount = hre.ethers.parseUnits("250", 6);
+    const deadline = (await time.latest()) + 3600;
+
+    const signature = await officer.signTypedData(domain, types, {
+      to: hre.ethers.ZeroAddress,
+      operationType: OperationType.Mint,
+      amount,
+      operationIdentifier: identifier,
+      deadline,
+    });
+
+    const submit = () =>
+      controller.executeOperation(
+        OperationType.Mint,
+        hre.ethers.ZeroAddress,
+        amount,
+        identifier,
+        deadline,
+        [signature]
+      );
+
+    await submit();
+    await expect(submit()).to.be.revertedWith(
+      "Operation identifier already used"
+    );
+  });
+
   // Same identifier, different operation: still one execution only. A reset
   // that changes the amount must not become a second mint either.
   it("rejects reuse of an identifier even when the operation differs", async function () {

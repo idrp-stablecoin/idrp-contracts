@@ -204,7 +204,9 @@ describe("IDRPController - pre/post upgrade history simulation", function () {
       [await sign(firstDeadline)]
     );
 
-    // Both records are now present: the approval AND the operation.
+    // The identifier is recorded; the digest deliberately is NOT. Anything that
+    // looks an operation up by digest will find nothing from here on, which is
+    // why the pre-check asks by identifier first.
     const digest = await controller.getOperationHash(
       hre.ethers.ZeroAddress,
       OperationType.Mint,
@@ -212,7 +214,7 @@ describe("IDRPController - pre/post upgrade history simulation", function () {
       id,
       firstDeadline
     );
-    expect(await controller.usedSignatures(digest)).to.equal(true);
+    expect(await controller.usedSignatures(digest)).to.equal(false);
     expect(await controller.isOperationIdentifierUsed(id)).to.equal(true);
 
     // The failing move — new deadline, fresh signature — is now refused.
