@@ -300,6 +300,13 @@ contract IDRPControllerv2 is
             require(to != address(0), "Invalid target address");
         }
 
+        // An empty identifier identifies nothing, and consuming it would burn
+        // the key for every later caller.
+        require(
+            bytes(operationIdentifier).length > 0,
+            "Operation identifier required"
+        );
+
         // One execution per identifier, whatever the deadline or the parameters
         // signed alongside it. Re-opening a request keeps the identifier, which
         // is legitimate until the operation has actually run.
