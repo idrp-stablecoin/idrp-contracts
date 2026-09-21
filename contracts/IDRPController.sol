@@ -588,9 +588,7 @@ contract IDRPController is
         string calldata operationIdentifier,
         uint256 deadline
     ) external view returns (bool) {
-        // current key
         if (usedSignatures[keccak256(bytes(operationIdentifier))]) return true;
-        // pre-upgrade key
         return
             usedSignatures[
                 getOperationHash(
