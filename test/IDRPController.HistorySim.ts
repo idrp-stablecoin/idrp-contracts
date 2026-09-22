@@ -240,6 +240,50 @@ describe("IDRPController - pre/post upgrade history simulation", function () {
     ).to.deep.equal({ executed: true, via: "identifier" });
   });
 
+  // The window the digest check exists for: an operation that executed BEFORE the
+  // upgrade, whose signatures are still inside their deadline afterwards. Its
+  // identifier was never keyed, so only the digest can refuse it.
+  it("refuses a pre-upgrade operation replayed with its original signatures", async function () {
+    const { controller, officer, domain, types } = await loadFixture(
+      deployFixture
+    );
+
+    const id = "signed-before-the-upgrade";
+    const amount = hre.ethers.parseUnits("1000", 6);
+    const deadline = BigInt((await time.latest()) + 3600);
+
+    const signature = await officer.signTypedData(domain, types, {
+      to: hre.ethers.ZeroAddress,
+      operationType: OperationType.Mint,
+      amount,
+      operationIdentifier: id,
+      deadline,
+    });
+
+    // It ran under the old scheme: digest recorded, identifier never keyed.
+    const digest = await controller.getOperationHash(
+      hre.ethers.ZeroAddress,
+      OperationType.Mint,
+      amount,
+      id,
+      deadline
+    );
+    await markUsedPreUpgrade(controller, digest);
+    expect(await controller.isOperationIdentifierUsed(id)).to.equal(false);
+
+    // The same signatures, still inside their deadline, must not execute again.
+    await expect(
+      controller.executeOperation(
+        OperationType.Mint,
+        hre.ethers.ZeroAddress,
+        amount,
+        id,
+        deadline,
+        [signature]
+      )
+    ).to.be.revertedWith("Operation already executed");
+  });
+
   it("isOperationExecuted answers for both records in one call", async function () {
     const { controller, officer, domain, types } = await loadFixture(
       deployFixture

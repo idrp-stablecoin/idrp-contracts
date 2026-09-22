@@ -466,6 +466,12 @@ contract IDRPController is
             deadline
         );
 
+        // Operations executed under the previous scheme are recorded by digest
+        // and carry no identifier key, so the check above cannot see them. Their
+        // signatures stay submittable until their deadline passes, which is why
+        // this stays: it closes that window without recording anything new.
+        require(!usedSignatures[operationHash], "Operation already executed");
+
         // Verify signatures based on operation type
         if (operationType == OperationType.Unpause) {
             verifyUnpauseSignatures(operationHash, signatures);
@@ -473,9 +479,9 @@ contract IDRPController is
             verifySignatures(operationHash, rule.requiredRoles, signatures);
         }
 
-        // Mark the operation as executed. The identifier is the whole key: the
-        // digest is not recorded any more, because a repeated digest implies a
-        // repeated identifier, which the check above has already refused.
+        // Mark the operation as executed. Only the identifier is recorded: a
+        // repeated digest implies a repeated identifier, so writing both would
+        // pay twice for one fact.
         usedSignatures[operationIdKey] = true;
 
         // Execute the operation
