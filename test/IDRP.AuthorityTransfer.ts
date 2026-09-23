@@ -2,6 +2,7 @@ import hre from "hardhat";
 import { expect } from "chai";
 import {
   loadFixture,
+  takeSnapshot,
   time,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
@@ -18,6 +19,16 @@ import {
 describe("IDRP authority handover (admin + upgrader)", function () {
   const DELAY = 48n * 60n * 60n; // 172800, UPGRADE_DELAY on the canonical build
   const ZERO = hre.ethers.ZeroAddress;
+
+  // These tests move the chain clock by days. Put it back afterwards: suites
+  // that run later build their deadlines from wall-clock time.
+  let untouched: Awaited<ReturnType<typeof takeSnapshot>>;
+  before(async () => {
+    untouched = await takeSnapshot();
+  });
+  after(async () => {
+    await untouched.restore();
+  });
 
   // ERC-7201 location of the handover state, derived here independently of the
   // contract: keccak256(abi.encode(uint256(keccak256(id)) - 1)) & ~0xff

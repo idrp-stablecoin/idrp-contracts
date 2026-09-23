@@ -30,6 +30,15 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
+      // EDR ships hardfork schedules only for well-known chains. Forking these
+      // without one fails to EXECUTE any call ("No known hardfork for execution
+      // on historical block ...") even though storage reads work. Inert unless
+      // a fork is started (test/upgrade/ForkUpgradeRehearsal.ts).
+      chains: {
+        56: { hardforkHistory: { cancun: 0 } }, // BSC
+        137: { hardforkHistory: { cancun: 0 } }, // Polygon
+        8217: { hardforkHistory: { cancun: 0 } }, // Kaia
+      },
     },
     holesky: {
       chainId: 17000,
