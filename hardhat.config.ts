@@ -30,14 +30,22 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
+      // A fork keeps hardhat's own chain id (31337) unless told otherwise, and
+      // OZ 5's EIP712 derives DOMAIN_SEPARATOR from block.chainid on every call.
+      // Fork rehearsals set HARDHAT_CHAIN_ID to the forked chain's id.
+      ...(process.env.HARDHAT_CHAIN_ID
+        ? { chainId: Number(process.env.HARDHAT_CHAIN_ID) }
+        : {}),
       // EDR ships hardfork schedules only for well-known chains. Forking these
       // without one fails to EXECUTE any call ("No known hardfork for execution
       // on historical block ...") even though storage reads work. Inert unless
       // a fork is started (test/upgrade/ForkUpgradeRehearsal.ts).
       chains: {
-        56: { hardforkHistory: { cancun: 0 } }, // BSC
-        137: { hardforkHistory: { cancun: 0 } }, // Polygon
-        8217: { hardforkHistory: { cancun: 0 } }, // Kaia
+        // shanghai, not cancun: EDR then demands blob-gas header fields that
+        // Polygon and Kaia blocks do not carry. The contracts target paris.
+        56: { hardforkHistory: { shanghai: 0 } }, // BSC
+        137: { hardforkHistory: { shanghai: 0 } }, // Polygon
+        8217: { hardforkHistory: { shanghai: 0 } }, // Kaia
       },
     },
     holesky: {
