@@ -10,6 +10,7 @@ import {TronGaplessUUPSUpgradeable} from "./utils/TronGaplessUUPSUpgradeable.sol
 import {LegacyAccessControlSlots} from "./utils/LegacyAccessControlSlots.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @notice Minimal interface IDRP needs from a sanctions list. Matches the
 ///         Chainalysis SanctionsList ABI exactly so we can point at theirs on
@@ -35,6 +36,8 @@ contract IDRP is
     //   upgrader    — single-address slot for upgrade authority + 48h timelock.
     // No roles, no AccessControlUpgradeable. Migration from the v2 source
     // (`upgrader`-only) happens via `initializeV3` (reinitializer(3), onlyUpgrader).
+    // `admin` and `upgrader` change hands only through a delayed two-step
+    // handover: the admin begins it, UPGRADE_DELAY runs, the new holder accepts.
 
     /// @dev Preserved storage namespace of the removed AccessControlUpgradeable
     ///      parent. OZ Upgrades requires the namespace to remain declared so
@@ -101,6 +104,24 @@ contract IDRP is
     ///         reverts `ControllerNotSet` — operational methods are inert.
     address public controller;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Handover of `admin` and `upgrader`, modelled on OpenZeppelin's
+    // AccessControlDefaultAdminRules with a fixed delay (UPGRADE_DELAY). Kept in
+    // its own ERC-7201 namespace so the sequential layout above is unchanged.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// @custom:storage-location erc7201:idrp.storage.AuthorityTransfer
+    struct AuthorityTransferStorage {
+        address pendingAdmin;
+        uint48 pendingAdminSchedule; // 0 == unset
+        address pendingUpgrader;
+        uint48 pendingUpgraderSchedule; // 0 == unset
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("idrp.storage.AuthorityTransfer")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant AUTHORITY_TRANSFER_STORAGE_LOCATION =
+        0xd991add08b46b747ed6af6ef75a6adb683aeb97c062570389ee0117fb395ff00;
+
     /// @dev Events
     event AccountFrozen(address indexed account);
     event AccountUnfrozen(address indexed account);
@@ -130,6 +151,16 @@ contract IDRP is
         address indexed oldController,
         address indexed newController
     );
+    event AdminTransferScheduled(
+        address indexed newAdmin,
+        uint48 acceptSchedule
+    );
+    event AdminTransferCanceled();
+    event UpgraderTransferScheduled(
+        address indexed newUpgrader,
+        uint48 acceptSchedule
+    );
+    event UpgraderTransferCanceled();
 
     /// @dev Errors
     error FrozenAccount();
@@ -139,6 +170,9 @@ contract IDRP is
     error ControllerNotSet();
     error SanctionedSender(address sender);
     error SanctionedRecipient(address recipient);
+    error NotPendingAdmin(address account);
+    error NotPendingUpgrader(address account);
+    error TransferDelayNotPassed(uint48 schedule);
 
     /// @dev Modifiers
     modifier onlyUpgrader() {
@@ -208,20 +242,133 @@ contract IDRP is
         emit UpgraderUpdated(oldUpgrader, _upgrader);
     }
 
-    /// @notice Rotate the single upgrader address. Only `admin` (Safe) may rotate.
-    function setUpgrader(address _upgrader) external onlyAdmin {
-        require(_upgrader != address(0), "Invalid upgrader");
-        address oldUpgrader = upgrader;
-        upgrader = _upgrader;
-        emit UpgraderUpdated(oldUpgrader, _upgrader);
+    /// @notice The pending admin handover and the time after which it can be
+    ///         accepted. `(address(0), 0)` when none is pending.
+    function pendingAdmin()
+        public
+        view
+        returns (address newAdmin, uint48 schedule)
+    {
+        AuthorityTransferStorage storage $ = _getAuthorityTransferStorage();
+        return ($.pendingAdmin, $.pendingAdminSchedule);
     }
 
-    /// @notice Rotate the admin address. Only the current `admin` may rotate.
-    function setAdmin(address _admin) external onlyAdmin {
-        require(_admin != address(0), "Invalid admin");
+    /// @notice The pending upgrader handover and the time after which it can
+    ///         be accepted. `(address(0), 0)` when none is pending.
+    function pendingUpgrader()
+        public
+        view
+        returns (address newUpgrader, uint48 schedule)
+    {
+        AuthorityTransferStorage storage $ = _getAuthorityTransferStorage();
+        return ($.pendingUpgrader, $.pendingUpgraderSchedule);
+    }
+
+    /// @notice Start handing `admin` to `newAdmin`, who may accept once
+    ///         UPGRADE_DELAY has passed. Replaces any pending admin handover.
+    function beginAdminTransfer(address newAdmin) external onlyAdmin {
+        require(newAdmin != address(0), "Invalid admin");
+        uint48 schedule = _transferSchedule();
+        _setPendingAdmin(newAdmin, schedule);
+        emit AdminTransferScheduled(newAdmin, schedule);
+    }
+
+    /// @notice Cancel the pending admin handover, if any.
+    function cancelAdminTransfer() external onlyAdmin {
+        _setPendingAdmin(address(0), 0);
+    }
+
+    /// @notice Complete the pending admin handover. Callable only by the
+    ///         pending admin, and only after its schedule has passed.
+    function acceptAdminTransfer() external {
+        (address newAdmin, uint48 schedule) = pendingAdmin();
+        if (_msgSender() != newAdmin) revert NotPendingAdmin(_msgSender());
+        if (!_isScheduleSet(schedule) || !_hasSchedulePassed(schedule)) {
+            revert TransferDelayNotPassed(schedule);
+        }
         address oldAdmin = admin;
-        admin = _admin;
-        emit AdminUpdated(oldAdmin, _admin);
+        admin = newAdmin;
+        AuthorityTransferStorage storage $ = _getAuthorityTransferStorage();
+        delete $.pendingAdmin;
+        delete $.pendingAdminSchedule;
+        emit AdminUpdated(oldAdmin, newAdmin);
+    }
+
+    /// @notice Start handing `upgrader` to `newUpgrader`, who may accept once
+    ///         UPGRADE_DELAY has passed. Replaces any pending upgrader handover.
+    /// @dev Begun by the admin, not the upgrader, so a lost upgrader key can
+    ///      still be replaced.
+    function beginUpgraderTransfer(address newUpgrader) external onlyAdmin {
+        require(newUpgrader != address(0), "Invalid upgrader");
+        uint48 schedule = _transferSchedule();
+        _setPendingUpgrader(newUpgrader, schedule);
+        emit UpgraderTransferScheduled(newUpgrader, schedule);
+    }
+
+    /// @notice Cancel the pending upgrader handover, if any.
+    function cancelUpgraderTransfer() external onlyAdmin {
+        _setPendingUpgrader(address(0), 0);
+    }
+
+    /// @notice Complete the pending upgrader handover. Callable only by the
+    ///         pending upgrader, and only after its schedule has passed.
+    function acceptUpgraderTransfer() external {
+        (address newUpgrader, uint48 schedule) = pendingUpgrader();
+        if (_msgSender() != newUpgrader) {
+            revert NotPendingUpgrader(_msgSender());
+        }
+        if (!_isScheduleSet(schedule) || !_hasSchedulePassed(schedule)) {
+            revert TransferDelayNotPassed(schedule);
+        }
+        address oldUpgrader = upgrader;
+        upgrader = newUpgrader;
+        AuthorityTransferStorage storage $ = _getAuthorityTransferStorage();
+        delete $.pendingUpgrader;
+        delete $.pendingUpgraderSchedule;
+        emit UpgraderUpdated(oldUpgrader, newUpgrader);
+    }
+
+    // Replacing a handover that was never accepted cancels it, and says so.
+    function _setPendingAdmin(address newAdmin, uint48 newSchedule) private {
+        AuthorityTransferStorage storage $ = _getAuthorityTransferStorage();
+        uint48 oldSchedule = $.pendingAdminSchedule;
+        $.pendingAdmin = newAdmin;
+        $.pendingAdminSchedule = newSchedule;
+        if (_isScheduleSet(oldSchedule)) emit AdminTransferCanceled();
+    }
+
+    function _setPendingUpgrader(
+        address newUpgrader,
+        uint48 newSchedule
+    ) private {
+        AuthorityTransferStorage storage $ = _getAuthorityTransferStorage();
+        uint48 oldSchedule = $.pendingUpgraderSchedule;
+        $.pendingUpgrader = newUpgrader;
+        $.pendingUpgraderSchedule = newSchedule;
+        if (_isScheduleSet(oldSchedule)) emit UpgraderTransferCanceled();
+    }
+
+    function _transferSchedule() private view returns (uint48) {
+        return SafeCast.toUint48(block.timestamp + UPGRADE_DELAY);
+    }
+
+    function _isScheduleSet(uint48 schedule) private pure returns (bool) {
+        return schedule != 0;
+    }
+
+    // Strictly after the schedule, as in AccessControlDefaultAdminRules.
+    function _hasSchedulePassed(uint48 schedule) private view returns (bool) {
+        return schedule < block.timestamp;
+    }
+
+    function _getAuthorityTransferStorage()
+        private
+        pure
+        returns (AuthorityTransferStorage storage $)
+    {
+        assembly {
+            $.slot := AUTHORITY_TRANSFER_STORAGE_LOCATION
+        }
     }
 
     /// @notice Rotate the controller address. Only `admin` may rotate.
