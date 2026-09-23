@@ -23,8 +23,8 @@ import { expect } from "chai";
  * or the EOA by impersonation — so the rehearsal follows the chain, not a note.
  *
  * Stages, each asserted on live state:
- *   1. what runs today: seats, implementations, token source identity, no
- *      pending upgrade, the handover namespace empty
+ *   1. what runs today: seats, implementations, token AND controller source
+ *      identity, no pending upgrade, the handover namespace empty
  *   2. both proxies upgraded the way the session will do it
  *   3. every piece of token and controller state survives
  *   4. a quorum-signed mint and burn still execute; a re-used identifier does not
@@ -385,10 +385,13 @@ describe(`Fork rehearsal: next upgrade session on ${name || "(no FORK_CHAIN)"}`,
     console.log(`    controller defaultAdmin=${st.defaultAdmin} upgrader=${st.ctrlUpgraderAddr}`);
     console.log(`    Safe ${SAFE} v${st.safeVersion} threshold ${st.safeThreshold}/${st.safeOwners.length}`);
 
-    // The token source we upgrade FROM is the one actually deployed.
+    // The sources we upgrade FROM are the ones actually deployed.
     const identity = await sameRuntime(await hre.ethers.provider.getCode(st.tokenImpl), "contracts/legacy/IDRPv3.sol", "IDRPv3");
     console.log(`    deployed token impl == IDRPv3 source: ${identity.equal} (${identity.detail})`);
     expect(identity.equal).to.equal(true);
+    const ctrlIdentity = await sameRuntime(await hre.ethers.provider.getCode(st.ctrlImpl), "contracts/legacy/IDRPControllerv3.sol", "IDRPControllerv3");
+    console.log(`    deployed controller impl == IDRPControllerv3 source: ${ctrlIdentity.equal} (${ctrlIdentity.detail})`);
+    expect(ctrlIdentity.equal).to.equal(true);
 
     expect(await st.tok.controller()).to.equal(chain.controller);
     expect(await st.ctrl.idrpToken()).to.equal(chain.token);
