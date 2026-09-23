@@ -7,8 +7,8 @@
  *   npx hardhat run scripts/tre-authority-transfer.ts --network tre
  *
  * Fixtures (scripts/tvm/make-fixtures.ts) differ from the real sources only in
- * UPGRADE_DELAY (60s) and the contract name, so every timelock — upgrades and
- * both handovers — runs for real, just faster. V2 fixtures come from the
+ * UPGRADE_DELAY / AUTHORITY_TRANSFER_DELAY (60s) and the contract name, so every
+ * timelock — upgrades and both handovers — runs for real, just faster. V2 fixtures come from the
  * contracts/legacy sources proven byte-identical to the Tron mainnet
  * implementations.
  *
@@ -17,7 +17,7 @@
  *      frozen account, the four quorum roles
  *   B. schedule both upgrades, wait, then the two atomic upgradeToAndCall calls
  *      mainnet will make (initializeV3 on each)
- *   C. everything survived; nothing is pending; the handover namespace is empty
+ *   C. everything survived; nothing is pending; the handover slots start empty
  *   D. a quorum-signed Mint and Burn execute on TVM; the same identifier under
  *      a new deadline is refused
  *   E. admin and upgrader handovers on TVM: too-early accept refused, accept,
@@ -31,7 +31,6 @@ const TronWeb = require("tronweb");
 
 const HOST = "http://127.0.0.1:9090";
 const IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-const HANDOVER_SLOT = 0xd991add08b46b747ed6af6ef75a6adb683aeb97c062570389ee0117fb395ff00n;
 const PROXY_SLOT_NAMES = ["idrp.tron.uups.__self", "idrp.tron.uups.__proxy"];
 
 const TOKEN_V2 = "IDRPv2Tvm";
@@ -143,6 +142,18 @@ async function view(to: string, iface: any, fn: string, args: any[] = []) {
 // TRE mines only when a transaction arrives, so the latest block's timestamp
 // goes stale while nothing is sent. Wall-clock time is what the NEXT block will
 // carry, so wait on that.
+/** The handover pair's two slots, from the tron-solc layout of the token being deployed. */
+async function handoverSlots(): Promise<[bigint, bigint]> {
+  const fq = (await hre.artifacts.getAllFullyQualifiedNames()).find((q) => q.endsWith(`:${TOKEN_V3}`))!;
+  const [src, name] = fq.split(":");
+  const info = await hre.artifacts.getBuildInfo(fq);
+  const entry = (info!.output.contracts as any)[src][name].storageLayout.storage.find(
+    (s: any) => s.label === "_authorityTransfer"
+  );
+  if (!entry) throw new Error("no _authorityTransfer in the token layout");
+  return [BigInt(entry.slot), BigInt(entry.slot) + 1n];
+}
+
 async function now() {
   return BigInt(Math.floor(Date.now() / 1000));
 }
@@ -218,7 +229,8 @@ async function main() {
   const digestBefore = await digestProbe(ctrlV2Iface);
   check("v2 token holds history", before.supply === AMOUNT && before.frozen === true, `supply ${before.supply}, holder ${before.holder}`);
   check("v2 controller holds the four quorum roles", (await rolesHeld(ctrlV2Iface)) === 4);
-  check("handover namespace empty on the v2 token", (await storage(token, HANDOVER_SLOT)) === 0n && (await storage(token, HANDOVER_SLOT + 1n)) === 0n);
+  const [hs0, hs1] = await handoverSlots();
+  check(`handover slots ${hs0}/${hs1} empty on the v2 token`, (await storage(token, hs0)) === 0n && (await storage(token, hs1)) === 0n);
 
   console.log("\nB. the mainnet calls: schedule both, wait, atomic upgradeToAndCall(initializeV3) on both");
   await must(ME, token, tokenV2Iface, "scheduleUpgrade", [hex20(tokenV3[0])], "token scheduleUpgrade (v2)");

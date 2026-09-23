@@ -4,8 +4,9 @@
 //
 // Source: contracts/IDRP.sol   ->   contract IDRPTvm
 // The ONLY changes vs that source are:
-//   - UPGRADE_DELAY shortened to 60 seconds so a local TVM
-//     rehearsal can actually run (the real sources keep 48 hours)
+//   - UPGRADE_DELAY (and AUTHORITY_TRANSFER_DELAY, if declared) shortened to
+//     60 seconds so a local TVM rehearsal can actually run (the real
+//     sources keep 48 hours)
 //   - relative imports rewritten one directory level up
 //   - the contract DECLARATION renamed with a "Tvm" suffix (declaration
 //     line only — string literals untouched, so DOMAIN_SEPARATOR is unchanged)
@@ -50,7 +51,8 @@ contract IDRPTvm is
     // No roles, no AccessControlUpgradeable. Migration from the v2 source
     // (`upgrader`-only) happens via `initializeV3` (reinitializer(3), onlyUpgrader).
     // `admin` and `upgrader` change hands only through a delayed two-step
-    // handover: the admin begins it, UPGRADE_DELAY runs, the new holder accepts.
+    // handover: the admin begins it, AUTHORITY_TRANSFER_DELAY runs, the new
+    // holder accepts.
 
     /// @dev Preserved storage namespace of the removed AccessControlUpgradeable
     ///      parent. OZ Upgrades requires the namespace to remain declared so
@@ -119,11 +121,11 @@ contract IDRPTvm is
 
     // ─────────────────────────────────────────────────────────────────────────
     // Handover of `admin` and `upgrader`, modelled on OpenZeppelin's
-    // AccessControlDefaultAdminRules with a fixed delay (UPGRADE_DELAY). Kept in
-    // its own ERC-7201 namespace so the sequential layout above is unchanged.
+    // AccessControlDefaultAdminRules with a fixed delay. Appended after
+    // `controller` in plain sequential storage, the way OZ 4 keeps its own
+    // pending admin.
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// @custom:storage-location erc7201:idrp.storage.AuthorityTransfer
     struct AuthorityTransferStorage {
         address pendingAdmin;
         uint48 pendingAdminSchedule; // 0 == unset
@@ -131,9 +133,11 @@ contract IDRPTvm is
         uint48 pendingUpgraderSchedule; // 0 == unset
     }
 
-    // keccak256(abi.encode(uint256(keccak256("idrp.storage.AuthorityTransfer")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant AUTHORITY_TRANSFER_STORAGE_LOCATION =
-        0xd991add08b46b747ed6af6ef75a6adb683aeb97c062570389ee0117fb395ff00;
+    AuthorityTransferStorage private _authorityTransfer;
+
+    /// @notice Delay between beginning and accepting an admin or upgrader
+    ///         handover.
+    uint48 public constant AUTHORITY_TRANSFER_DELAY = 60 seconds;
 
     /// @dev Events
     event AccountFrozen(address indexed account);
@@ -281,7 +285,8 @@ contract IDRPTvm is
     }
 
     /// @notice Start handing `admin` to `newAdmin`, who may accept once
-    ///         UPGRADE_DELAY has passed. Replaces any pending admin handover.
+    ///         AUTHORITY_TRANSFER_DELAY has passed. Replaces any pending admin
+    ///         handover.
     function beginAdminTransfer(address newAdmin) external onlyAdmin {
         require(newAdmin != address(0), "Invalid admin");
         uint48 schedule = _transferSchedule();
@@ -311,7 +316,8 @@ contract IDRPTvm is
     }
 
     /// @notice Start handing `upgrader` to `newUpgrader`, who may accept once
-    ///         UPGRADE_DELAY has passed. Replaces any pending upgrader handover.
+    ///         AUTHORITY_TRANSFER_DELAY has passed. Replaces any pending
+    ///         upgrader handover.
     /// @dev Begun by the admin, not the upgrader, so a lost upgrader key can
     ///      still be replaced.
     function beginUpgraderTransfer(address newUpgrader) external onlyAdmin {
@@ -365,7 +371,7 @@ contract IDRPTvm is
     }
 
     function _transferSchedule() private view returns (uint48) {
-        return SafeCast.toUint48(block.timestamp + UPGRADE_DELAY);
+        return SafeCast.toUint48(block.timestamp) + AUTHORITY_TRANSFER_DELAY;
     }
 
     function _isScheduleSet(uint48 schedule) private pure returns (bool) {
@@ -379,12 +385,10 @@ contract IDRPTvm is
 
     function _getAuthorityTransferStorage()
         private
-        pure
-        returns (AuthorityTransferStorage storage $)
+        view
+        returns (AuthorityTransferStorage storage)
     {
-        assembly {
-            $.slot := AUTHORITY_TRANSFER_STORAGE_LOCATION
-        }
+        return _authorityTransfer;
     }
 
     /// @notice Rotate the controller address. Only `admin` may rotate.
@@ -416,8 +420,8 @@ contract IDRPTvm is
 
     /// @notice Cancel a pending scheduled upgrade.
     /// @dev The admin may cancel too. Replacing the upgrader takes
-    ///      UPGRADE_DELAY, as long as a rogue schedule needs to mature, so
-    ///      this is what stops a compromised upgrader in the meantime.
+    ///      AUTHORITY_TRANSFER_DELAY, no less than a rogue schedule needs to
+    ///      mature, so this is what stops a compromised upgrader meanwhile.
     function cancelUpgrade() external {
         if (_msgSender() != upgrader && _msgSender() != admin) {
             revert NotUpgrader();

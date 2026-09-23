@@ -16,6 +16,7 @@
  *
  * PERMITTED EDITS — anything else and generation fails
  *   1. UPGRADE_DELAY = 48 hours   ->  = <TVM_UPGRADE_DELAY> seconds
+ *      (and AUTHORITY_TRANSFER_DELAY = 48 hours, where the source declares it)
  *   2. relative imports "./x"     ->  "../x"   (the file moved down one level)
  *   3. the contract DECLARATION line gets a suffix. Declaration only: a global
  *      rename would also rewrite the string literals __ERC20_init("IDRP","IDRP")
@@ -57,8 +58,9 @@ const HEADER = (j: Job, contractName: string) => `// ─────────
 //
 // Source: ${j.src}   ->   contract ${contractName}
 // The ONLY changes vs that source are:
-//   - UPGRADE_DELAY shortened to ${DELAY_SECONDS} seconds so a local TVM
-//     rehearsal can actually run (the real sources keep 48 hours)
+//   - UPGRADE_DELAY (and AUTHORITY_TRANSFER_DELAY, if declared) shortened to
+//     ${DELAY_SECONDS} seconds so a local TVM rehearsal can actually run (the real
+//     sources keep 48 hours)
 //   - relative imports rewritten one directory level up
 //   - the contract DECLARATION renamed with a "${j.suffix}" suffix (declaration
 //     line only — string literals untouched, so DOMAIN_SEPARATOR is unchanged)${j.swapBase ? `
@@ -76,6 +78,10 @@ function transform(text: string, j: Job): string {
     /(uint256\s+public\s+constant\s+UPGRADE_DELAY\s*=\s*)48 hours(\s*;)/,
     `$1${DELAY_SECONDS} seconds$2`,
   );
+  out = out.replace(
+    /(uint48\s+public\s+constant\s+AUTHORITY_TRANSFER_DELAY\s*=\s*)48 hours(\s*;)/,
+    `$1${DELAY_SECONDS} seconds$2`,
+  );
   out = out.replace(/(^import\s[^;]*?from\s+")\.\//gm, "$1../");
   out = out.replace(/^contract\s+([A-Za-z0-9_]+)(\s)/m, `contract $1${j.suffix}$2`);
   if (j.swapBase) out = out.split(GAPLESS).join(SLOTTED);
@@ -87,6 +93,10 @@ function invert(text: string, j: Job): string {
   if (j.swapBase) back = back.split(SLOTTED).join(GAPLESS);
   back = back.replace(
     new RegExp(`(uint256\\s+public\\s+constant\\s+UPGRADE_DELAY\\s*=\\s*)${DELAY_SECONDS} seconds(\\s*;)`),
+    "$148 hours$2",
+  );
+  back = back.replace(
+    new RegExp(`(uint48\\s+public\\s+constant\\s+AUTHORITY_TRANSFER_DELAY\\s*=\\s*)${DELAY_SECONDS} seconds(\\s*;)`),
     "$148 hours$2",
   );
   back = back.replace(/(^import\s[^;]*?from\s+")\.\.\//gm, "$1./");

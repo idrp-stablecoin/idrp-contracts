@@ -107,11 +107,11 @@ contract IDRP is
 
     // ─────────────────────────────────────────────────────────────────────────
     // Handover of `admin` and `upgrader`, modelled on OpenZeppelin's
-    // AccessControlDefaultAdminRules with a fixed delay. Kept in its own ERC-7201
-    // namespace so the sequential layout above is unchanged.
+    // AccessControlDefaultAdminRules with a fixed delay. Appended after
+    // `controller` in plain sequential storage, the way OZ 4 keeps its own
+    // pending admin.
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// @custom:storage-location erc7201:idrp.storage.AuthorityTransfer
     struct AuthorityTransferStorage {
         address pendingAdmin;
         uint48 pendingAdminSchedule; // 0 == unset
@@ -119,9 +119,7 @@ contract IDRP is
         uint48 pendingUpgraderSchedule; // 0 == unset
     }
 
-    // keccak256(abi.encode(uint256(keccak256("idrp.storage.AuthorityTransfer")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant AUTHORITY_TRANSFER_STORAGE_LOCATION =
-        0xd991add08b46b747ed6af6ef75a6adb683aeb97c062570389ee0117fb395ff00;
+    AuthorityTransferStorage private _authorityTransfer;
 
     /// @notice Delay between beginning and accepting an admin or upgrader
     ///         handover.
@@ -373,12 +371,10 @@ contract IDRP is
 
     function _getAuthorityTransferStorage()
         private
-        pure
-        returns (AuthorityTransferStorage storage $)
+        view
+        returns (AuthorityTransferStorage storage)
     {
-        assembly {
-            $.slot := AUTHORITY_TRANSFER_STORAGE_LOCATION
-        }
+        return _authorityTransfer;
     }
 
     /// @notice Rotate the controller address. Only `admin` may rotate.
