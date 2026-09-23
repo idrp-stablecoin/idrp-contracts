@@ -220,6 +220,9 @@ contract IDRP is
         address _controller,
         address _upgrader
     ) external reinitializer(3) onlyUpgrader {
+        // Only a v2 proxy, which has no admin yet, may take this path.
+        // Anywhere else it would bypass the delayed handover.
+        require(admin == address(0), "Admin already set");
         require(_admin != address(0), "Invalid admin");
         require(_controller != address(0), "Invalid controller");
         require(_upgrader != address(0), "Invalid upgrader");
@@ -391,7 +394,13 @@ contract IDRP is
     }
 
     /// @notice Cancel a pending scheduled upgrade.
-    function cancelUpgrade() external onlyUpgrader {
+    /// @dev The admin may cancel too. Replacing the upgrader takes
+    ///      UPGRADE_DELAY, as long as a rogue schedule needs to mature, so
+    ///      this is what stops a compromised upgrader in the meantime.
+    function cancelUpgrade() external {
+        if (_msgSender() != upgrader && _msgSender() != admin) {
+            revert NotUpgrader();
+        }
         address cancelled = scheduledImplementation;
         require(cancelled != address(0), "No pending upgrade");
         scheduledImplementation = address(0);

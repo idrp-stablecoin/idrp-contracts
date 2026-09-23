@@ -436,6 +436,67 @@ describe("IDRP authority handover (admin + upgrader)", function () {
     });
   });
 
+  describe("a compromised upgrader can still be stopped", function () {
+    // With the upgrader handover delayed, a rogue upgrade scheduled by a
+    // compromised upgrader would mature before any replacement could accept.
+    // The admin's cancelUpgrade is the brake that covers that window.
+    async function separateUpgrader(idrp: any, admin: any, upgrader: any) {
+      const { schedule } = await beginAndSchedule(idrp, ROLES[1], admin, upgrader.address);
+      await time.increaseTo(schedule + 1n);
+      await idrp.connect(upgrader).acceptUpgraderTransfer();
+    }
+
+    it("the admin cancels a rogue upgrade, and it never executes", async function () {
+      const { idrp, IDRP, admin, target: rogue } = await loadFixture(fixture);
+      await separateUpgrader(idrp, admin, rogue);
+      const evil = await (await IDRP.deploy()).getAddress();
+      await idrp.connect(rogue).scheduleUpgrade(evil);
+
+      await expect(idrp.connect(admin).cancelUpgrade())
+        .to.emit(idrp, "UpgradeCancelled")
+        .withArgs(evil, admin.address);
+
+      await time.increase(DELAY + 1n);
+      await expect(upgrade(idrp, rogue, evil)).to.be.revertedWith("Upgrade not scheduled");
+    });
+
+    it("the admin keeps cancelling while the replacement waits out the delay, then the rogue is out", async function () {
+      const { idrp, IDRP, admin, target: rogue, second: replacement } = await loadFixture(fixture);
+      await separateUpgrader(idrp, admin, rogue);
+      const evil = await (await IDRP.deploy()).getAddress();
+
+      await idrp.connect(rogue).scheduleUpgrade(evil);
+      await idrp.connect(admin).cancelUpgrade();
+      const { schedule } = await beginAndSchedule(idrp, ROLES[1], admin, replacement.address);
+      await idrp.connect(rogue).scheduleUpgrade(evil); // tries again, same block window
+      await idrp.connect(admin).cancelUpgrade();
+
+      await time.increaseTo(schedule + 1n);
+      await idrp.connect(replacement).acceptUpgraderTransfer();
+      await expect(idrp.connect(rogue).scheduleUpgrade(evil)).to.be.revertedWithCustomError(idrp, "NotUpgrader");
+      await expect(upgrade(idrp, rogue, evil)).to.be.revertedWithCustomError(idrp, "NotUpgrader");
+    });
+
+    it("anyone else still cannot cancel an upgrade", async function () {
+      const { idrp, IDRP, admin, target: upgrader, other } = await loadFixture(fixture);
+      await separateUpgrader(idrp, admin, upgrader);
+      await idrp.connect(upgrader).scheduleUpgrade(await (await IDRP.deploy()).getAddress());
+      await expect(idrp.connect(other).cancelUpgrade()).to.be.revertedWithCustomError(idrp, "NotUpgrader");
+    });
+  });
+
+  describe("the migration initializer cannot be used as a shortcut", function () {
+    it("initializeV3 refuses a proxy whose admin is already set (every fresh deploy)", async function () {
+      const { idrp, admin, other } = await loadFixture(fixture);
+      // Fresh proxy: initialize() ran (version 1), admin == upgrader == admin.
+      await expect(
+        idrp.connect(admin).initializeV3(other.address, other.address, other.address)
+      ).to.be.revertedWith("Admin already set");
+      expect(await idrp.admin()).to.equal(admin.address);
+      expect(await idrp.controller()).to.equal(ZERO);
+    });
+  });
+
   describe("the instant setters are gone", function () {
     for (const sig of ["setAdmin(address)", "setUpgrader(address)"]) {
       it(`${sig} no longer exists`, async function () {
