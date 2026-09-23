@@ -8,6 +8,10 @@ import { expect } from "chai";
  *   FORK_CHAIN=ethereum HARDHAT_CHAIN_ID=1 npx hardhat test test/upgrade/ForkUpgradeRehearsal.ts
  *   (polygon 137, bsc 56, kaia 8217; FORK_RPC_URL overrides the default RPC)
  *
+ * Optional: FORK_BLOCK pins an exact block (re-runs then hit a caching relay),
+ * FORK_BLOCK_LAG (default 3) pins that far behind head, FORK_TIMEOUT_MS raises
+ * the per-stage timeout for throttled RPCs.
+ *
  * HARDHAT_CHAIN_ID must equal the forked chain's id: the token's EIP712 domain is
  * derived from block.chainid, so a fork running as 31337 reports a different
  * DOMAIN_SEPARATOR after the first locally mined block.
@@ -90,7 +94,7 @@ const name = process.env.FORK_CHAIN ?? "";
 const chain = CHAINS[name];
 
 describe(`Fork rehearsal: next upgrade session on ${name || "(no FORK_CHAIN)"}`, function () {
-  this.timeout(600_000);
+  this.timeout(Number(process.env.FORK_TIMEOUT_MS ?? 600_000));
 
   const gas: Record<string, bigint> = {};
   const st: any = {};
@@ -178,7 +182,9 @@ describe(`Fork rehearsal: next upgrade session on ${name || "(no FORK_CHAIN)"}`,
         try {
           const r = await c.getQuorumRule(op, amount);
           rules.push(`${op}:${amount}:${r.minAmount}-${r.maxAmount}:${[...r.requiredRoles].join(",")}`);
-        } catch {
+        } catch (e: any) {
+          // A revert means "no rule for this amount"; an RPC failure means nothing.
+          if (e?.code !== "CALL_EXCEPTION") throw e;
           rules.push(`${op}:${amount}:none`);
         }
       }
@@ -291,7 +297,7 @@ describe(`Fork rehearsal: next upgrade session on ${name || "(no FORK_CHAIN)"}`,
       this.skip();
     }
     const rpc = process.env.FORK_RPC_URL ?? chain.rpc;
-    const probe = new hre.ethers.JsonRpcProvider(rpc);
+    const probe = new hre.ethers.JsonRpcProvider(rpc, undefined, { batchMaxCount: 1 });
     const head = await probe.getBlockNumber();
     const { chainId } = await probe.getNetwork();
     expect(chainId).to.equal(chain.chainId);
@@ -321,7 +327,8 @@ describe(`Fork rehearsal: next upgrade session on ${name || "(no FORK_CHAIN)"}`,
     probe.destroy();
 
     originalFork = (hre.network.config as { forking?: unknown }).forking;
-    st.forkBlock = head - 3;
+    // A few blocks behind head; more when load-balanced upstreams sit at different heights.
+    st.forkBlock = process.env.FORK_BLOCK ? Number(process.env.FORK_BLOCK) : head - Number(process.env.FORK_BLOCK_LAG ?? 3);
     await hre.network.provider.request({
       method: "hardhat_reset",
       params: [{ forking: { jsonRpcUrl: rpc, blockNumber: st.forkBlock } }],
