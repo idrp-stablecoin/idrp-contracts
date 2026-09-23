@@ -75,28 +75,36 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
     });
   });
 
-  describe("setUpgrader", function () {
-    it("Should rotate upgrader and emit UpgraderUpdated", async function () {
+  // The upgrader moves through the delayed two-step handover; the full
+  // behaviour is pinned in test/IDRP.AuthorityTransfer.ts.
+  async function rotateUpgrader(idrp: any, admin: any, next: any) {
+    await idrp.connect(admin).beginUpgraderTransfer(next.address);
+    await time.increase(UPGRADE_DELAY + 1);
+    return idrp.connect(next).acceptUpgraderTransfer();
+  }
+
+  describe("upgrader handover", function () {
+    it("Should rotate upgrader after the delay and emit UpgraderUpdated", async function () {
       const { idrp, superAdmin, newUpgrader } = await loadFixture(deployFixture);
 
-      await expect(idrp.connect(superAdmin).setUpgrader(newUpgrader.address))
+      await expect(rotateUpgrader(idrp, superAdmin, newUpgrader))
         .to.emit(idrp, "UpgraderUpdated")
         .withArgs(superAdmin.address, newUpgrader.address);
 
       expect(await idrp.upgrader()).to.equal(newUpgrader.address);
     });
 
-    it("Should revert if caller is not DEFAULT_ADMIN_ROLE", async function () {
+    it("Should revert if caller is not the admin (NotAdmin)", async function () {
       const { idrp, other, newUpgrader } = await loadFixture(deployFixture);
       await expect(
-        idrp.connect(other).setUpgrader(newUpgrader.address)
-      ).to.be.rejected;
+        idrp.connect(other).beginUpgraderTransfer(newUpgrader.address)
+      ).to.be.revertedWithCustomError(idrp, "NotAdmin");
     });
 
     it("Should reject address(0)", async function () {
       const { idrp, superAdmin } = await loadFixture(deployFixture);
       await expect(
-        idrp.connect(superAdmin).setUpgrader(hre.ethers.ZeroAddress)
+        idrp.connect(superAdmin).beginUpgraderTransfer(hre.ethers.ZeroAddress)
       ).to.be.revertedWith("Invalid upgrader");
     });
   });
@@ -172,7 +180,7 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
         await loadFixture(deployFixture);
 
       // Rotate upgrader away from superAdmin, but schedule must come from upgrader too.
-      await idrp.connect(superAdmin).setUpgrader(newUpgrader.address);
+      await rotateUpgrader(idrp, superAdmin, newUpgrader);
       await idrp.connect(newUpgrader).scheduleUpgrade(newImplAddr);
       await time.increase(UPGRADE_DELAY + 1);
 
@@ -248,7 +256,7 @@ describe("[C-1] IDRP upgrade flow (single upgrader + timelock)", function () {
       const { idrp, newImplAddr, superAdmin, newUpgrader } =
         await loadFixture(deployFixture);
 
-      await idrp.connect(superAdmin).setUpgrader(newUpgrader.address);
+      await rotateUpgrader(idrp, superAdmin, newUpgrader);
       await idrp.connect(newUpgrader).scheduleUpgrade(newImplAddr);
       await time.increase(UPGRADE_DELAY + 1);
 

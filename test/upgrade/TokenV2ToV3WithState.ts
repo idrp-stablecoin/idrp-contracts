@@ -124,4 +124,52 @@ describe("Token v2 → v3 on a proxy with state", function () {
     await hre.network.provider.send("evm_mine", []);
     await expect(v3.connect(admin).upgradeTo(nextAddress)).to.not.be.reverted;
   });
+
+  it("hands admin and upgrader over after the migration, and the new upgrader upgrades twice more", async function () {
+    const { idrp, admin, depository, holder, frozen, controller } =
+      await loadFixture(seededV2Fixture);
+    const [, , , , , , newAdmin, newUpgrader] = await hre.ethers.getSigners();
+
+    const v3: any = await migrate(idrp, admin, controller.address);
+    const before = {
+      supply: await v3.totalSupply(),
+      depository: await v3.balanceOf(depository.address),
+      holder: await v3.balanceOf(holder.address),
+      permitDomain: await v3.DOMAIN_SEPARATOR(),
+    };
+
+    // A v2 proxy with history arrives with nothing pending.
+    expect(await v3.pendingAdmin()).to.deep.equal([hre.ethers.ZeroAddress, 0n]);
+    expect(await v3.pendingUpgrader()).to.deep.equal([hre.ethers.ZeroAddress, 0n]);
+
+    await v3.connect(admin).beginAdminTransfer(newAdmin.address);
+    await v3.connect(admin).beginUpgraderTransfer(newUpgrader.address);
+    await hre.network.provider.send("evm_increaseTime", [48 * 60 * 60 + 1]);
+    await hre.network.provider.send("evm_mine", []);
+    await v3.connect(newAdmin).acceptAdminTransfer();
+    await v3.connect(newUpgrader).acceptUpgraderTransfer();
+
+    // OZ 4 build: upgradeTo, never upgradeToAndCall(impl, "0x").
+    for (let hop = 0; hop < 2; hop++) {
+      const next = await (await hre.ethers.getContractFactory("IDRP")).deploy();
+      await next.waitForDeployment();
+      await v3.connect(newUpgrader).scheduleUpgrade(await next.getAddress());
+      await hre.network.provider.send("evm_increaseTime", [48 * 60 * 60 + 1]);
+      await hre.network.provider.send("evm_mine", []);
+      await v3.connect(newUpgrader).upgradeTo(await next.getAddress());
+      expect(
+        await hre.upgrades.erc1967.getImplementationAddress(await v3.getAddress())
+      ).to.equal(await next.getAddress());
+    }
+
+    await expect(
+      v3.connect(admin).scheduleUpgrade(admin.address)
+    ).to.be.revertedWithCustomError(v3, "NotUpgrader");
+    expect(await v3.admin()).to.equal(newAdmin.address);
+    expect(await v3.totalSupply()).to.equal(before.supply);
+    expect(await v3.balanceOf(depository.address)).to.equal(before.depository);
+    expect(await v3.balanceOf(holder.address)).to.equal(before.holder);
+    expect(await v3.DOMAIN_SEPARATOR()).to.equal(before.permitDomain);
+    expect(await v3.frozen(frozen.address)).to.equal(true);
+  });
 });

@@ -70,7 +70,7 @@ contract IDRPControllerTronUups is
     bytes32 public constant COMMISSIONER_ROLE = keccak256("COMMISSIONER_ROLE");
 
     address public idrpToken;
-    // @dev Deprecated: nonce is no longer used. Replay protection is via usedSignatures[operationHash].
+    // @dev Deprecated: nonce is no longer used. Replay protection is by operation identifier.
     uint256 public nonce;
 
     // Operation types
@@ -93,7 +93,14 @@ contract IDRPControllerTronUups is
     // Mapping of operation types to their quorum rules
     mapping(OperationType => QuorumRule[]) public quorumRules;
 
-    // Mapping to track used signatures
+    // Executed-once records, keyed by keccak256(bytes(operationIdentifier)).
+    //
+    // Proxies that predate this version also hold EIP-712 digests here, written
+    // by the previous scheme, and those entries are kept: they are the only
+    // on-chain proof that an earlier operation ran. Nothing adds a digest any
+    // more. A digest covers the deadline, so re-signing one identifier under a
+    // later deadline produced a key that had never been seen — which is the
+    // hole the identifier key closes.
     mapping(bytes32 => bool) public usedSignatures;
 
     // Domain separator for EIP-712
@@ -449,6 +456,22 @@ contract IDRPControllerTronUups is
             require(to != address(0), "Invalid target address");
         }
 
+        // An empty identifier identifies nothing, and consuming it would burn
+        // the key for every later caller.
+        require(
+            bytes(operationIdentifier).length > 0,
+            "Operation identifier required"
+        );
+
+        // One execution per identifier, whatever the deadline or the parameters
+        // signed alongside it. A reset re-opens the same identifier with a new
+        // deadline, which is legitimate until the operation has actually run.
+        bytes32 operationIdKey = keccak256(bytes(operationIdentifier));
+        require(
+            !usedSignatures[operationIdKey],
+            "Operation identifier already used"
+        );
+
         // Get the appropriate quorum rule for this operation and amount
         QuorumRule memory rule = getQuorumRule(operationType, amount);
 
@@ -461,6 +484,12 @@ contract IDRPControllerTronUups is
             deadline
         );
 
+        // Operations executed under the previous scheme are recorded by digest
+        // and carry no identifier key, so the check above cannot see them. Their
+        // signatures stay submittable until their deadline passes, which is why
+        // this stays: it closes that window without recording anything new.
+        require(!usedSignatures[operationHash], "Operation already executed");
+
         // Verify signatures based on operation type
         if (operationType == OperationType.Unpause) {
             verifyUnpauseSignatures(operationHash, signatures);
@@ -468,8 +497,10 @@ contract IDRPControllerTronUups is
             verifySignatures(operationHash, rule.requiredRoles, signatures);
         }
 
-        // Mark operation hash as used to prevent replay
-        usedSignatures[operationHash] = true;
+        // Mark the operation as executed. Only the identifier is recorded: a
+        // repeated digest implies a repeated identifier, so writing both would
+        // pay twice for one fact.
+        usedSignatures[operationIdKey] = true;
 
         // Execute the operation
         if (operationType == OperationType.Mint) {
@@ -491,12 +522,14 @@ contract IDRPControllerTronUups is
 
     // Specialized function to verify unpause signatures with OR logic
     // Each signer can only contribute to one role to prevent multi-role bypass
+    //
+    // Verifies approval only. Replay is refused by the identifier check in
+    // executeOperation, which is the sole caller — any new entry point that
+    // verifies signatures must make that check itself.
     function verifyUnpauseSignatures(
         bytes32 operationHash,
         bytes[] calldata signatures
     ) internal view {
-        require(!usedSignatures[operationHash], "Operation hash already used");
-
         bool hasOfficer = false;
         bool hasManager = false;
         bool hasDirector = false;
@@ -565,6 +598,40 @@ contract IDRPControllerTronUups is
         revert("No matching quorum rule found");
     }
 
+    // Has this identifier already executed? The dashboard calls this before it
+    // re-opens a signature request, so signers are never asked to approve an
+    // operation that has already run.
+    function isOperationIdentifierUsed(
+        string calldata operationIdentifier
+    ) external view returns (bool) {
+        return usedSignatures[keccak256(bytes(operationIdentifier))];
+    }
+
+    /// @notice Whether this operation has executed, under either replay key.
+    /// @dev    Two keys exist: the identifier, used from this version on, and
+    ///         the EIP-712 digest, used by everything that ran before it. A
+    ///         caller holding the executeOperation arguments can ask once
+    ///         rather than rebuild the digest itself.
+    function isOperationExecuted(
+        address to,
+        uint8 operationType,
+        uint256 amount,
+        string calldata operationIdentifier,
+        uint256 deadline
+    ) external view returns (bool) {
+        if (usedSignatures[keccak256(bytes(operationIdentifier))]) return true;
+        return
+            usedSignatures[
+                getOperationHash(
+                    to,
+                    operationType,
+                    amount,
+                    operationIdentifier,
+                    deadline
+                )
+            ];
+    }
+
     // Helper to get the EIP-712 hash for an operation - updated to use operationIdentifier
     function getOperationHash(
         address to,
@@ -592,13 +659,15 @@ contract IDRPControllerTronUups is
 
     // Verify that all required signatures are present and valid
     // Each signer can only satisfy one role to prevent multi-role bypass
+    //
+    // Verifies approval only. Replay is refused by the identifier check in
+    // executeOperation, which is the sole caller — any new entry point that
+    // verifies signatures must make that check itself.
     function verifySignatures(
         bytes32 operationHash,
         bytes32[] memory requiredRoles,
         bytes[] calldata signatures
     ) internal view {
-        require(!usedSignatures[operationHash], "Operation hash already used");
-
         address[] memory usedSigners = new address[](requiredRoles.length);
         uint256 usedCount = 0;
 

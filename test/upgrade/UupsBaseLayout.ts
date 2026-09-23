@@ -62,6 +62,14 @@ describe("UUPS base choice — storage layout", () => {
     expect(s).to.equal(151);
   });
 
+  it("the token's own variables still end at controller (512); handover state is namespaced", async () => {
+    const info = await hre.artifacts.getBuildInfo("contracts/IDRP.sol:IDRP");
+    const storage = (info!.output.contracts as any)["contracts/IDRP.sol"].IDRP.storageLayout.storage;
+    const last = storage[storage.length - 1];
+    expect(await slotOf("contracts/IDRP.sol:IDRP", "admin")).to.equal(511);
+    expect([last.label, Number(last.slot)]).to.deep.equal(["controller", 512]);
+  });
+
   it("the token's __legacyTailGap stands in for the removed UUPS gap", async () => {
     // 454..503, immediately before `frozen` at 504.
     expect(await slotOf("contracts/IDRP.sol:IDRP", "__legacyTailGap")).to.equal(454);

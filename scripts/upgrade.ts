@@ -174,7 +174,7 @@ async function executeScheduledUpgrade(args: {
   if (currentUpgrader.toLowerCase() !== admin.address.toLowerCase()) {
     throw new Error(
       `Admin ${admin.address} is not the current upgrader (${currentUpgrader}). ` +
-        `Use the correct signer or rotate via setUpgrader.`
+        `Use the correct signer, or hand the role over (beginUpgraderTransfer, then acceptUpgraderTransfer after UPGRADE_DELAY).`
     );
   }
 
