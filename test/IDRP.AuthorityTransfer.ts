@@ -9,15 +9,16 @@ import {
 /**
  * Delayed two-step handover of the token's `admin` and `upgrader`, modelled on
  * OpenZeppelin's AccessControlDefaultAdminRules: the admin begins a transfer,
- * UPGRADE_DELAY runs, then the new holder accepts. Until then the admin can
- * cancel it or begin another, which replaces it.
+ * AUTHORITY_TRANSFER_DELAY runs, then the new holder accepts. Until then the
+ * admin can cancel it or begin another, which replaces it.
  *
- * Written to run unchanged on both lineages (OZ 5 on EVM, OZ 4 on Tron): slot
- * numbers come from the compiler, and upgrades go through `upgradeTo` where the
- * build still has it.
+ * Written to run unchanged on both lineages. The OZ 5 build keeps the pending
+ * pair in an ERC-7201 namespace; the OZ 4 build keeps it in plain storage right
+ * after `controller`, as OZ 4 does. Slot numbers come from the compiler, and
+ * upgrades go through `upgradeTo` where the build still has it.
  */
 describe("IDRP authority handover (admin + upgrader)", function () {
-  const DELAY = 48n * 60n * 60n; // 172800, UPGRADE_DELAY on the canonical build
+  const DELAY = 48n * 60n * 60n; // 172800, AUTHORITY_TRANSFER_DELAY on the canonical build
   const ZERO = hre.ethers.ZeroAddress;
 
   // These tests move the chain clock by days. Put it back afterwards: suites
@@ -122,6 +123,16 @@ describe("IDRP authority handover (admin + upgrader)", function () {
     return BigInt(entry.slot);
   }
 
+  /** Where this build keeps the pending pair: plain storage (OZ 4) or the namespace (OZ 5). */
+  async function handoverSlot(): Promise<{ slot: bigint; sequential: boolean }> {
+    const info = await hre.artifacts.getBuildInfo("contracts/IDRP.sol:IDRP");
+    const layout = (info!.output.contracts as any)["contracts/IDRP.sol"].IDRP.storageLayout;
+    const entry = layout.storage.find((s: any) => s.label === "_authorityTransfer");
+    return entry
+      ? { slot: BigInt(entry.slot), sequential: true }
+      : { slot: NAMESPACE_SLOT, sequential: false };
+  }
+
   async function word(idrp: any, slot: bigint): Promise<bigint> {
     return BigInt(await hre.ethers.provider.getStorage(await idrp.getAddress(), slot));
   }
@@ -147,7 +158,7 @@ describe("IDRP authority handover (admin + upgrader)", function () {
         );
       });
 
-      it("begin records the target and a schedule UPGRADE_DELAY ahead, without moving the role", async function () {
+      it("begin records the target and a schedule AUTHORITY_TRANSFER_DELAY ahead, without moving the role", async function () {
         const { idrp, admin, target } = await loadFixture(fixture);
         const { tx, schedule } = await beginAndSchedule(idrp, role, admin, target.address);
 
@@ -291,11 +302,12 @@ describe("IDRP authority handover (admin + upgrader)", function () {
           .withArgs(target.address);
       });
 
-      it("stores the pending pair at the ERC-7201 slot, packed address | uint48", async function () {
+      it("stores the pending pair where the build declares it, packed address | uint48", async function () {
         const { idrp, admin, target } = await loadFixture(fixture);
         const { schedule } = await beginAndSchedule(idrp, role, admin, target.address);
 
-        const w = await word(idrp, NAMESPACE_SLOT + role.slotOffset);
+        const { slot } = await handoverSlot();
+        const w = await word(idrp, slot + role.slotOffset);
         const mask160 = (1n << 160n) - 1n;
         expect(hre.ethers.getAddress("0x" + (w & mask160).toString(16).padStart(40, "0"))).to.equal(
           target.address
@@ -516,6 +528,10 @@ describe("IDRP authority handover (admin + upgrader)", function () {
 
   describe("storage", function () {
     it("leftover data in the sequential slot after `controller` is not read as a pending handover", async function () {
+      // Only true of the namespaced build. The OZ 4 build keeps the pending pair
+      // in exactly that slot, so there the live proxies must read zero before
+      // the upgrade (checked in the pre-flight and the layout test instead).
+      if ((await handoverSlot()).sequential) this.skip();
       const { idrp, admin, target } = await loadFixture(fixture);
       const after = (await slotOf("controller")) + 1n;
       const junk = "0x" + "00".repeat(6) + "0000000000ff" + "11".repeat(20);
