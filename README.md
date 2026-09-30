@@ -108,6 +108,21 @@ reproduces the bytecode byte for byte and is what block explorers accept for
 verification; a flattened file can do neither. Older testnet builds used
 `300 seconds` in places, and the testnet verify scripts record exactly which.
 
+Deployment records are kept per env, so merging one env's branch into another
+adds records instead of overwriting them:
+
+| records | where |
+|---|---|
+| mainnet | `deployment/chain-<chainId>.json`, `deployment/tron/mainnet.json` |
+| testnet | `deployment/testnet/chain-<chainId>.json` |
+| build inputs, any env | `deployment/builds/<chainId>/<implementationAddress>.json` |
+
+Deploy the `testnet` env (Base Sepolia, Kairos) from this branch with
+`npx hardhat run scripts/testnet-deploy.ts --network <baseSepolia|kairos>`.
+It makes the edit above for the build, refuses mainnet chain ids, wires the
+contracts the way mainnet is wired, and writes both records. Run it without
+`--network` for a local rehearsal.
+
 ## License
 
 This project is licensed under the MIT License.
