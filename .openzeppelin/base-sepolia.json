@@ -19,6 +19,16 @@
       "address": "0xE31F3E0163d58d644736cA694a9cC1EA91154A44",
       "txHash": "0x61327b1d8310ca9293ff0c4e3a5f7fb3406eba8924aa7ef05b38d5b9519219c6",
       "kind": "uups"
+    },
+    {
+      "address": "0x67D51d412Ada4dD92ecD068CD42E3950780e8e95",
+      "txHash": "0x9afd8ed0aae150a4217289808fe0672ee0d609b4d328544ce29b4ae2b83a56c6",
+      "kind": "uups"
+    },
+    {
+      "address": "0x6948DB271638c876157C24f3aAC00B7FCA9A3874",
+      "txHash": "0x201b19bbdea665bb47649cf001ed5a2dbd506639add338948326d1d7afdf372e",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -3123,7 +3133,11 @@
             }
           ]
         }
-      }
+      },
+      "allAddresses": [
+        "0xFF08969eE2F901d95C7791d5CD1098E8c13Ac770",
+        "0x94f1455d32244F08c3F89F9d7De1D38ABceaD9F2"
+      ]
     },
     "741e65856bab20edda01dddd2e0098a79f3ef548479f37d5bd5e73cafaea0780": {
       "address": "0x8F686EE87eAc9EF1A474ABEE3feb078d585B024F",
@@ -3510,7 +3524,11 @@
             }
           ]
         }
-      }
+      },
+      "allAddresses": [
+        "0x8F686EE87eAc9EF1A474ABEE3feb078d585B024F",
+        "0xe11AC0C5e31ADda392F3DA4301508a0607395671"
+      ]
     }
   }
 }
