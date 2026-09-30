@@ -63,6 +63,23 @@ npx hardhat run scripts/deploy-controller.ts --network <your-network>
 - **Frozen accounts cannot receive or send tokens.**
 - **Upgrades should be carefully reviewed before deployment.**
 
+## Testnet env on Nile
+
+This branch (`tron-testnet`) holds the source Tron mainnet runs. The testnet
+env runs the same source on Nile; only the build differs: both
+`uint256 public constant UPGRADE_DELAY = 48 hours;` lines (IDRP and
+IDRPController) become `5 minutes` for the compile, and the edit is never
+committed.
+
+    npx hardhat run scripts/testnet-deploy-tron.ts --network nile
+
+It makes that edit, refuses every network except `nile` (and `tre`, a local
+rehearsal), wires the contracts the way Tron mainnet is wired, and records
+the addresses in `deployment/testnet/tron/nile.json` and each
+implementation's exact compiler input in
+`deployment/builds/3448148188/<implementation>.json`. Branch and env
+conventions are in the README on `main`.
+
 ## License
 
 This project is licensed under the MIT License.
