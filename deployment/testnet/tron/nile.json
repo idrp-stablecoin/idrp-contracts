@@ -1,0 +1,42 @@
+{
+  "env": "testnet",
+  "network": "nile",
+  "chainId": 3448148188,
+  "sourceCommit": "d03fd0f822ac9452135799d2b71110730b16130e",
+  "delays": {
+    "IDRP.UPGRADE_DELAY": "5 minutes",
+    "IDRPController.UPGRADE_DELAY": "5 minutes"
+  },
+  "deployer": "TXCxw9Pyu1g8jo8VieZjLpVKMgfSyfKm1d",
+  "deployedAt": "2026-09-30T16:44:35.816Z",
+  "IDRP": "TRpT5Qy8iDDrrAghSaeTFX4gAYyLCieRW2",
+  "IDRPController": "TUDChEyTzCe43xRAwKwcCzub5QpeVCoM5c",
+  "IDRPImpl": "TAw4h7rspGKHKMFXvM1wts4woRNzntuFe8",
+  "IDRPControllerImpl": "TCZq1EhzXyhz4HbExopP9eHW4chhT2fovu",
+  "IDRPBuild": "deployment/builds/3448148188/TAw4h7rspGKHKMFXvM1wts4woRNzntuFe8.json",
+  "IDRPControllerBuild": "deployment/builds/3448148188/TCZq1EhzXyhz4HbExopP9eHW4chhT2fovu.json",
+  "depositoryWallet": "TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6",
+  "sanctionsList": "TBCVynr5bAZWpiDt1WDCH8dWnkDUTdJqPp",
+  "quorumSigners": [
+    {
+      "role": "OFFICER_ROLE",
+      "addr": "TRdtU12WDtT1FTEJik3tKBLv74BzthYfk8"
+    },
+    {
+      "role": "OFFICER_ROLE",
+      "addr": "TXbC54RQ1SkwPLignMGT1nkhne9Z4nRyzG"
+    },
+    {
+      "role": "MANAGER_ROLE",
+      "addr": "TQbWCxtHFYzMyCraqFsS7WxStHckfkcyGk"
+    },
+    {
+      "role": "DIRECTOR_ROLE",
+      "addr": "TEcdkZu92pvMS6NcFZ2KUrqfDsXnRdMuHK"
+    },
+    {
+      "role": "COMMISSIONER_ROLE",
+      "addr": "TRpY5VmtdsMqNW2tc6U2kvoknzDevM74NJ"
+    }
+  ]
+}
