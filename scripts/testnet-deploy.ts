@@ -198,11 +198,14 @@ async function main() {
   console.log(`deployer        ${deployer.address}`);
   console.log(`balance         ${hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address))}`);
 
+  // The upgrades plugin reuses any implementation in .openzeppelin/ whose code
+  // matches ignoring metadata. That hands back an older build (other comments,
+  // other delay text) whose source this run did not record, so always deploy.
+  const proxyOpts = { kind: "uups" as const, redeployImplementation: "always" as const };
+
   const built = await withTestnetDelays(async () => {
     console.log("\n[1/7] IDRP proxy");
-    const token = await hre.upgrades.deployProxy(await hre.ethers.getContractFactory("IDRP"), [deployer.address], {
-      kind: "uups",
-    });
+    const token = await hre.upgrades.deployProxy(await hre.ethers.getContractFactory("IDRP"), [deployer.address], proxyOpts);
     await token.waitForDeployment();
     const tokenAddr = await token.getAddress();
     const tokenImpl = await hre.upgrades.erc1967.getImplementationAddress(tokenAddr);
@@ -212,7 +215,7 @@ async function main() {
     const controller = await hre.upgrades.deployProxy(
       await hre.ethers.getContractFactory("IDRPController"),
       [tokenAddr, deployer.address],
-      { kind: "uups" }
+      proxyOpts
     );
     await controller.waitForDeployment();
     const ctrlAddr = await controller.getAddress();
@@ -238,17 +241,6 @@ async function main() {
       IDRPController: await buildRecord("contracts/IDRPController.sol:IDRPController"),
     };
 
-    // Explorer verification needs this exact build, so it happens here.
-    if (!local) {
-      for (const [label, impl] of [["IDRP", tokenImpl], ["IDRPController", ctrlImpl]]) {
-        try {
-          await hre.run("verify:verify", { address: impl, constructorArguments: [] });
-        } catch (e: any) {
-          console.log(`      ! explorer verification of ${label} failed: ${String(e.message ?? e).split("\n")[0]}`);
-          console.log(`        verify it by hand with deployment/builds/${chainId}/${impl}.json`);
-        }
-      }
-    }
     return { token, controller, tokenAddr, ctrlAddr, tokenImpl, ctrlImpl, builds };
   });
   const { token, controller, tokenAddr, ctrlAddr, tokenImpl, ctrlImpl, builds } = built;
@@ -343,7 +335,10 @@ async function main() {
   console.log(`\nPlatform AppSettings for this chain:`);
   console.log(`  idrpAddress${chainId}        = ${tokenAddr}`);
   console.log(`  controllerAddress${chainId}  = ${ctrlAddr}`);
-  if (!local) console.log(`\nCommit the record: git add deployment/${ENV}/chain-${chainId}.json deployment/builds/${chainId}/`);
+  if (!local) {
+    console.log(`\nCommit the record: git add deployment/${ENV}/chain-${chainId}.json deployment/builds/${chainId}/ .openzeppelin`);
+    console.log(`Verify on the explorer: npx hardhat run scripts/verify-testnet-builds.ts --network ${hre.network.name}`);
+  }
 }
 
 main().catch((e) => {
