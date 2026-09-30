@@ -63,6 +63,51 @@ npx hardhat run scripts/deploy-controller.ts --network <your-network>
 - **Frozen accounts cannot receive or send tokens.**
 - **Upgrades should be carefully reviewed before deployment.**
 
+## Branches and environments
+
+Each trunk holds exactly the source that runs on its environment.
+
+| env | EVM | Tron | runs on | platform env |
+|---|---|---|---|---|
+| main | `main` | `tron-main` | mainnets | production |
+| testnet | `testnet` | `tron-testnet` | a testnet deployment that mirrors mainnet | sandbox |
+| testnet-beta | `testnet-beta` | `tron-testnet-beta` | testnets running features not yet released | beta |
+| main-beta | `main-beta` | `tron-main-beta` | new features live on mainnet (created when needed) | — |
+
+- `testnet` is the same source as `main`: same features and logic. Only the
+  timelock delays differ, and only in the build (see below).
+- Work branches are `<trunk>-<type>/<name>`, e.g. `testnet-beta-feat/confiscate`
+  or `tron-main-hotfix/<name>`, with `<type>` one of `feat`, `fix`, `hotfix`,
+  `chore`. It is a dash, not a slash, because git cannot have both a branch
+  `main` and a branch `main/feat/x`.
+- Changes move up: `testnet-beta` → `testnet` → `main`. Before merging,
+  `git log <target>..<branch>` must list only the branch's own commits.
+- Each trunk carries a script that proves it against its chains:
+  `scripts/verify-deployed-bytecode.ts` (EVM mainnets),
+  `scripts/verify-deployed-bytecode-tron.ts --network tron`,
+  `scripts/verify-testnet-bytecode.ts` (Base Sepolia, Kairos) and
+  `scripts/verify-testnet-bytecode-tron.ts --network nile`.
+
+## Testnet builds
+
+A testnet build shortens every timelock to 5 minutes by editing its constant
+line at build time. The edit is never committed:
+
+```solidity
+uint256 public constant UPGRADE_DELAY = 48 hours;        // IDRP and IDRPController
+uint48 public constant DEFAULT_ADMIN_DELAY = 48 hours;   // IDRPController
+```
+
+Each line becomes `... = 5 minutes;`. Any delay constant added later gets the
+same treatment. The replacement text is part of the contract's metadata hash,
+so the build has to be recorded. The exact compiler input (Standard JSON Input)
+of every deployed implementation belongs in
+`deployment/builds/<chainId>/<implementationAddress>.json`, and the chain's
+deployment JSON names that file with the commit it was built from. That input
+reproduces the bytecode byte for byte and is what block explorers accept for
+verification; a flattened file can do neither. Older testnet builds used
+`300 seconds` in places, and the testnet verify scripts record exactly which.
+
 ## License
 
 This project is licensed under the MIT License.
