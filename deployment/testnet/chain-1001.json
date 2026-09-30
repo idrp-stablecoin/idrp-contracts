@@ -1,0 +1,27 @@
+{
+  "env": "testnet",
+  "network": "kairos",
+  "chainId": 1001,
+  "sourceCommit": "7bfa4b95f3e63fd983dcdb40980cdce7af6035a7",
+  "delays": {
+    "IDRP.UPGRADE_DELAY": "5 minutes",
+    "IDRPController.UPGRADE_DELAY": "5 minutes",
+    "IDRPController.DEFAULT_ADMIN_DELAY": "5 minutes"
+  },
+  "deployer": "0x1EE445Fbc60EE07fDdE916F49f94D6953D4d8D6C",
+  "deployedAt": "2026-09-30T16:15:06.737Z",
+  "IDRP": "0x46BE0AE7551864C14450747b35d0D94B84F27A90",
+  "IDRPController": "0xfeb1c317eCcea8d3c7920447fAAcDc1a823Af279",
+  "IDRPImpl": "0xdC46628028944054949340A7fDC1A498388Ec775",
+  "IDRPControllerImpl": "0x54306AeB4f9CC4014ebaDFCa55E0545Ca8AF8c16",
+  "IDRPBuild": "deployment/builds/1001/0xdC46628028944054949340A7fDC1A498388Ec775.json",
+  "IDRPControllerBuild": "deployment/builds/1001/0x54306AeB4f9CC4014ebaDFCa55E0545Ca8AF8c16.json",
+  "depositoryWallet": "0x0FC4CBd7f60E0BE5FeaCFAB6B8818F88763f9640",
+  "sanctionsList": "0x8d6DD6045Eebb8019ad72Bf06db44887F08e290D",
+  "quorumSigners": {
+    "OFFICER_ROLE": "0x99A0AD5DF1651D8812B0b4Ca5102ad060C4DC2d3",
+    "MANAGER_ROLE": "0xf712A68ff897cdcdD7a0b68c1DE6886F1F8eD761",
+    "DIRECTOR_ROLE": "0x5B2A48685a89458ECbaB3AEC56923e128f441995",
+    "COMMISSIONER_ROLE": "0xb9E8412a3b35A5A75b76E679d8791EF2C75984Ed"
+  }
+}
