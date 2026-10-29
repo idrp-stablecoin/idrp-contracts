@@ -1,0 +1,27 @@
+{
+  "env": "testnet",
+  "network": "bscTestnet",
+  "chainId": 97,
+  "sourceCommit": "8a8955126d79c99e17ec3701416eedffc1c931a4",
+  "delays": {
+    "IDRP.UPGRADE_DELAY": "5 minutes",
+    "IDRPController.UPGRADE_DELAY": "5 minutes",
+    "IDRPController.DEFAULT_ADMIN_DELAY": "5 minutes"
+  },
+  "deployer": "0x1EE445Fbc60EE07fDdE916F49f94D6953D4d8D6C",
+  "deployedAt": "2026-10-29T15:21:38.661Z",
+  "IDRP": "0x817d0C3D4e63231d88B2d73217B7fB75b87e0606",
+  "IDRPController": "0x466d7B865e394f640aa436a399A464f7dC65C410",
+  "IDRPImpl": "0xbcC9286b36A7F37c6f2Affb453D692033A54Fbe7",
+  "IDRPControllerImpl": "0x82CB9f9d7c7a1C76ce77d5905291A4ad5f09b20c",
+  "IDRPBuild": "deployment/builds/97/0xbcC9286b36A7F37c6f2Affb453D692033A54Fbe7.json",
+  "IDRPControllerBuild": "deployment/builds/97/0x82CB9f9d7c7a1C76ce77d5905291A4ad5f09b20c.json",
+  "depositoryWallet": "0x0FC4CBd7f60E0BE5FeaCFAB6B8818F88763f9640",
+  "sanctionsList": "0x999f947F3c7C0cF64AE53571a7fda51ce7f66164",
+  "quorumSigners": {
+    "OFFICER_ROLE": "0x99A0AD5DF1651D8812B0b4Ca5102ad060C4DC2d3",
+    "MANAGER_ROLE": "0xf712A68ff897cdcdD7a0b68c1DE6886F1F8eD761",
+    "DIRECTOR_ROLE": "0x5B2A48685a89458ECbaB3AEC56923e128f441995",
+    "COMMISSIONER_ROLE": "0xb9E8412a3b35A5A75b76E679d8791EF2C75984Ed"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "env": "testnet",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "sourceCommit": "8a8955126d79c99e17ec3701416eedffc1c931a4",
+  "delays": {
+    "IDRP.UPGRADE_DELAY": "5 minutes",
+    "IDRPController.UPGRADE_DELAY": "5 minutes",
+    "IDRPController.DEFAULT_ADMIN_DELAY": "5 minutes"
+  },
+  "deployer": "0x1EE445Fbc60EE07fDdE916F49f94D6953D4d8D6C",
+  "deployedAt": "2026-10-29T15:14:12.937Z",
+  "IDRP": "0x8A571BC36D59051e056ac151e285048C49C7d0B6",
+  "IDRPController": "0x522C312d8Be13686aaE9f0ED4D8E388F9A722854",
+  "IDRPImpl": "0x9E6253a5fbB3c041233e4Fe564bA1d516bf377c8",
+  "IDRPControllerImpl": "0x41bC763d8b9684f7a148804E740E8f7C042e44Ff",
+  "IDRPBuild": "deployment/builds/11155111/0x9E6253a5fbB3c041233e4Fe564bA1d516bf377c8.json",
+  "IDRPControllerBuild": "deployment/builds/11155111/0x41bC763d8b9684f7a148804E740E8f7C042e44Ff.json",
+  "depositoryWallet": "0x0FC4CBd7f60E0BE5FeaCFAB6B8818F88763f9640",
+  "sanctionsList": "0x05a1CADe9ecFAf5d41C2782d4856887A6c0EFeEE",
+  "quorumSigners": {
+    "OFFICER_ROLE": "0x99A0AD5DF1651D8812B0b4Ca5102ad060C4DC2d3",
+    "MANAGER_ROLE": "0xf712A68ff897cdcdD7a0b68c1DE6886F1F8eD761",
+    "DIRECTOR_ROLE": "0x5B2A48685a89458ECbaB3AEC56923e128f441995",
+    "COMMISSIONER_ROLE": "0xb9E8412a3b35A5A75b76E679d8791EF2C75984Ed"
+  }
+}

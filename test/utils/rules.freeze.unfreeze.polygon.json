@@ -1,0 +1,36 @@
+[
+  {
+    "minAmount": "0",
+    "maxAmount": "100000000000000",
+    "requiredRoles": [
+      "0xbbecb2568601cb27e6ced525237c463da94c4fb7a9b98ac79fd30fd56d8e1b53"
+    ]
+  },
+  {
+    "minAmount": "100000000000000",
+    "maxAmount": "500000000000000",
+    "requiredRoles": [
+      "0xbbecb2568601cb27e6ced525237c463da94c4fb7a9b98ac79fd30fd56d8e1b53",
+      "0x241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b08"
+    ]
+  },
+  {
+    "minAmount": "500000000000000",
+    "maxAmount": "1000000000000000",
+    "requiredRoles": [
+      "0xbbecb2568601cb27e6ced525237c463da94c4fb7a9b98ac79fd30fd56d8e1b53",
+      "0x241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b08",
+      "0x15e007796fc034bf8274acdcfbd2f48124815698ba6f70c109f3423981a7052f"
+    ]
+  },
+  {
+    "minAmount": "1000000000000000",
+    "maxAmount": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+    "requiredRoles": [
+      "0xbbecb2568601cb27e6ced525237c463da94c4fb7a9b98ac79fd30fd56d8e1b53",
+      "0x241ecf16d79d0f8dbfb92cbc07fe17840425976cf0667f022fe9877caa831b08",
+      "0x15e007796fc034bf8274acdcfbd2f48124815698ba6f70c109f3423981a7052f",
+      "0xf40a29943eea2d5a1b57ac2700eb4e82e89f06c5825e85a2046bfcfb4eea28a7"
+    ]
+  }
+]

@@ -10,6 +10,7 @@ import hre from "hardhat";
  *
  *   npx hardhat run scripts/verify-testnet-builds.ts --network baseSepolia
  *   npx hardhat run scripts/verify-testnet-builds.ts --network kairos
+ *   npx hardhat run scripts/verify-testnet-builds.ts --network sepolia | bscTestnet | polygonAmoy
  *
  * Before submitting anything it compiles each recorded input locally and
  * checks the result against the chain, byte for byte including metadata; a
@@ -27,6 +28,24 @@ const EXPLORERS: Record<number, { api: string; browser: string; key: () => strin
   84532: {
     api: "https://api.etherscan.io/v2/api?chainid=84532",
     browser: "https://sepolia.basescan.org/address/",
+    key: () => String(hre.config.etherscan.apiKey),
+    linksProxies: true,
+  },
+  11155111: {
+    api: "https://api.etherscan.io/v2/api?chainid=11155111",
+    browser: "https://sepolia.etherscan.io/address/",
+    key: () => String(hre.config.etherscan.apiKey),
+    linksProxies: true,
+  },
+  97: {
+    api: "https://api.etherscan.io/v2/api?chainid=97",
+    browser: "https://testnet.bscscan.com/address/",
+    key: () => String(hre.config.etherscan.apiKey),
+    linksProxies: true,
+  },
+  80002: {
+    api: "https://api.etherscan.io/v2/api?chainid=80002",
+    browser: "https://amoy.polygonscan.com/address/",
     key: () => String(hre.config.etherscan.apiKey),
     linksProxies: true,
   },

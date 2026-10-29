@@ -76,6 +76,16 @@ const config: HardhatUserConfig = {
       accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
       gasMultiplier: 1.1, // Add 10% buffer to estimated gas
     },
+    bscTestnet: {
+      chainId: 97,
+      url: "https://bsc-testnet-rpc.publicnode.com",
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
+    },
+    polygonAmoy: {
+      chainId: 80002,
+      url: "https://polygon-amoy-bor-rpc.publicnode.com",
+      accounts: [IDRP_DEPLOYER_PRIVATE_KEY, IDRP_ADMIN_PRIVATE_KEY],
+    },
     kaia: {
       chainId: 8217,
       url: `https://public-en.node.kaia.io`,

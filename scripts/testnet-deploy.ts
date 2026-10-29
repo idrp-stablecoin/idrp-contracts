@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { execSync } from "child_process";
 import hre from "hardhat";
+import { MIRROR_OF, compareToMainnet } from "./utils/mirror";
 
 /**
  * Deploys the `testnet` environment: fresh IDRP + IDRPController proxies on a
@@ -26,10 +27,15 @@ import hre from "hardhat";
  * Usage:
  *   npx hardhat run scripts/testnet-deploy.ts --network baseSepolia
  *   npx hardhat run scripts/testnet-deploy.ts --network kairos
+ *   npx hardhat run scripts/testnet-deploy.ts --network sepolia
+ *   npx hardhat run scripts/testnet-deploy.ts --network bscTestnet
+ *   npx hardhat run scripts/testnet-deploy.ts --network polygonAmoy
  *   npx hardhat run scripts/testnet-deploy.ts              (local rehearsal, records to a temp dir)
+ *   REHEARSE_AS=80002 npx hardhat run scripts/testnet-deploy.ts   (rehearsal with that testnet's mainnet profile)
  *
  * Env:
  *   MINT_IDRP        whole IDRP minted to the depository as test supply (default 1000000, 0 skips)
+ *   REHEARSE_AS      local rehearsal only: the testnet chain id whose mainnet profile to build.
  *   SANCTIONS_LIST   sanctions list to wire. Otherwise the chain's known testnet list, or a fresh
  *                    SanctionsList owned by the deployer.
  */
@@ -47,7 +53,7 @@ const DELAY_LINES: Array<[string, string]> = [
 
 const MAINNET_CHAIN_IDS = new Set([1, 56, 137, 8217, 728126428]);
 const LOCAL_CHAIN_ID = 31337;
-const ALLOWED_CHAIN_IDS = new Set([84532, 1001, LOCAL_CHAIN_ID]);
+const ALLOWED_CHAIN_IDS = new Set([84532, 1001, 11155111, 97, 80002, LOCAL_CHAIN_ID]);
 
 /** Quorum signers and depository: the wallets today's testnets use. */
 const QUORUM_SIGNERS: Record<string, string> = {
@@ -73,6 +79,17 @@ const RULE_FILES: Array<[number, string, string]> = [
   [5, "Unpause", "rules.unpause.json"],
 ];
 
+/**
+ * Where a mainnet differs from the files above (measured on chain). Polygon runs
+ * lower freeze/unfreeze tiers and lists the pause roles MANAGER, DIRECTOR.
+ */
+const PROFILE_RULE_FILES: Record<number, Partial<Record<number, string>>> = {
+  80002: { 2: "rules.freeze.unfreeze.polygon.json", 3: "rules.freeze.unfreeze.polygon.json" },
+};
+const PROFILE_PAUSE_ORDER: Record<number, string[]> = {
+  80002: ["MANAGER_ROLE", "DIRECTOR_ROLE"],
+};
+
 type Rule = { minAmount: bigint; maxAmount: bigint; requiredRoles: string[] };
 type BuildRecord = { contract: string; compiler: string; input: unknown };
 
@@ -88,14 +105,14 @@ const MAINNET_ROLE_ORDER: Record<number, string[]> = {
   4: ["DIRECTOR_ROLE", "MANAGER_ROLE"],
 };
 
-function loadRules(op: number, file: string): Rule[] {
+function loadRules(op: number, file: string, profile: number): Rule[] {
   const raw = JSON.parse(fs.readFileSync(path.join(root, "test/utils", file), "utf8"));
   const rules: Rule[] = raw.map((r: any) => ({
     minAmount: BigInt(r.minAmount),
     maxAmount: BigInt(r.maxAmount),
     requiredRoles: r.requiredRoles,
   }));
-  const order = MAINNET_ROLE_ORDER[op];
+  const order = op === 4 ? PROFILE_PAUSE_ORDER[profile] ?? MAINNET_ROLE_ORDER[op] : MAINNET_ROLE_ORDER[op];
   if (order) {
     const wanted = order.map((role) => hre.ethers.id(role));
     for (const r of rules) {
@@ -178,6 +195,8 @@ async function main() {
   if (MAINNET_CHAIN_IDS.has(chainId)) throw new Error(`REFUSING: chainId ${chainId} is a MAINNET.`);
   if (!ALLOWED_CHAIN_IDS.has(chainId)) throw new Error(`REFUSING: chainId ${chainId} is not an allowed testnet.`);
   const local = chainId === LOCAL_CHAIN_ID;
+  // The chain whose mainnet profile is built: the real chain, or the rehearsal's choice.
+  const profile = local ? Number(process.env.REHEARSE_AS ?? 0) : chainId;
 
   const recordDir = local ? fs.mkdtempSync(path.join(os.tmpdir(), "idrp-testnet-")) : path.join(root, "deployment");
   const recordFile = path.join(recordDir, ENV, `chain-${chainId}.json`);
@@ -197,6 +216,7 @@ async function main() {
   console.log(`env             ${ENV}   source ${commit.slice(0, 7)}`);
   console.log(`deployer        ${deployer.address}`);
   console.log(`balance         ${hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address))}`);
+  const startBlock = await hre.ethers.provider.getBlockNumber();
 
   // The upgrades plugin reuses any implementation in .openzeppelin/ whose code
   // matches ignoring metadata. That hands back an older build (other comments,
@@ -274,8 +294,8 @@ async function main() {
   }
 
   console.log("\n[6/7] Quorum rules");
-  for (const [op, name, file] of RULE_FILES) {
-    const rules = loadRules(op, file);
+  for (const [op, name, defaultFile] of RULE_FILES) {
+    const rules = loadRules(op, PROFILE_RULE_FILES[profile]?.[op] ?? defaultFile, profile);
     await (await (controller as any).setQuorumRules(op, rules)).wait();
     for (const [i, r] of rules.entries()) {
       const live = await (controller as any).getQuorumRule(op, r.minAmount);
@@ -327,6 +347,24 @@ async function main() {
   fs.mkdirSync(path.dirname(recordFile), { recursive: true });
   fs.writeFileSync(recordFile, JSON.stringify(record, null, 2) + "\n");
 
+  // Gas this run spent, summed from the deployer's receipts.
+  let gasUsed = 0n;
+  for (let n = startBlock + 1, last = await hre.ethers.provider.getBlockNumber(); n <= last; n++) {
+    const block = await hre.ethers.provider.getBlock(n, true);
+    for (const tx of block!.prefetchedTransactions) {
+      if (tx.from.toLowerCase() === deployer.address.toLowerCase()) gasUsed += (await hre.ethers.provider.getTransactionReceipt(tx.hash))!.gasUsed;
+    }
+  }
+  console.log(`\ngas used       ${gasUsed}`);
+
+  // The contracts are live and recorded by now. Compare with the mainnet this one mirrors.
+  let mirrorDiffs: string[] = [];
+  if (MIRROR_OF[profile]) {
+    console.log(`\n[mirror] comparing with chain ${MIRROR_OF[profile]} (read-only)`);
+    mirrorDiffs = await compareToMainnet(hre.ethers.provider, { controller: ctrlAddr, token: tokenAddr }, profile, DELAY_SECONDS);
+    console.log(mirrorDiffs.length === 0 ? "      identical apart from the timelocks and the sanctions list address" : mirrorDiffs.map((d) => `      DIFF ${d}`).join("\n"));
+  }
+
   console.log("\n─────────────────────────────────────────────────────");
   console.log(`token       ${tokenAddr}   impl ${tokenImpl}`);
   console.log(`controller  ${ctrlAddr}   impl ${ctrlImpl}`);
@@ -339,6 +377,7 @@ async function main() {
     console.log(`\nCommit the record: git add deployment/${ENV}/chain-${chainId}.json deployment/builds/${chainId}/ .openzeppelin`);
     console.log(`Verify on the explorer: npx hardhat run scripts/verify-testnet-builds.ts --network ${hre.network.name}`);
   }
+  if (mirrorDiffs.length) throw new Error(`${mirrorDiffs.length} difference(s) from the mainnet this testnet mirrors — see above`);
 }
 
 main().catch((e) => {
