@@ -38,5 +38,58 @@
       "role": "COMMISSIONER_ROLE",
       "addr": "TRpY5VmtdsMqNW2tc6U2kvoknzDevM74NJ"
     }
+  ],
+  "upgrades": [
+    {
+      "step": "deploy",
+      "contract": "IDRPController",
+      "implementation": "TV38EticWWM5oRHrq7JnvRdW1N3cta75pU",
+      "build": "deployment/builds/3448148188/TV38EticWWM5oRHrq7JnvRdW1N3cta75pU.json",
+      "sourceCommit": "2d93a929e6034b5c1977ec66c66bb93e8635bb84",
+      "delays": "5 minutes",
+      "tx": "5b93451a7eadd96ab8bbfb9ce847ad6645ea762a660298ab3a3496d88c43a7a3",
+      "at": "2026-10-30T07:12:37.975Z"
+    },
+    {
+      "step": "schedule",
+      "contract": "IDRPController",
+      "implementation": "TV38EticWWM5oRHrq7JnvRdW1N3cta75pU",
+      "executableAfter": "2026-10-30T07:18:15.000Z",
+      "tx": "344b1895e07b2e155b0eeb14358b034ad94b564dfd2caec71d3e0eda71957338",
+      "at": "2026-10-30T07:14:13.261Z"
+    },
+    {
+      "step": "deploy",
+      "contract": "IDRP",
+      "implementation": "TXcAvuqxNHYeeqiriZu7tTSDPY6k3gcq2s",
+      "build": "deployment/builds/3448148188/TXcAvuqxNHYeeqiriZu7tTSDPY6k3gcq2s.json",
+      "sourceCommit": "2d93a929e6034b5c1977ec66c66bb93e8635bb84",
+      "delays": "5 minutes",
+      "tx": "9be9f7e6584630bdee3a0da4615dc5e4f0873984229b5da98f458b7fc061e581",
+      "at": "2026-10-30T07:15:58.538Z"
+    },
+    {
+      "step": "schedule",
+      "contract": "IDRP",
+      "implementation": "TXcAvuqxNHYeeqiriZu7tTSDPY6k3gcq2s",
+      "executableAfter": "2026-10-30T07:21:51.000Z",
+      "tx": "3fa4d8d10e47868e64472fe5b1b1ce3843a0ca39d7022373aa77797d26ac1f88",
+      "at": "2026-10-30T07:17:58.311Z"
+    },
+    {
+      "step": "cancel",
+      "contract": "IDRP",
+      "cancelled": "TXcAvuqxNHYeeqiriZu7tTSDPY6k3gcq2s",
+      "tx": "953212ea9396f586702554b631a0d3bce53e383dcd836a81428c9a2f25cee61b",
+      "at": "2026-10-30T07:19:47.839Z"
+    },
+    {
+      "step": "schedule",
+      "contract": "IDRP",
+      "implementation": "TXcAvuqxNHYeeqiriZu7tTSDPY6k3gcq2s",
+      "executableAfter": "2026-10-30T07:25:09.000Z",
+      "tx": "03e53bb03f313e4da830ea60d07103e5e0138c3e1b4b1637ef238da54b8506fb",
+      "at": "2026-10-30T07:21:06.474Z"
+    }
   ]
 }
