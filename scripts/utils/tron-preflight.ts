@@ -48,6 +48,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const trx = (sun: number) => (sun / 1e6).toLocaleString("en-US", { minimumFractionDigits: 6, maximumFractionDigits: 6 });
 const n = (v: number) => v.toLocaleString("en-US");
 
+const TRANSIENT = /\b429\b|Too Many Requests|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|socket hang up|network error|timeout/i;
+
+/**
+ * Retries a TronWeb call that failed in transport (TronGrid's free tier answers 429 under any
+ * burst). Anything else — a validation error, a revert — is thrown at once.
+ */
+export async function retrying<T>(label: string, fn: () => Promise<T>, attempts = 6): Promise<T> {
+  let last: unknown;
+  for (let a = 0; a < attempts; a++) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      last = e;
+      if (!TRANSIENT.test(`${e?.message ?? e} ${e?.response?.status ?? ""}`)) throw e;
+    }
+    await sleep(1500 * (a + 1));
+  }
+  throw new Error(`${label} failed after retries: ${(last as any)?.message ?? last}`);
+}
+
 export async function chainPrices(net: TronNet): Promise<Prices> {
   const r = await walletApi(net, "wallet/getchainparameters", {}, (x) => Array.isArray(x?.chainParameter));
   const get = (key: string) => {
@@ -220,7 +240,7 @@ export async function gatedSend(net: TronNet, step: Step): Promise<any | undefin
   const prices = await chainPrices(net);
   const res = await accountResources(net, net.signer);
   const feeLimit = Math.ceil(step.energy * FEE_LIMIT_FACTOR) * prices.energyFee;
-  const unsigned = await step.build(feeLimit);
+  const unsigned = await retrying(`${step.label}: building the transaction`, () => step.build(feeLimit));
   if (Number(unsigned?.raw_data?.fee_limit) !== feeLimit) {
     throw new Error(`${step.label}: the built transaction has fee_limit ${unsigned?.raw_data?.fee_limit}, expected ${feeLimit}`);
   }
@@ -236,8 +256,12 @@ export async function gatedSend(net: TronNet, step: Step): Promise<any | undefin
   if (!v.ok) throw new Error(`REFUSED: ${step.label} is not funded (short by ${trx(v.shortfall)} TRX). Nothing was sent.`);
 
   const signed = await net.tw.trx.sign(unsigned);
-  const sent = await net.tw.trx.sendRawTransaction(signed);
-  if (!sent?.result) throw new Error(`${step.label}: the node rejected the transaction: ${JSON.stringify(sent)}`);
+  // The same signed transaction can be re-broadcast safely: a node that already has it answers
+  // DUP_TRANSACTION_ERROR for the same txID, which means it was sent.
+  const sent: any = await retrying(`${step.label}: broadcasting`, () => net.tw.trx.sendRawTransaction(signed));
+  if (!sent?.result && sent?.code !== "DUP_TRANSACTION_ERROR") {
+    throw new Error(`${step.label}: the node rejected the transaction: ${JSON.stringify(sent)}`);
+  }
   console.log(`  sent          ${unsigned.txID}`);
   const info = await waitReceipt(net, unsigned.txID, step.label);
   const r = info.receipt ?? {};
