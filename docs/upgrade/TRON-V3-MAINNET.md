@@ -4,10 +4,10 @@ Hand this to whoever holds the upgrader key. Branch: **`tron-main`**. Its contra
 v3 release (`contracts/` identical to `69ac77c`), and its `tron-*` scripts are the gated ones
 described below. Background and rationale: [`TRON-MAINNET-V3-README.md`](../../TRON-MAINNET-V3-README.md).
 
-The whole sequence below was rehearsed on 2026-10-30 with these exact scripts: first on a local
-Tron node holding a replica of the testnet env (same code and storage as the Nile sandbox), then
-on the Nile testnet env itself. Every receipt matched the energy and bandwidth the scripts
-measured beforehand.
+The whole sequence below was run on 2026-10-30 with these exact scripts: first on a local Tron
+node holding a replica of the testnet env (same code and storage as the Nile sandbox), then on the
+Nile testnet env itself, which is now on v3. Every receipt matched the energy and bandwidth the
+scripts measured beforehand.
 
 ---
 
@@ -59,27 +59,37 @@ Plan the money with:
 ACCOUNT=TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6 npx hardhat run scripts/tron-funding-check.ts --network tron
 ```
 
-Measured on mainnet, 2026-10-30 (100 sun per energy, 1,000 sun per byte):
+Measured on mainnet, 2026-10-30, by that script (100 sun per energy, 1,000 sun per byte):
 
 | Session | Step | Energy | Bytes | TRX if burned |
 |---|---|---|---|---|
-| 1 | token `cancelUpgrade()` | 12,363 | 280 | 1.52 |
+| 1 | token `cancelUpgrade()` | 12,363 | 278 | 1.51 |
 | 1 | deploy the controller implementation | 4,362,064 | 26,602 | 462.81 |
-| 1 | controller `scheduleUpgrade` | 42,516 | 314 | 4.57 |
-| 2 | controller `upgradeToAndCall(initializeV3)` | 88,718 * | ~571 | 9.44 |
+| 1 | controller `scheduleUpgrade` | 42,516 | 313 | 4.56 |
+| 2 | controller `upgradeToAndCall(initializeV3)` | 88,718 * | 571 | 9.44 |
 | 2 | deploy the token implementation | 3,666,145 | 22,908 | 389.52 |
-| 2 | token `scheduleUpgrade` | 42,578 | 314 | 4.57 |
-| 3 | token `upgradeToAndCall(initializeV3)` | 82,406 * | ~571 | 8.81 |
-| | **total** | **8,296,790** | **51,560** | **881.24** |
+| 2 | token `scheduleUpgrade` (after the cancel) | 42,578 * | 312 | 4.57 |
+| 3 | token `upgradeToAndCall(initializeV3)` | 82,406 * | 507 | 8.75 |
+| | **total** | **8,296,790** | **51,491** | **881.17** |
 
-\* measured on a local node and on Nile; mainnet can measure it only once the schedule matures,
-and the script does then.
+\* not measurable on mainnet yet, so the receipt of the same call elsewhere: the two executes on
+the Nile testnet env (2026-10-30, identical on a local node), and the token schedule from an empty
+slot (Nile 2026-10-30, and mainnet's own 2026-06-30 receipt). Each step script measures its own
+transaction again before it sends.
 
-- **Burn only:** hold **1,000 TRX** before session 1 and top up between sessions as the funding
-  check says.
+What each session needs, with the 1.1× margin:
+
+| Session | Burn only | Or rent energy, and hold for bandwidth |
+|---|---|---|
+| 1 | ≥ 513.06 TRX | ≥ 4,858,638 energy + ≥ 77.19 TRX |
+| 2 | ≥ 441.51 TRX | ≥ 4,177,186 energy + ≥ 73.79 TRX |
+| 3 | ≥ 9.57 TRX | burn it |
+
+- **Burn only:** fund **1,000 TRX** before session 1 (everything needs ≥ 964.14 TRX) and run the
+  funding check again before each session.
 - **Renting energy:** rent for one session at a time, to the upgrader's **address** (never connect
-  its wallet or key to a rental site), right before running it, and keep ≥ 50 TRX in the account
-  for bandwidth: a 26,602-byte deploy cannot use rented or free bandwidth, it burns about 27 TRX.
+  its wallet or key to a rental site), right before running it, and hold the TRX the table says:
+  bandwidth is burned in full, because a 26,602-byte deploy cannot use rented or free bandwidth.
 - Contracts that are used heavily pay a dynamic-energy surcharge on Tron. Measured 2026-10-30:
   neither IDRP contract carries one. The dry run would include it if that changed.
 

@@ -132,7 +132,7 @@ async function main() {
     console.log(`✓ ${name} implementation ${u.implementation}  (${u.delays} build, source ${String(u.sourceCommit).slice(0, 7)})`);
     console.log(`    form      ${explorer}/#/contract/${u.implementation}/code  -> Verify and Publish`);
     console.log(`    file      ${path.relative(root, file)}   (main contract: ${name})`);
-    console.log(`    compiler  ${build.compiler.split(" ")[1].replace(/\.Emscripten.*$/, "")}   optimizer ${enabled ? "yes" : "no"}, runs ${runs}   license MIT`);
+    console.log(`    compiler  ${build.compiler.split(" ")[1].replace(/\.Emscripten.*$/, "")}   optimizer ${enabled ? "yes" : "no"}, runs ${runs}   evm ${build.input.settings.evmVersion ?? "default"} (if asked)   license MIT`);
   }
   console.log(`\nEvery file reproduces the on-chain code with tron-solc. Verify each on ${explorer} before executing its upgrade.`);
 }
