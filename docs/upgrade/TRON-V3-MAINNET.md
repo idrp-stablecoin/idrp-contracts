@@ -1,265 +1,247 @@
-# Tron mainnet v2 → v3 — deploy and schedule
+# Tron mainnet v2 → v3 — runbook
 
-Hand this to whoever holds the upgrader key. Branch: **`mainnet-ready-impl`**, merged
-into **`tron`**. Background and rationale: [`TRON-MAINNET-V3-README.md`](../../TRON-MAINNET-V3-README.md).
+Hand this to whoever holds the upgrader key. Branch: **`tron-main`**. Its contracts are the
+v3 release (`contracts/` identical to `69ac77c`), and its `tron-*` scripts are the gated ones
+described below. Background and rationale: [`TRON-MAINNET-V3-README.md`](../../TRON-MAINNET-V3-README.md).
 
-Everything below has been rehearsed on a local TVM from mainnet's real starting state,
-against the deployed v2 sources. **Nothing here has been run on mainnet.**
+The whole sequence below was rehearsed on 2026-10-30 with these exact scripts: first on a local
+Tron node holding a replica of the testnet env (same code and storage as the Nile sandbox), then
+on the Nile testnet env itself. Every receipt matched the energy and bandwidth the scripts
+measured beforehand.
 
 ---
 
-## The facts this depends on
+## 1. What happened before, and what is left over
 
-| | value |
+| When (UTC) | What | Result |
+|---|---|---|
+| 2026-06-29 | Controller v3 deploy, OpenZeppelin 5 build | ran out of energy: **311.68 TRX burned**, nothing deployed |
+| 2026-06-30 | OZ 5 builds deployed and scheduled on **both** proxies | can never work: Tron's proxies are OZ 4, so OZ 5 reads every variable from the wrong slot |
+| 2026-09-01 | Controller `upgradeToAndCall(OZ 5 build, initializeV3)` | reverted, atomically, nothing changed |
+| 2026-09-03 | Controller schedule cancelled | ✓ |
+| 2026-09-03 | Controller deploy (OZ 4 build, an earlier branch) | ran out of energy: **264.88 TRX burned**, nothing deployed |
+
+What it leaves on mainnet today (read it again on the day):
+
+- **The token still has the June OZ 5 build scheduled, and the upgrader can execute it.**
+  Executed, the token would read balances, admin and upgrader from empty storage. **The first
+  transaction of the first session is its cancel.** The controller has nothing pending.
+- Both proxies are on v2, behind stock OZ 4 UUPS proxies, with a 48 h `UPGRADE_DELAY`.
+
+Why the OZ 4 path: v3 is built on OZ 4.9.6 so that no storage slot moves — the quorum role
+holders keep their roles with **no re-grant**, and there is no service outage. The single
+default admin uses `AccessControlDefaultAdminRulesUpgradeable`, which OZ 4.9.6 ships.
+
+| | |
 |---|---|
 | Controller proxy | `TSQFFuzLK7f3EVGenQyQpXrpoFuDsXEvbX` |
 | Token proxy | `TQn7gmXFj6oPFkFytQkpK1utAx9V9Ah97r` |
-| Current `upgrader()` on both | `TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6` (`0x9d0a05af…78ba`) |
-| Legacy `DEFAULT_ADMIN_ROLE` holders | **exactly one:** `0x9d0a05af0f1fcf33ffa4ec74d3bdbf63e0ff78ba` |
-| `UPGRADE_DELAY` | 48 h on both, unchanged |
-| Pending (poisoned) Controller schedule | `41ecf9e211dfaf7ab5936ecb5601934aa38c8f96aa`, executable since 2026-07-02 |
-| Pending (poisoned) Token schedule | `0x66acb0ad5ce62b1ae389ed890c663b528d2c3c46` |
-
-**The signer must be the upgrader key.** Every write below is `onlyUpgrader`. If it is
-ever moved to a multisig, propose the same calls through TronLink/TronScan instead of
-running the scripts.
+| Upgrader (both) | `TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6` — a single key; every write below is `onlyUpgrader` |
+| Legacy `DEFAULT_ADMIN_ROLE` holders | enumerate on the day (`tron-list-default-admin-holders.ts`); last read: exactly one, the upgrader |
 
 ---
 
-## Step 0 — build and self-check (no chain writes)
+## 2. Funding — measure it, then fund it
+
+Tron burns everything a transaction consumed when it runs out of energy. The fee limit is a
+cap, not a reservation: when it is higher than the balance, the balance is the cap. That is how
+the two deploys above burned 576.56 TRX and deployed nothing.
+
+**Every script is a dry run unless `EXECUTE=1`.** Before it sends anything it simulates the exact
+transaction on the node, measures energy and bandwidth, reads the account and the chain's prices,
+and refuses unless the account can cover **1.1×** the measured energy. It sets the fee limit to
+**1.2×** the measured energy, so even a wrong estimate cannot cost more. The dry run prints all of
+it: run every step without `EXECUTE=1` first and read the `funding` line.
+
+Plan the money with:
 
 ```bash
-git checkout mainnet-ready-impl
-npm ci
-npx hardhat compile --network tron          # tron-solc 0.8.22, artifacts-tron/
-
-npx hardhat run scripts/verify-deployed-source.ts --network tron   # read-only
-npx hardhat run scripts/verify-live-layout.ts     --network tron   # read-only
-npx hardhat test test/upgrade/TronUpgradeRepeatability.ts test/upgrade/UupsBaseLayout.ts
+ACCOUNT=TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6 npx hardhat run scripts/tron-funding-check.ts --network tron
 ```
 
-Expect `ALL TARGETS VERIFIED`, `LAYOUT VERIFIED AGAINST LIVE MAINNET`, and `8 passing`.
-(Name the two files — `hardhat test` does not accept a directory or a glob, and
-`test/upgrade/` also holds a mainnet-fork test that self-skips without
-`MAINNET_FORK_RPC_URL`.)
-If any of those fail, stop — do not deploy.
+Measured on mainnet, 2026-10-30 (100 sun per energy, 1,000 sun per byte):
 
-Re-confirm the admin list on the day rather than trusting the table above, and capture a
-before-state for both proxies:
+| Session | Step | Energy | Bytes | TRX if burned |
+|---|---|---|---|---|
+| 1 | token `cancelUpgrade()` | 12,363 | 280 | 1.52 |
+| 1 | deploy the controller implementation | 4,362,064 | 26,602 | 462.81 |
+| 1 | controller `scheduleUpgrade` | 42,516 | 314 | 4.57 |
+| 2 | controller `upgradeToAndCall(initializeV3)` | 88,718 * | ~571 | 9.44 |
+| 2 | deploy the token implementation | 3,666,145 | 22,908 | 389.52 |
+| 2 | token `scheduleUpgrade` | 42,578 | 314 | 4.57 |
+| 3 | token `upgradeToAndCall(initializeV3)` | 82,406 * | ~571 | 8.81 |
+| | **total** | **8,296,790** | **51,560** | **881.24** |
+
+\* measured on a local node and on Nile; mainnet can measure it only once the schedule matures,
+and the script does then.
+
+- **Burn only:** hold **1,000 TRX** before session 1 and top up between sessions as the funding
+  check says.
+- **Renting energy:** rent for one session at a time, to the upgrader's **address** (never connect
+  its wallet or key to a rental site), right before running it, and keep ≥ 50 TRX in the account
+  for bandwidth: a 26,602-byte deploy cannot use rented or free bandwidth, it burns about 27 TRX.
+- Contracts that are used heavily pay a dynamic-energy surcharge on Tron. Measured 2026-10-30:
+  neither IDRP contract carries one. The dry run would include it if that changed.
+
+---
+
+## 3. What to run
+
+Times the scripts print are UTC. Keep every output.
+
+### Session 1 — checks, the cancel, the controller deploy and schedule
+
+```bash
+git checkout tron-main
+git pull
+git diff 69ac77c -- contracts/
+npm ci
+```
+
+`git diff` must print nothing: the contracts are the rehearsed release. `npm ci` also patches
+`@layerzerolabs/hardhat-tron` so Node 22 and later work (Node 20, 24 and 25 measured).
+
+Read-only gates — nothing is sent:
+
+```bash
+npx hardhat run scripts/verify-deployed-source.ts --network tron
+npx hardhat run scripts/verify-live-layout.ts --network tron
+npx hardhat test test/upgrade/TronUpgradeRepeatability.ts test/upgrade/UupsBaseLayout.ts
+npx hardhat run scripts/tron-list-default-admin-holders.ts --network tron
+TARGET=controller SNAPSHOT=controller-before.json npx hardhat run scripts/tron-verify-v3.ts --network tron
+TARGET=token SNAPSHOT=token-before.json npx hardhat run scripts/tron-verify-v3.ts --network tron
+```
+
+Expect `ALL TARGETS VERIFIED`, `LAYOUT VERIFIED AGAINST LIVE MAINNET` and `9 passing`. If any
+fails, stop.
+
+The cancel — dry run, then send:
+
+```bash
+TARGET=token npx hardhat run scripts/tron-cancel-upgrade.ts --network tron
+TARGET=token EXECUTE=1 npx hardhat run scripts/tron-cancel-upgrade.ts --network tron
+```
+
+It must end with `✓ cleared`.
+
+The controller implementation — dry run, then send:
+
+```bash
+npx hardhat run scripts/tron-deploy-controller-v3-impl.ts --network tron
+EXECUTE=1 npx hardhat run scripts/tron-deploy-controller-v3-impl.ts --network tron
+```
+
+It refuses uncommitted contracts, compiles with tron-solc, checks the build's timelock constants,
+and after the deploy proves the code on chain is the build. It records the exact compiler input
+under `deployment/builds/728126428/` and the deploy in `deployment/tron/mainnet.json`. Commit
+both.
+
+**Verify it on Tronscan before it can go live:**
+
+```bash
+npx hardhat run scripts/tron-explorer-files.ts --network tron
+```
+
+It proves the recorded input reproduces the on-chain code, writes the single-file source to
+`flattened/tron/`, and prints the form values. Submit the form at
+`https://tronscan.org/#/contract/<implementation>/code`. If verification fails, do not schedule.
+
+Then schedule it — dry run, then send:
+
+```bash
+IMPL=<controller implementation> npx hardhat run scripts/tron-schedule-controller-upgrade.ts --network tron
+IMPL=<controller implementation> EXECUTE=1 npx hardhat run scripts/tron-schedule-controller-upgrade.ts --network tron
+```
+
+Before sending, it checks the implementation on chain: every timelock constant is 48 h, and
+`initializeV3` is present with its initializer locked the OpenZeppelin 4 way (an OZ 5 build is
+refused). It prints when the upgrade becomes executable.
+
+### Session 2 — at least 48 h later: execute the controller, then deploy and schedule the token
+
+Enumerate the legacy admins again and pass exactly that list. `initializeV3` revokes only what it
+is given; a holder left out keeps `DEFAULT_ADMIN_ROLE`.
 
 ```bash
 npx hardhat run scripts/tron-list-default-admin-holders.ts --network tron
-
-TARGET=controller npx hardhat run scripts/tron-verify-v3.ts --network tron
-TARGET=token      npx hardhat run scripts/tron-verify-v3.ts --network tron
 ```
 
-Keep that output. It is the baseline you compare against afterwards.
-
-### Funding — check before you begin
-
-Every script signs with `IDRP_DEPLOYER_PRIVATE_KEY_TRON`, and `schedule` / `execute` /
-`cancel` all require that key to be the upgrader. So the **upgrader account** pays for
-everything, including the two implementation deploys.
-
-Measured from the actual v2 deploy transactions, scaled by bytecode size, at the current
-100 SUN/energy:
-
-| | energy | cost |
-|---|---|---|
-| Controller v3 deploy | ~4.28 M | **~430 TRX** |
-| Token v3 deploy | ~3.32 M | **~330 TRX** |
-| 2 cancels + 2 schedules + 2 executes | — | ~100–200 TRX |
-| **total** | | **~900–1000 TRX** |
-
-*(For reference the real v2 deploys cost 324 TRX / 3,057,781 energy for the Controller and
-362 TRX / 3,406,419 energy for the Token.)*
-
-The account has **no staked energy**, so all of that is a TRX burn. Check the balance
-before starting:
+`CTRL_V3_ADMIN` and `CTRL_V3_UPGRADER` are required; nothing defaults to the signer. To keep
+today's single key, pass the upgrader for both. To move to a multisig, pass its address. Then:
 
 ```bash
-curl -s -X POST https://api.trongrid.io/wallet/getaccount \
-  -H 'Content-Type: application/json' \
-  -d '{"address":"TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6","visible":true}' | grep -o '"balance":[0-9]*'
+CTRL_V3_ADMIN=<admin> CTRL_V3_UPGRADER=<upgrader> CTRL_V3_LEGACY_DAR_HOLDERS=<list> npx hardhat run scripts/tron-execute-controller-upgrade.ts --network tron
+CTRL_V3_ADMIN=<admin> CTRL_V3_UPGRADER=<upgrader> CTRL_V3_LEGACY_DAR_HOLDERS=<list> EXECUTE=1 npx hardhat run scripts/tron-execute-controller-upgrade.ts --network tron
+TARGET=controller BASELINE=controller-before.json npx hardhat run scripts/tron-verify-v3.ts --network tron
 ```
 
-Divide by 1,000,000 for TRX. **Fund it to ~1,500 TRX before step 2** — a deploy that runs
-out mid-flight wastes the fee and the session. `feeLimit` is clamped to the chain maximum
-of 1000 TRX per transaction, so no single call can overspend, but the balance must be
-there.
+The execute is **one atomic `upgradeToAndCall(impl, initializeV3(...))`**. Never split it into
+`upgradeTo` plus a separate initializer: the atomic call is what makes a failure harmless, and
+splitting it is what deadlocked a Nile controller. The dry run simulates the exact call first.
+Afterwards the script checks `defaultAdmin()`, the upgrader, the revocations, the quorum roles
+(no re-grant), both `idrp.tron.uups.*` slots (must be `0x0`) and that the upgrade gate still
+passes. The verify run must end with `✓ nothing changed that the upgrade must not change`.
 
----
+Watch the controller live before the token goes on: the platform's operations keep working
+against the v2 token (rehearsed), and the one change is that a reused or empty operation
+identifier is refused.
 
-## Step 1 — clear the two poisoned schedules
-
-Both proxies still have an OZ 5 implementation scheduled from June, executable since
-July. Neither can succeed. The Token's is actively dangerous: the live OZ 4
-implementation still exposes `upgradeTo`, which **would** succeed and brick the contract
-holding every user balance.
-
-Dry run first — this prints what it would send and exits:
-
-```bash
-TARGET=controller npx hardhat run scripts/tron-cancel-upgrade.ts --network tron
-TARGET=token      npx hardhat run scripts/tron-cancel-upgrade.ts --network tron
-```
-
-Then broadcast:
-
-```bash
-TARGET=controller EXECUTE=1 npx hardhat run scripts/tron-cancel-upgrade.ts --network tron
-TARGET=token      EXECUTE=1 npx hardhat run scripts/tron-cancel-upgrade.ts --network tron
-```
-
-Both must end with `scheduledImplementation: …0000  ✓ cleared`.
-
-> **On "scheduling just replaces the old one".** At the contract level that is true — the
-> deployed v2 `scheduleUpgrade` overwrites `scheduledImplementation` and resets
-> `upgradeScheduledAt` with no pending-check, so scheduling the good implementation would
-> also neutralise the poisoned one and restart the 48 h clock. Cancelling first is still
-> preferred: it is one explicit, auditable action, and it leaves
-> `scheduledImplementation == 0` as a checkpoint anyone can verify before something new is
-> scheduled. If you do want to skip the cancel, the schedule scripts accept
-> `REPLACE_PENDING=1`.
-
----
-
-## Step 2 — Controller: deploy, schedule, wait, execute
-
-```bash
-# deploy the implementation (real TRX)
-npx hardhat run scripts/tron-deploy-controller-v3-impl.ts --network tron
-# -> prints Address (hex). Call it $CTRL_IMPL.
-
-# schedule
-IMPL=$CTRL_IMPL npx hardhat run scripts/tron-schedule-controller-upgrade.ts --network tron
-```
-
-The script refuses if `UPGRADE_DELAY != 48h`, if a schedule is already pending, or if the
-signer is not `upgrader()`. It prints the exact `executable after` timestamp.
-
-**Wait the full 48 hours.** Then:
-
-```bash
-npx hardhat run scripts/tron-execute-controller-upgrade.ts --network tron
-```
-
-That calls `upgradeToAndCall(scheduledImpl, initializeV3(admin, upgrader, legacyHolders))`
-in **one atomic transaction**. Never split it into `upgradeTo` plus a separate initializer
-— splitting removes the rollback that makes a failure harmless, and is what bricked the
-Nile Controller.
-
-`_legacyDefaultAdminHolders` must be exactly the array Step 0 printed.
-
-### Verify before declaring done
-
-```bash
-TARGET=controller npx hardhat run scripts/tron-verify-v3.ts --network tron
-```
-
-(`check-tron-roles.ts` does **not** cover this — it reads a deployment JSON and only
-checks the Token's MINTER/PAUSER/FREEZER/UPGRADER roles.)
-
-Pre-upgrade baseline captured 2026-09-03:
-
-```
-implementation            0x1f49fcf152c62e49f49fb225c630c94ffd56dd84  (TCpean…qpsX)
-upgrader()                0x9d0a05af0f1fcf33ffa4ec74d3bdbf63e0ff78ba
-idrpToken()               0xa270dfc7cb955b0fc54beb8b570fd6b1ee4ea7fc
-defaultAdmin()            reverts — ACDAR, only exists in v3
-scheduledImplementation() 0xecf9e211dfaf7ab5936ecb5601934aa38c8f96aa   <- poisoned
-OFFICER / MANAGER / DIRECTOR / COMMISSIONER                            4/4 ✓
-idrp.tron.uups.__self / __proxy                                        0x0 / 0x0 ✓
-upgrade path (simulated)  reverts "Upgrade not scheduled"              healthy ✓
-```
-
-After the upgrade expect: implementation changed, `defaultAdmin()` now answering,
-`scheduledImplementation()` back to `0x0`, quorum roles still **4/4 with no re-grant**,
-both TronUUPS slots still `0x0`, and the simulated upgrade path still reaching the
-timelock check.
-
-Three of those matter most:
-
-- **4/4 roles** is the whole reason for choosing the OZ 4 path — no role re-grant, no
-  service outage.
-- **Both TronUUPS slots `0x0`.** If either is ever non-zero, upgrades stop working
-  permanently. The script exits non-zero if it sees that.
-- **The simulated upgrade path.** You cannot prove a mainnet proxy is still upgradeable by
-  upgrading it again, so the script simulates `upgradeTo` and reads *where* it reverts.
-  `upgradeTo` runs the UUPS proxy gate before `_authorizeUpgrade`, so the reason tells you
-  which stage was reached:
-
-  | revert reason | meaning |
-  |---|---|
-  | `"Upgrade not scheduled"` / `"Timelock not expired"` | gate PASSED, reached the timelock logic — **healthy** |
-  | `"Function must be called through active proxy"` / `"…delegatecall"` / `0xbeb6ee1f` | gate FAILED — **frozen, no upgrade can ever land** |
-
-  Nothing is broadcast.
-
----
-
-## Step 3 — Token
-
-**Do not start until the Controller has been live and observed.** The Token holds every
-user balance, so it goes second even though the evidence is equally strong.
+Then the token implementation, the same way as the controller's:
 
 ```bash
 npx hardhat run scripts/tron-deploy-idrp-v3-impl.ts --network tron
-IMPL=$TOKEN_IMPL npx hardhat run scripts/tron-schedule-idrp-upgrade.ts --network tron
-# wait 48 h
-npx hardhat run scripts/tron-execute-idrp-upgrade.ts --network tron
-TARGET=token npx hardhat run scripts/tron-verify-v3.ts --network tron
+EXECUTE=1 npx hardhat run scripts/tron-deploy-idrp-v3-impl.ts --network tron
+npx hardhat run scripts/tron-explorer-files.ts --network tron
+IMPL=<token implementation> npx hardhat run scripts/tron-schedule-idrp-upgrade.ts --network tron
+IMPL=<token implementation> EXECUTE=1 npx hardhat run scripts/tron-schedule-idrp-upgrade.ts --network tron
 ```
 
-Pre-upgrade baseline captured 2026-09-03:
+Verify it on Tronscan between the deploy and the schedule.
 
-```
-implementation            0xc1e38647c0529c2a3c0212e2c949bb0cf8f9a3e8  (TTePym…bUvc)
-upgrader()                0x9d0a05af0f1fcf33ffa4ec74d3bdbf63e0ff78ba
-admin() / controller()    revert — only exist in v3
-sanctionsList()           0xe7eb27194eda053e44be061d6c4f0be8b31cb76f
-scheduledImplementation() 0x66acb0ad5ce62b1ae389ed890c663b528d2c3c46   <- poisoned
-idrp.tron.uups.__self / __proxy                                        0x0 / 0x0 ✓
-```
+### Session 3 — at least 48 h later: execute the token
 
-Then confirm `DOMAIN_SEPARATOR` is **unchanged** from its pre-upgrade value. It derives
-from EIP712's `_name`/`_version` at slots 301-304, so if the 100-slot
-`LegacyAccessControlSlots` placeholder were off by even one slot it would change and
-`permit()` would break silently. The rehearsal shows it does not change.
-
----
-
-## Reproducing the evidence
+Snapshot again right before (the supply moves with every mint and burn), and name every frozen
+account so their flags are compared:
 
 ```bash
-docker run -d --name idrp-tre -p 9090:9090 tronbox/tre     # local TVM, free
-npx hardhat compile --network tron
-npx hardhat run scripts/tvm/make-fixtures.ts               # generated, drift-checked
-npx hardhat run scripts/tre-mainnet-rehearsal.ts --network tre     # Controller
-npx hardhat run scripts/tre-suite.ts             --network tre     # Token + TronUUPS
-npx hardhat run scripts/tre-tronuups-suite.ts    --network tre     # why not TronUUPS
+TARGET=token SNAPSHOT=token-before-execute.json CHECK_ACCOUNTS=<frozen T…,…> npx hardhat run scripts/tron-verify-v3.ts --network tron
+IDRP_V3_ADMIN=<admin> IDRP_V3_UPGRADER=<upgrader> npx hardhat run scripts/tron-execute-idrp-upgrade.ts --network tron
+IDRP_V3_ADMIN=<admin> IDRP_V3_UPGRADER=<upgrader> EXECUTE=1 npx hardhat run scripts/tron-execute-idrp-upgrade.ts --network tron
+TARGET=token BASELINE=token-before-execute.json CHECK_ACCOUNTS=<frozen T…,…> npx hardhat run scripts/tron-verify-v3.ts --network tron
 ```
 
-Expect Controller green (roles 4/4), Token **25/25**, TronUUPS suite **10/10**.
+`IDRP_V3_CONTROLLER` defaults to the controller proxy. Supply, balances, frozen flags and
+`DOMAIN_SEPARATOR` (`permit()`) must be unchanged.
 
-The fixtures exist because both v2 and v3 hard-code `UPGRADE_DELAY = 48 hours`; the
-generator copies each source changing **only** that constant, the relative imports, and
-the contract declaration name, and fails if the transform is not exactly reversible.
+### If something reverts
+
+A revert during `upgradeToAndCall` is **safe**: the implementation swap rolls back and the proxy
+is untouched. Capture the reason and stop. Do not retry with a split call. A dry run that refuses
+for funding sent nothing; fund the shortfall it prints and run it again.
 
 ---
+
+## 4. Reproducing the evidence
+
+```bash
+docker run -d --name idrp-tre -p 9090:9090 tronbox/tre
+npx hardhat run scripts/tvm/make-fixtures.ts
+npx hardhat run scripts/tre-suite.ts --network tre
+npx hardhat run scripts/tre-mainnet-rehearsal.ts --network tre
+npx hardhat run scripts/tre-authority-transfer.ts --network tre
+```
+
+`make-fixtures` must leave `git status` clean. Expect token 25/25, the controller rehearsal
+green (roles 4/4, still upgradeable), and 36/36. The testnet-env rehearsal — a 1:1 replica of
+the Nile sandbox upgraded with the scripts above — lives on `tron-testnet`
+(`scripts/tre-sandbox-ops.ts`).
 
 ## Rules
 
 1. **Atomic `upgradeToAndCall` only.** Never split the upgrade from its initializer.
-2. **Data-less upgrades use `upgradeTo`.** OZ 4's `upgradeToAndCall` forces a delegatecall
-   even with empty calldata and reverts `"Address: low-level delegate call failed"`.
+2. **Data-less upgrades use `upgradeTo`.** OZ 4's `upgradeToAndCall` forces a delegatecall even
+   with empty calldata.
 3. **Verify against deployed bytecode and live storage, never against repo source.**
 4. **No UUPS whose proxy check depends on storage.** That is the deadlock class.
-5. **Rehearse on local TVM first.** It is free, and it starts from mainnet's real state.
-
-## If something reverts
-
-A revert during `upgradeToAndCall` is **safe** — the implementation swap is rolled back
-and the proxy is untouched. Capture the revert reason and stop; do not retry with a split
-call.
+5. **Fund before you send.** A dry run first, every time.
+6. **Verify each implementation on Tronscan while the timelock runs**, before executing it.
