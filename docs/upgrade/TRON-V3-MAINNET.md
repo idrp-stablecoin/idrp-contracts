@@ -153,14 +153,17 @@ npx hardhat run scripts/tron-explorer-files.ts --network tron
 ```
 
 It proves the recorded input reproduces the on-chain code, writes the single-file source to
-`flattened/tron/`, and prints the form values. Submit the form at
-`https://tronscan.org/#/contract/<implementation>/code`. If verification fails, do not schedule.
+`flattened/tron/`, and prints the form values. Submit the form on the implementation's Tronscan
+page (Contract, then Verify and Publish). If verification fails, do not schedule.
 
-Then schedule it — dry run, then send:
+Then schedule it — dry run, then send. Put the address the deploy printed in `CTRL_IMPL`. The
+blocks in this runbook hold no comments and no `<…>` placeholders, so they paste into zsh as they
+are; replace the `TPASTE_…` values first.
 
 ```bash
-IMPL=<controller implementation> npx hardhat run scripts/tron-schedule-controller-upgrade.ts --network tron
-IMPL=<controller implementation> EXECUTE=1 npx hardhat run scripts/tron-schedule-controller-upgrade.ts --network tron
+CTRL_IMPL=TPASTE_THE_CONTROLLER_IMPLEMENTATION
+IMPL=$CTRL_IMPL npx hardhat run scripts/tron-schedule-controller-upgrade.ts --network tron
+IMPL=$CTRL_IMPL EXECUTE=1 npx hardhat run scripts/tron-schedule-controller-upgrade.ts --network tron
 ```
 
 Before sending, it checks the implementation on chain: every timelock constant is 48 h, and
@@ -176,12 +179,19 @@ is given; a holder left out keeps `DEFAULT_ADMIN_ROLE`.
 npx hardhat run scripts/tron-list-default-admin-holders.ts --network tron
 ```
 
-`CTRL_V3_ADMIN` and `CTRL_V3_UPGRADER` are required; nothing defaults to the signer. To keep
-today's single key, pass the upgrader for both. To move to a multisig, pass its address. Then:
+The admin and upgrader are required; nothing defaults to the signer. Decide them before this
+session. With today's single key all three values below are the upgrader; to move to a multisig,
+put its address in `ADMIN` and `UPGRADER`. `LEGACY` is exactly the list just printed.
 
 ```bash
-CTRL_V3_ADMIN=<admin> CTRL_V3_UPGRADER=<upgrader> CTRL_V3_LEGACY_DAR_HOLDERS=<list> npx hardhat run scripts/tron-execute-controller-upgrade.ts --network tron
-CTRL_V3_ADMIN=<admin> CTRL_V3_UPGRADER=<upgrader> CTRL_V3_LEGACY_DAR_HOLDERS=<list> EXECUTE=1 npx hardhat run scripts/tron-execute-controller-upgrade.ts --network tron
+ADMIN=TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6
+UPGRADER=TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6
+LEGACY=TQHZ6XmErRcTaBjoWnBwd55sKdoUDfuNn6
+```
+
+```bash
+CTRL_V3_ADMIN=$ADMIN CTRL_V3_UPGRADER=$UPGRADER CTRL_V3_LEGACY_DAR_HOLDERS=$LEGACY npx hardhat run scripts/tron-execute-controller-upgrade.ts --network tron
+CTRL_V3_ADMIN=$ADMIN CTRL_V3_UPGRADER=$UPGRADER CTRL_V3_LEGACY_DAR_HOLDERS=$LEGACY EXECUTE=1 npx hardhat run scripts/tron-execute-controller-upgrade.ts --network tron
 TARGET=controller BASELINE=controller-before.json npx hardhat run scripts/tron-verify-v3.ts --network tron
 ```
 
@@ -202,22 +212,28 @@ Then the token implementation, the same way as the controller's:
 npx hardhat run scripts/tron-deploy-idrp-v3-impl.ts --network tron
 EXECUTE=1 npx hardhat run scripts/tron-deploy-idrp-v3-impl.ts --network tron
 npx hardhat run scripts/tron-explorer-files.ts --network tron
-IMPL=<token implementation> npx hardhat run scripts/tron-schedule-idrp-upgrade.ts --network tron
-IMPL=<token implementation> EXECUTE=1 npx hardhat run scripts/tron-schedule-idrp-upgrade.ts --network tron
 ```
 
-Verify it on Tronscan between the deploy and the schedule.
+Verify it on Tronscan, then schedule it:
+
+```bash
+TOKEN_IMPL=TPASTE_THE_TOKEN_IMPLEMENTATION
+IMPL=$TOKEN_IMPL npx hardhat run scripts/tron-schedule-idrp-upgrade.ts --network tron
+IMPL=$TOKEN_IMPL EXECUTE=1 npx hardhat run scripts/tron-schedule-idrp-upgrade.ts --network tron
+```
 
 ### Session 3 — at least 48 h later: execute the token
 
-Snapshot again right before (the supply moves with every mint and burn), and name every frozen
-account so their flags are compared:
+Snapshot again right before (the supply moves with every mint and burn). Put every frozen
+account in `FROZEN`, comma-separated, so their flags are compared, or leave it empty
+(`FROZEN=`) if there are none. Set the same `ADMIN` and `UPGRADER` as in session 2.
 
 ```bash
-TARGET=token SNAPSHOT=token-before-execute.json CHECK_ACCOUNTS=<frozen T…,…> npx hardhat run scripts/tron-verify-v3.ts --network tron
-IDRP_V3_ADMIN=<admin> IDRP_V3_UPGRADER=<upgrader> npx hardhat run scripts/tron-execute-idrp-upgrade.ts --network tron
-IDRP_V3_ADMIN=<admin> IDRP_V3_UPGRADER=<upgrader> EXECUTE=1 npx hardhat run scripts/tron-execute-idrp-upgrade.ts --network tron
-TARGET=token BASELINE=token-before-execute.json CHECK_ACCOUNTS=<frozen T…,…> npx hardhat run scripts/tron-verify-v3.ts --network tron
+FROZEN=TPASTE_FROZEN_ACCOUNTS_COMMA_SEPARATED
+TARGET=token SNAPSHOT=token-before-execute.json CHECK_ACCOUNTS=$FROZEN npx hardhat run scripts/tron-verify-v3.ts --network tron
+IDRP_V3_ADMIN=$ADMIN IDRP_V3_UPGRADER=$UPGRADER npx hardhat run scripts/tron-execute-idrp-upgrade.ts --network tron
+IDRP_V3_ADMIN=$ADMIN IDRP_V3_UPGRADER=$UPGRADER EXECUTE=1 npx hardhat run scripts/tron-execute-idrp-upgrade.ts --network tron
+TARGET=token BASELINE=token-before-execute.json CHECK_ACCOUNTS=$FROZEN npx hardhat run scripts/tron-verify-v3.ts --network tron
 ```
 
 `IDRP_V3_CONTROLLER` defaults to the controller proxy. Supply, balances, frozen flags and
