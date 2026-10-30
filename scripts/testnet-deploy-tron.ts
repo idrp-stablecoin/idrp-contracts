@@ -235,6 +235,12 @@ async function main() {
   if (network !== "nile" && network !== "tre") {
     throw new Error(`REFUSING: --network ${network}. This deploys the testnet env to nile (or tre locally) only.`);
   }
+  if (/function initializeV3\(/.test(fs.readFileSync(path.join(root, "contracts/IDRP.sol"), "utf8"))) {
+    throw new Error(
+      "REFUSING: this tree is v3. This script builds the v2 testnet env (Tron mainnet's v2 source) and wires it the v2 way; " +
+        "the v3 implementations for an existing env go through scripts/testnet-upgrade-tron.ts."
+    );
+  }
   const local = network === "tre";
   const cfg = hre.network.config as any;
   host = String(cfg.url).replace(/\/jsonrpc\/?$/, "");

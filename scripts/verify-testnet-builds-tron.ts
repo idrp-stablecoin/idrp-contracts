@@ -150,6 +150,10 @@ async function main() {
     { label: "IDRPController implementation", address: record.IDRPControllerImpl, build: load(record.IDRPControllerBuild), args: "" },
     { label: "IDRP proxy", address: record.IDRP, build: proxyBuild, args: coder.encode(["address", "bytes"], [tronToHex(record.IDRPImpl), initToken]).slice(2) },
     { label: "IDRPController proxy", address: record.IDRPController, build: proxyBuild, args: coder.encode(["address", "bytes"], [tronToHex(record.IDRPControllerImpl), initCtrl]).slice(2) },
+    // Implementations deployed later by scripts/testnet-upgrade-tron.ts, each with its own recorded 5-minute build.
+    ...(record.upgrades ?? [])
+      .filter((u: any) => u.step === "deploy")
+      .map((u: any) => ({ label: `${u.contract} implementation (${u.delays} build, ${String(u.sourceCommit).slice(0, 7)})`, address: u.implementation, build: load(u.build), args: "" })),
   ];
 
   fs.mkdirSync(path.join(root, OUT_DIR), { recursive: true });
