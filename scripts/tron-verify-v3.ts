@@ -1,192 +1,161 @@
 /**
- * Tron MAINNET: snapshot the Controller / Token state around the v3 upgrade.
+ * Snapshot the Controller / Token around the v3 upgrade, and compare. Read-only.
  *
- *   TARGET=controller npx hardhat run scripts/tron-verify-v3.ts --network tron
+ *   TARGET=controller npx hardhat run scripts/tron-verify-v3.ts --network tron   (or nile | tre)
  *   TARGET=token      npx hardhat run scripts/tron-verify-v3.ts --network tron
  *
- * Read-only. Run it BEFORE the upgrade to capture a baseline and AFTER to confirm.
+ *   SNAPSHOT=before-token.json   writes what it read (run this BEFORE the upgrade)
+ *   BASELINE=before-token.json   compares with that file and fails on any difference the
+ *                                upgrade must not cause (run this AFTER)
+ *   CHECK_ACCOUNTS=T…,T…         token: also balanceOf / frozen / nonces for these accounts
+ *                                (e.g. every frozen account)
  *
- * WHY A DEDICATED SCRIPT
- *   check-tron-roles.ts reads a deployment JSON and only covers the Token's
- *   MINTER/PAUSER/FREEZER/UPGRADER roles. It does not touch the Controller's quorum
- *   roles, defaultAdmin(), the pending schedule, or the TronUUPS proxy slot — which
- *   are the things that actually decide whether this upgrade went well.
+ * What it checks every time: the implementation, the upgrader, the pending schedule, the
+ * quorum signers' roles (controller), both TronUUPS slots (any non-zero value means future
+ * upgrades revert), and the upgrade path: upgradeTo is simulated from the upgrader and must
+ * stop at the timelock check ("Upgrade not scheduled" / "Timelock not expired"), which
+ * proves the UUPS proxy gate still passes.
  *
- * Everything is a raw eth_call and every failure throws. A read that cannot be
- * completed must never be reported as a `false`.
+ * What may differ from the baseline after the upgrade: the implementation, the cleared
+ * schedule, and getters that only exist on v3. Everything else (supply, balances, frozen
+ * flags, the permit domain, the signing digest, the quorum rules and roles) must be equal.
+ *
+ * Every read is a raw call and every transport failure throws: a read that cannot be
+ * completed is never reported as a value.
  */
+import fs from "fs";
+import path from "path";
 import hre from "hardhat";
-const TronWeb = require("tronweb");
+import { ethers } from "ethers";
+import { tronNetwork, base58Of, hexOf, type TronNet } from "./utils/tron-network";
+import { ethCall, getStorage } from "./utils/tron-preflight";
+import { IMPL_SLOT } from "./utils/tron-impl";
+import { DEFAULT_ADMIN_ROLE, PROXY_SLOT_NAMES, quorumRolesHeld, upgradeGateHealthy } from "./utils/tron-steps";
 
-const HOST = "https://api.trongrid.io";
-const IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-const PROXY_SLOTS = ["idrp.tron.uups.__self", "idrp.tron.uups.__proxy"];
+type Snap = Record<string, string>;
 
-const PROXIES: Record<string, { addr: string; label: string }> = {
-  controller: { addr: "TSQFFuzLK7f3EVGenQyQpXrpoFuDsXEvbX", label: "IDRPController" },
-  token: { addr: "TQn7gmXFj6oPFkFytQkpK1utAx9V9Ah97r", label: "IDRP token" },
-};
+const RULE_FILES: Array<[number, string, string]> = [
+  [0, "Mint", "rules.mint.burn.json"],
+  [1, "Burn", "rules.mint.burn.json"],
+  [2, "Freeze", "rules.freeze.unfreeze.json"],
+  [3, "Unfreeze", "rules.freeze.unfreeze.json"],
+  [4, "Pause", "rules.pause.json"],
+  [5, "Unpause", "rules.unpause.json"],
+];
 
-// The four quorum signers granted at deployment. They must survive the upgrade
-// with no re-grant; the local TVM rehearsal shows 4/4 do.
-const QUORUM = {
-  OFFICER_ROLE: "0xb490d3db1f0567c7a6f7e3468a35842392ed04b3",
-  MANAGER_ROLE: "0xd3eeba4ff3da9818a8524c5f76f5935040f4952e",
-  DIRECTOR_ROLE: "0x0b13ced0bdc13d3935adede2befce9b6cc7a2c9b",
-  COMMISSIONER_ROLE: "0x894d0762b01166641d78987cc6257a3417b982e4",
-};
+/** Keys the upgrade is expected to change. */
+const MAY_CHANGE = new Set(["implementation", "scheduledImplementation()", "upgradeScheduledAt()"]);
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/**
- * A contract REVERT and a failed RPC look similar and must not be conflated: a
- * revert is a real answer ("this implementation has no such function"), a transport
- * failure is not an answer at all. Reverts come back as REVERTED; everything else
- * is retried and then thrown.
- */
-const REVERTED = "0x";
-
-async function rpc(method: string, params: unknown[]) {
-  let last: any;
-  for (let a = 0; a < 6; a++) {
-    try {
-      const r = await fetch(`${HOST}/jsonrpc`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", method, params, id: 1 }),
-      }).then((x) => x.json());
-      if (r.result !== undefined) return r.result as string;
-      if (r.error && /revert/i.test(String(r.error.message))) return REVERTED;
-      last = r.error;
-    } catch (e) { last = e; }
-    await sleep(800 * (a + 1));
-  }
-  throw new Error(`${method} failed: ${JSON.stringify(last)}`);
+async function read(net: TronNet, toHex: string, signature: string, args: unknown[] = []): Promise<string> {
+  const ifc = new ethers.Interface([`function ${signature}`]);
+  const fn = ifc.fragments[0] as ethers.FunctionFragment;
+  const out = await ethCall(net, toHex, ifc.encodeFunctionData(fn, args));
+  if (out === null || out === "0x") return "(reverts)";
+  const r = ifc.decodeFunctionResult(fn, out);
+  return JSON.stringify(r.length === 1 ? r[0] : [...r], (_, v) => (typeof v === "bigint" ? v.toString() : v));
 }
 
-const isRevert = (v: string) => !v || v === "0x";
-const toAddr = (v: string) => "0x" + v.slice(-40);
-const isZero = (v: string) => /^0x0*$/.test(v || "0x0");
+async function snapController(net: TronNet): Promise<Snap> {
+  const c = hexOf(net, net.controller);
+  const s: Snap = {};
+  s.implementation = "0x" + (await getStorage(net, c, IMPL_SLOT)).slice(-40).toLowerCase();
+  for (const g of ["upgrader() view returns (address)", "idrpToken() view returns (address)", "scheduledImplementation() view returns (address)",
+    "upgradeScheduledAt() view returns (uint256)", "UPGRADE_DELAY() view returns (uint256)", "nonce() view returns (uint256)",
+    "defaultAdmin() view returns (address)", "defaultAdminDelay() view returns (uint48)", "pendingDefaultAdmin() view returns (address,uint48)"]) {
+    s[g.split(" ")[0]] = await read(net, c, g);
+  }
+  const probe = ["0x000000000000000000000000000000000000dEaD", 0, 1n, "tron-verify-v3 probe", 1n];
+  s["getOperationHash(probe)"] = await read(net, c, "getOperationHash(address,uint8,uint256,string,uint256) view returns (bytes32)", probe);
+  const upgrader = JSON.parse(s["upgrader()"]);
+  s["hasRole(DEFAULT_ADMIN, upgrader)"] = await read(net, c, "hasRole(bytes32,address) view returns (bool)", [DEFAULT_ADMIN_ROLE, upgrader]);
+  for (const [op, name, file] of RULE_FILES) {
+    const tiers = JSON.parse(fs.readFileSync(path.join(hre.config.paths.root, "test/utils", file), "utf8"));
+    for (const t of tiers) {
+      s[`getQuorumRule(${name}, ${t.minAmount})`] = await read(net, c,
+        "getQuorumRule(uint8,uint256) view returns ((uint256 minAmount,uint256 maxAmount,bytes32[] requiredRoles))", [op, BigInt(t.minAmount)]);
+    }
+  }
+  const q = await quorumRolesHeld(net);
+  for (const l of q.lines) s[`role ${l.split(/\s+/).slice(0, 2).join(" ")}`] = l.endsWith("✓") ? "held" : "MISSING";
+  for (const n of PROXY_SLOT_NAMES) s[n] = await getStorage(net, c, ethers.id(n));
+  return s;
+}
+
+async function snapToken(net: TronNet): Promise<Snap> {
+  const t = hexOf(net, net.token);
+  const s: Snap = {};
+  s.implementation = "0x" + (await getStorage(net, t, IMPL_SLOT)).slice(-40).toLowerCase();
+  for (const g of ["upgrader() view returns (address)", "scheduledImplementation() view returns (address)", "upgradeScheduledAt() view returns (uint256)",
+    "UPGRADE_DELAY() view returns (uint256)", "name() view returns (string)", "symbol() view returns (string)", "decimals() view returns (uint8)",
+    "totalSupply() view returns (uint256)", "DOMAIN_SEPARATOR() view returns (bytes32)", "paused() view returns (bool)",
+    "depositoryWallet() view returns (address)", "maxSupply() view returns (uint256)", "sanctionsList() view returns (address)",
+    "admin() view returns (address)", "controller() view returns (address)", "pendingAdmin() view returns (address,uint48)",
+    "pendingUpgrader() view returns (address,uint48)", "AUTHORITY_TRANSFER_DELAY() view returns (uint48)"]) {
+    s[g.split(" ")[0]] = await read(net, t, g);
+  }
+  const depository = JSON.parse(s["depositoryWallet()"]);
+  const accounts = new Set<string>([depository.toLowerCase(), hexOf(net, net.controller)]);
+  for (const a of (process.env.CHECK_ACCOUNTS ?? "").split(",").map((x) => x.trim()).filter(Boolean)) accounts.add(hexOf(net, a));
+  for (const a of accounts) {
+    const label = base58Of(net, a);
+    s[`balanceOf(${label})`] = await read(net, t, "balanceOf(address) view returns (uint256)", [a]);
+    s[`frozen(${label})`] = await read(net, t, "frozen(address) view returns (bool)", [a]);
+    s[`nonces(${label})`] = await read(net, t, "nonces(address) view returns (uint256)", [a]);
+  }
+  for (const n of PROXY_SLOT_NAMES) s[n] = await getStorage(net, t, ethers.id(n));
+  return s;
+}
 
 async function main() {
-  if (hre.network.name !== "tron") throw new Error(`Tron MAINNET only (got ${hre.network.name})`);
   const target = (process.env.TARGET ?? "").toLowerCase();
-  if (!PROXIES[target]) throw new Error(`Set TARGET=controller or TARGET=token`);
-  const { addr: proxyT, label } = PROXIES[target];
+  if (target !== "controller" && target !== "token") throw new Error(`Set TARGET=controller or TARGET=token`);
+  const net = await tronNetwork(hre);
+  const proxy = target === "controller" ? net.controller : net.token;
+  console.log(`\n${"━".repeat(78)}\n${target === "controller" ? "IDRPController" : "IDRP token"}   ${proxy}   (${net.name} — ${net.label})\n${"━".repeat(78)}`);
 
-  const tw = new TronWeb({ fullHost: HOST });
-  const { keccak256, toUtf8Bytes, AbiCoder } = await import("ethers");
-  const proxyHex = "0x" + tw.address.toHex(proxyT).slice(2);
-  const sel = (sig: string) => keccak256(toUtf8Bytes(sig)).slice(0, 10);
-  const call = (data: string) => rpc("eth_call", [{ to: proxyHex, data }, "latest"]);
+  const snap = target === "controller" ? await snapController(net) : await snapToken(net);
+  const width = Math.max(...Object.keys(snap).map((k) => k.length));
+  for (const [k, v] of Object.entries(snap)) console.log(`  ${k.padEnd(width)}  ${v}`);
 
-  console.log(`\n${"━".repeat(74)}\n${label}   ${proxyT}\n${"━".repeat(74)}`);
-
-  const impl = toAddr(await rpc("eth_getStorageAt", [proxyHex, IMPL_SLOT, "latest"]));
-  console.log(`  implementation          ${impl}  (${tw.address.fromHex("41" + impl.slice(2))})`);
-
-  // --- plain address getters. Absent on v2 -> "0x" (revert), which is expected pre-upgrade.
-  const getters = target === "controller"
-    ? ["upgrader()", "idrpToken()", "defaultAdmin()", "scheduledImplementation()"]
-    : ["upgrader()", "admin()", "controller()", "sanctionsList()", "scheduledImplementation()"];
-  console.log(`\n  getters`);
-  for (const g of getters) {
-    const v = await call(sel(g));
-    console.log(`    ${g.padEnd(28)} ${isRevert(v) ? "reverts — not present on this implementation" : toAddr(v)}`);
-    await sleep(250);
-  }
-
-  // --- quorum roles (controller only)
+  let bad = 0;
   if (target === "controller") {
-    console.log(`\n  quorum roles — must be true both before AND after, with no re-grant`);
-    const hasRoleSel = sel("hasRole(bytes32,address)");
-    let ok = 0;
-    for (const [role, acct] of Object.entries(QUORUM)) {
-      const data = hasRoleSel + new AbiCoder()
-        .encode(["bytes32", "address"], [keccak256(toUtf8Bytes(role)), acct]).slice(2);
-      const v = await call(data);
-      if (isRevert(v)) throw new Error(`hasRole(${role}) reverted — cannot verify`);
-      const has = BigInt(v) === 1n;
-      if (has) ok++;
-      console.log(`    ${role.padEnd(20)} ${acct}  ${has ? "✓" : "✗ MISSING"}`);
-      await sleep(250);
+    const q = await quorumRolesHeld(net);
+    console.log(`\n  quorum roles: ${q.held}/${q.total} held`);
+    if (q.held !== q.total) bad++;
+  }
+  for (const n of PROXY_SLOT_NAMES) {
+    if (!/^0x0*$/.test(snap[n])) {
+      console.log(`  ✗ ${n} is SET — future upgrades will revert. Investigate immediately.`);
+      bad++;
     }
-    console.log(`    -> ${ok}/4`);
-    if (ok !== 4) throw new Error(`only ${ok}/4 quorum roles present`);
+  }
+  try {
+    console.log(`\n  upgrade path (simulated from the upgrader, nothing sent): "${await upgradeGateHealthy(net, target)}" — the UUPS proxy gate passes ✓`);
+  } catch (e: any) {
+    console.log(`\n  ✗ upgrade path: ${e.message}`);
+    bad++;
   }
 
-  // --- the check that the proxy is still upgradeable
-  console.log(`\n  upgradeability`);
-  let slotsClean = true;
-  for (const name of PROXY_SLOTS) {
-    const v = await rpc("eth_getStorageAt", [proxyHex, keccak256(toUtf8Bytes(name)), "latest"]);
-    const clean = isZero(v);
-    if (!clean) slotsClean = false;
-    console.log(`    ${name.padEnd(24)} ${clean ? "0x0 ✓" : "SET ✗ " + v}`);
-    await sleep(250);
+  if (process.env.SNAPSHOT) {
+    fs.writeFileSync(process.env.SNAPSHOT, JSON.stringify({ network: net.name, proxy, at: new Date().toISOString(), snap }, null, 2) + "\n");
+    console.log(`\n  snapshot written to ${process.env.SNAPSHOT}`);
   }
-  console.log(`    -> ${slotsClean
-    ? "no storage-dependent proxy gate — the proxy can still be upgraded"
-    : "A TRONUUPS SLOT IS SET — future upgrades will revert. Investigate immediately."}`);
-  if (!slotsClean) process.exit(1);
-
-  // --- the decisive "can this proxy still be upgraded?" check ---
-  //
-  // On mainnet you cannot prove upgradeability by doing another upgrade. But you
-  // can simulate one and read WHERE it reverts. upgradeTo() runs the UUPS
-  // onlyProxy gate BEFORE _authorizeUpgrade, so the revert reason says which:
-  //
-  //   "Upgrade not scheduled" / "Timelock not expired"
-  //        -> the proxy gate PASSED and execution reached the timelock logic.
-  //           The proxy is healthy. This is what we want to see.
-  //   "Function must be called through active proxy" / "...delegatecall"
-  //   or the TronUUPSUnauthorizedCallContext selector 0xbeb6ee1f
-  //        -> the proxy gate FAILED. The proxy is frozen; no upgrade can ever land.
-  //
-  // triggerconstantcontract is used rather than eth_call because TronGrid's
-  // eth_call discards the revert data and returns a bare "REVERT opcode executed".
-  // Nothing is broadcast — this is a constant call.
-  console.log(`\n  upgrade path (simulated — nothing is sent)`);
-  {
-    const upgraderHex = toAddr(await call(sel("upgrader()")));
-    const upgraderT = tw.address.fromHex("41" + upgraderHex.slice(2));
-    const r = await fetch(`${HOST}/wallet/triggerconstantcontract`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        owner_address: upgraderT,
-        contract_address: proxyT,
-        function_selector: "upgradeTo(address)",
-        parameter: new AbiCoder().encode(["address"], ["0x000000000000000000000000000000000000dEaD"]).slice(2),
-        visible: true,
-      }),
-    }).then((x) => x.json());
-
-    const cr: string = (r.constant_result ?? [])[0] ?? "";
-    let reason = "(no revert data)";
-    if (cr.startsWith("08c379a0")) {
-      reason = new AbiCoder().decode(["string"], "0x" + cr.slice(8))[0] as string;
-    } else if (cr) {
-      reason = "custom error 0x" + cr.slice(0, 8);
-    } else if (r.result?.result === true && !r.result?.message) {
-      reason = "(did not revert)";
+  if (process.env.BASELINE) {
+    const base = JSON.parse(fs.readFileSync(process.env.BASELINE, "utf8"));
+    if (base.proxy !== proxy || base.network !== net.name) throw new Error(`${process.env.BASELINE} is a snapshot of ${base.proxy} on ${base.network}`);
+    console.log(`\n  compared with ${process.env.BASELINE} (${base.at}):`);
+    let diffs = 0;
+    for (const [k, before] of Object.entries(base.snap as Snap)) {
+      const after = snap[k];
+      if (after === before) continue;
+      const expected = MAY_CHANGE.has(k) || before === "(reverts)";
+      if (!expected) diffs++;
+      console.log(`    ${expected ? "~" : "✗"} ${k}\n        before ${before}\n        after  ${after ?? "(not read)"}`);
     }
-
-    const frozen = /active proxy|delegatecall/i.test(reason) || cr.startsWith("beb6ee1f");
-    const healthy = /Upgrade not scheduled|Timelock not expired/i.test(reason);
-    console.log(`    simulated as    ${upgraderT}`);
-    console.log(`    revert reason   ${JSON.stringify(reason)}`);
-    if (frozen) {
-      console.log(`    -> FROZEN: the UUPS proxy gate rejected the call. No upgrade can land. ✗`);
-      process.exit(1);
-    }
-    console.log(`    -> ${healthy
-      ? "reached the timelock check, so the UUPS proxy gate PASSED — still upgradeable ✓"
-      : "unexpected reason — the proxy gate did not obviously fail, but confirm this manually"}`);
+    console.log(diffs ? `  ✗ ${diffs} unexpected difference(s)` : `  ✓ nothing changed that the upgrade must not change`);
+    bad += diffs;
   }
-
-  const sched = await call(sel("scheduledImplementation()"));
-  if (!isRevert(sched)) {
-    console.log(`\n  pending schedule        ${isZero(sched) ? "none ✓" : toAddr(sched) + "  <- still pending"}`);
-  }
+  if (bad) process.exitCode = 1;
 }
 
-main().then(() => process.exit(0)).catch((e) => { console.error(`\n✗ ${e.message ?? e}`); process.exit(1); });
+main().catch((e) => { console.error(`\n✗ ${e.message ?? e}`); process.exitCode = 1; });
