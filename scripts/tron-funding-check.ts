@@ -13,8 +13,8 @@
  *              · schedule each
  *   session B  (after the delay) the two atomic upgradeToAndCall calls
  * Deploys and schedules are measured exactly with the node's estimator. The executes can
- * only be measured once their schedules mature; until then the line uses the local-TVM
- * measurement and is labelled as such. Every step script runs its own gate again before it
+ * only be measured once their schedules mature; until then the line uses the receipts of
+ * the same calls on the Nile testnet env and is labelled as such. Every step script runs its own gate again before it
  * sends, so this is for planning, not a substitute.
  */
 import hre from "hardhat";
@@ -24,9 +24,9 @@ import { accountResources, assess, bandwidthOf, chainPrices, simulate, ENERGY_MA
 import { assertArtifactIsBuild, checkImplementation, KINDS, type Kind } from "./utils/tron-impl";
 import { proxyState } from "./utils/tron-steps";
 
-/** Local-TVM receipts of the two executes (scripts/tre-authority-transfer.ts, 2026-09-23). */
-const EXECUTE_ENERGY_TRE: Record<Kind, number> = { controller: 88_718, token: 82_406 };
-const EXECUTE_BYTES = 571; // the mainnet 2026-09-01 upgradeToAndCall receipt, the same call shape
+/** Receipts of the two executes on the Nile testnet env (2026-10-30), the same calls mainnet makes. */
+const EXECUTE_ENERGY: Record<Kind, number> = { controller: 88_718, token: 82_406 };
+const EXECUTE_BYTES: Record<Kind, number> = { controller: 571, token: 507 };
 
 type Line = { session: "A" | "B"; label: string; energy: number; bandwidth: number; measured: boolean };
 
@@ -99,7 +99,7 @@ async function main() {
       const fromEmpty = s.scheduled ? " (measured over the pending one; from an empty slot it costs more — cancel first)" : "";
       lines.push({ session: "A", label: `${name}: scheduleUpgrade${fromEmpty}`, energy: schedSim.energy, bandwidth: bandwidthOf(st.transaction), measured: true });
     }
-    lines.push({ session: "B", label: `${name}: upgradeToAndCall(initializeV3) — local-TVM figure, measure again when due`, energy: EXECUTE_ENERGY_TRE[kind], bandwidth: EXECUTE_BYTES, measured: false });
+    lines.push({ session: "B", label: `${name}: upgradeToAndCall(initializeV3) — Nile figure, measured again when due`, energy: EXECUTE_ENERGY[kind], bandwidth: EXECUTE_BYTES[kind], measured: false });
   }
 
   if (!lines.length) {
