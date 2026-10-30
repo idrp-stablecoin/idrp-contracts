@@ -1,3 +1,8 @@
+> **SUPERSEDED — do not deploy from this branch.** This is the September 2026 Tron v3 build.
+> Later fixes to the controller and the token are not in it, and its scripts send without checking
+> the account can pay. The Tron v3 release is on `tron-main` (from 2026-10-30), and its runbook is
+> `docs/upgrade/TRON-V3-MAINNET.md` there.
+
 # Tron mainnet v2 → v3 — deploy and schedule
 
 Hand this to whoever holds the upgrader key. Branch: **`mainnet-ready-impl`**, merged

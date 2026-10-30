@@ -1,3 +1,8 @@
+> **SUPERSEDED — do not deploy from this branch.** This is the September 2026 Tron v3 build.
+> Later fixes to the controller and the token are not in it, and its scripts send without checking
+> the account can pay. The Tron v3 release is on `tron-main` (from 2026-10-30), and its runbook is
+> `docs/upgrade/TRON-V3-MAINNET.md` there.
+
 # IDRP Stablecoin
 
 IDRP is a stablecoin pegged to the Indonesian Rupiah (IDR). It is an ERC-20 token with additional features such as upgradability, pausing, freezing, and minting/burning capabilities. The IDRP contract is built using OpenZeppelin’s upgradeable contracts and consists of:
