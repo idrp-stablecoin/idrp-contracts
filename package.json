@@ -12,7 +12,8 @@
     "verify:baseSepolia": "hardhat run scripts/verify.ts --network baseSepolia",
     "verify:kairos": "hardhat run scripts/verify.ts --network kairos",
     "verify:shasta": "hardhat run scripts/verify-tron.ts --network shasta",
-    "verify:tron": "hardhat run scripts/verify-tron.ts --network tron"
+    "verify:tron": "hardhat run scripts/verify-tron.ts --network tron",
+    "postinstall": "node scripts/patch-hardhat-tron.js"
   },
   "keywords": [],
   "author": "",

@@ -70,6 +70,10 @@ abstract contract TronGaplessUUPSUpgradeable is
     ERC1967UpgradeUpgradeable
 {
     /// @dev Address of this implementation, fixed in bytecode at construction.
+    ///      Deliberate — see the note above on why this is the one immutable we
+    ///      keep. Without the annotation the upgrades plugin refuses every
+    ///      deploy and upgrade of a contract built on this base.
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address private immutable __self = address(this);
 
     /// @dev Reverts unless called through a delegatecall from an active proxy.

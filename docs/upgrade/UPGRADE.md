@@ -78,6 +78,13 @@ idrp.setUpgrader(<safe-address>)
 
 Emits `UpgraderUpdated(oldUpgrader, safeAddress)`. From this point, only Safe-signed transactions can schedule or execute upgrades on IDRP.
 
+> On builds after v3 (the delayed-handover build) `setUpgrader` and `setAdmin` no longer exist. The
+> admin calls `beginUpgraderTransfer(<new>)` / `beginAdminTransfer(<new>)`; after
+> `AUTHORITY_TRANSFER_DELAY` (48h) the new holder calls `acceptUpgraderTransfer()` / `acceptAdminTransfer()`. `pendingUpgrader()` /
+> `pendingAdmin()` show what is pending; the admin can `cancel…Transfer()` until it is accepted.
+> The admin can also `cancelUpgrade()`: that is how a compromised upgrader is stopped while its
+> replacement waits out the delay.
+
 ### Step 4 — record the migration
 
 Append a row to [docs/upgrade-history/UPGRADE_HISTORY.md](../upgrade-history/UPGRADE_HISTORY.md) under the appropriate chain heading:

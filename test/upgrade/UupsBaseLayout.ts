@@ -62,6 +62,25 @@ describe("UUPS base choice — storage layout", () => {
     expect(s).to.equal(151);
   });
 
+  it("the handover pair is appended right after controller, packed as OZ 4 packs its pending admin", async () => {
+    // Live Tron mainnet reads zero at 513 and 514 (measured before this build),
+    // so the upgrade starts with nothing pending.
+    const info = await hre.artifacts.getBuildInfo("contracts/IDRP.sol:IDRP");
+    const layout = (info!.output.contracts as any)["contracts/IDRP.sol"].IDRP.storageLayout;
+    const last = layout.storage[layout.storage.length - 1];
+    expect(await slotOf("contracts/IDRP.sol:IDRP", "admin")).to.equal(511);
+    expect(await slotOf("contracts/IDRP.sol:IDRP", "controller")).to.equal(512);
+    expect([last.label, Number(last.slot)]).to.deep.equal(["_authorityTransfer", 513]);
+    const type = layout.types[last.type];
+    expect(type.numberOfBytes).to.equal("64");
+    expect(type.members.map((m: any) => [m.label, Number(m.slot), m.offset])).to.deep.equal([
+      ["pendingAdmin", 0, 0],
+      ["pendingAdminSchedule", 0, 20],
+      ["pendingUpgrader", 1, 0],
+      ["pendingUpgraderSchedule", 1, 20],
+    ]);
+  });
+
   it("the token's __legacyTailGap stands in for the removed UUPS gap", async () => {
     // 454..503, immediately before `frozen` at 504.
     expect(await slotOf("contracts/IDRP.sol:IDRP", "__legacyTailGap")).to.equal(454);

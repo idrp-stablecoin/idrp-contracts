@@ -4,8 +4,9 @@
 //
 // Source: contracts/legacy/IDRPControllerv2.sol   ->   contract IDRPControllerv2Tvm
 // The ONLY changes vs that source are:
-//   - UPGRADE_DELAY shortened to 60 seconds so a local TVM
-//     rehearsal can actually run (the real sources keep 48 hours)
+//   - UPGRADE_DELAY (and AUTHORITY_TRANSFER_DELAY, if declared) shortened to
+//     60 seconds so a local TVM rehearsal can actually run (the real
+//     sources keep 48 hours)
 //   - relative imports rewritten one directory level up
 //   - the contract DECLARATION renamed with a "Tvm" suffix (declaration
 //     line only — string literals untouched, so DOMAIN_SEPARATOR is unchanged)

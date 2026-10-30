@@ -105,6 +105,6 @@ describe("[M-2] Deprecated Nonce Still Being Incremented", function () {
         OperationType.Mint, hre.ethers.ZeroAddress, amount,
         "MINT-M2-REPLAY", deadline, [sig1, sig2]
       )
-    ).to.be.revertedWith("Operation hash already used");
+    ).to.be.revertedWith("Operation identifier already used");
   });
 });
