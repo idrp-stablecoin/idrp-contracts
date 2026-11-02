@@ -29,9 +29,9 @@ const IDRP_ADMIN_PRIVATE_KEY_TRON = tronToHex(
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
 const ALCHEMY_API_KEY = vars.get("ALCHEMY_API_KEY");
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
-const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
-const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
-const KAIA_API_KEY = vars.get("KAIA_API_KEY");
+// const POLYGON_API_KEY = vars.get("POLYGON_API_KEY");
+// const KAIROS_API_KEY = vars.get("KAIROS_API_KEY");
+// const KAIA_API_KEY = vars.get("KAIA_API_KEY");
 // TRON-PRO-API-KEY (Trongrid free-tier API key — get one at https://www.trongrid.io/)
 // Set with: npx hardhat vars set TRONGRID_API_KEY
 // Optional. If unset, Tron RPCs hit the unauthenticated public quota
@@ -147,7 +147,9 @@ const config: HardhatUserConfig = {
     // without spending testnet TRX. Key is a well-known TRE dev account, not a secret.
     tre: {
       url: "http://127.0.0.1:9090/jsonrpc",
-      accounts: ["7cdcc19e9253564859a70808680e2df0572f7d7c7a938bca0b06c9cdf2006573"],
+      accounts: [
+        "7cdcc19e9253564859a70808680e2df0572f7d7c7a938bca0b06c9cdf2006573",
+      ],
       tron: true,
     },
     nile: {

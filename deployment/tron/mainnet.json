@@ -1,4 +1,13 @@
 {
   "IDRP": "TQn7gmXFj6oPFkFytQkpK1utAx9V9Ah97r",
-  "IDRPController": "TSQFFuzLK7f3EVGenQyQpXrpoFuDsXEvbX"
+  "IDRPController": "TSQFFuzLK7f3EVGenQyQpXrpoFuDsXEvbX",
+  "upgrades": [
+    {
+      "step": "cancel",
+      "contract": "IDRP",
+      "cancelled": "TKL6oM6jo484VuYPA7QN7ooE6BtXAaZzej",
+      "tx": "8c74679218869fff896f47e990fbb5945cbfb6e000c0999c1339032e8661003f",
+      "at": "2026-11-02T02:35:40.663Z"
+    }
+  ]
 }
